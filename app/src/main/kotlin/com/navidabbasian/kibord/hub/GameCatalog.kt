@@ -1,0 +1,90 @@
+package com.navidabbasian.kibord.hub
+
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
+import com.navidabbasian.kibord.core.ui.theme.DorAccent
+import com.navidabbasian.kibord.core.ui.theme.DorAccentDark
+import com.navidabbasian.kibord.core.ui.theme.GandeGooAccent
+import com.navidabbasian.kibord.core.ui.theme.GandeGooAccentDark
+import com.navidabbasian.kibord.core.ui.theme.KalamzAccent
+import com.navidabbasian.kibord.core.ui.theme.KalamzAccentDark
+import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccent
+import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccentDark
+import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccent
+import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccentDark
+
+@Immutable
+data class GameInfo(
+    val id: String,
+    val title: String,
+    val tagline: String,
+    val emoji: String,
+    val accent: Color,
+    val accentDark: Color,
+    val players: String,
+    /** null یعنی هنوز منتشر نشده — نشان «به زودی» می‌گیرد */
+    val route: String?,
+)
+
+object Routes {
+    const val HUB = "hub"
+    const val KALAMZ = "game/kalamz"
+    const val DOR = "game/dor"
+    const val GANDEGOO = "game/gandegoo"
+    const val PANTOMIME_CLASSIC = "game/pantomime_classic"
+    const val PANTOMIME_RIVAL = "game/pantomime_rival"
+}
+
+/** فهرست بازی‌های هاب — افزودن بازی جدید فقط یک آیتم اینجا و یک مقصد در NavHost است */
+val gameCatalog = listOf(
+    GameInfo(
+        id = "kalamz",
+        title = "کلمز",
+        tagline = "سه راند حدس کلمه: توضیح، یک کلمه، پانتومیم",
+        emoji = "🗣️",
+        accent = KalamzAccent,
+        accentDark = KalamzAccentDark,
+        players = "۴ تا ۱۶ نفر",
+        route = Routes.KALAMZ,
+    ),
+    GameInfo(
+        id = "dor",
+        title = "دور",
+        tagline = "بمب داره تیک‌تاک می‌کنه! کلمه رو برسون و رد کن",
+        emoji = "💣",
+        accent = DorAccent,
+        accentDark = DorAccentDark,
+        players = "۴ تا ۱۰ نفر",
+        route = Routes.DOR,
+    ),
+    GameInfo(
+        id = "gandegoo",
+        title = "گنده گو",
+        tagline = "بلوف بزن، گنده‌شو بگو، مچشونو بگیر!",
+        emoji = "🎭",
+        accent = GandeGooAccent,
+        accentDark = GandeGooAccentDark,
+        players = "۴ یا ۶ نفر",
+        route = Routes.GANDEGOO,
+    ),
+    GameInfo(
+        id = "pantomime_classic",
+        title = "پانتومیم کلاسیک",
+        tagline = "بدون کلام! با موضوع طلایی ۳۰ امتیازی پرریسک",
+        emoji = "🤫",
+        accent = PantomimeClassicAccent,
+        accentDark = PantomimeClassicAccentDark,
+        players = "۴+ نفر — ۲ تیم",
+        route = Routes.PANTOMIME_CLASSIC,
+    ),
+    GameInfo(
+        id = "pantomime_rival",
+        title = "پانتومیم رقابتی",
+        tagline = "جدول امتیازها — اجرا کن و خانه‌ها رو فتح کن",
+        emoji = "⚔️",
+        accent = PantomimeRivalAccent,
+        accentDark = PantomimeRivalAccentDark,
+        players = "۴ یا ۶ نفر",
+        route = Routes.PANTOMIME_RIVAL,
+    ),
+)

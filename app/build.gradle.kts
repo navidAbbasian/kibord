@@ -22,6 +22,19 @@ android {
         }
     }
 
+    signingConfigs {
+        // امضای ریلیز از متغیرهای محیطی (CI)؛ در نبودشان بیلد ریلیز محلی با کلید دیباگ امضا می‌شود
+        create("release") {
+            val keystorePath = System.getenv("KIBORD_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KIBORD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KIBORD_KEY_ALIAS")
+                keyPassword = System.getenv("KIBORD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -30,6 +43,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (System.getenv("KIBORD_KEYSTORE_PATH") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

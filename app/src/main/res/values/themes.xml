@@ -1,0 +1,14 @@
+<resources>
+    <color name="window_background">#FAF7FF</color>
+    <color name="brand_violet">#8B72E8</color>
+
+    <style name="Theme.KiBord" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <style name="Theme.KiBord.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/window_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.KiBord</item>
+    </style>
+</resources>

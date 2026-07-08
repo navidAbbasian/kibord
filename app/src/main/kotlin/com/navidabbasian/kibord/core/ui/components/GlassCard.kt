@@ -8,6 +8,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -22,11 +23,13 @@ fun GlassCard(
     borderColor: Color? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    tilt: Float = 0f,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val extras = kiExtras
     val fill = containerColor ?: if (strong) extras.glassStrong else extras.glass
     val border = borderColor ?: if (strong) extras.glassBorderStrong else extras.glassBorder
+    val modifier = if (tilt != 0f) modifier.graphicsLayer { rotationZ = tilt } else modifier
 
     if (onClick != null) {
         Card(

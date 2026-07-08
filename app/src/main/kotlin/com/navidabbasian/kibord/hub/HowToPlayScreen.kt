@@ -1,6 +1,10 @@
 package com.navidabbasian.kibord.hub
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,15 +14,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
@@ -27,17 +29,31 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ComingSoonBadge
-import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.StickerTitle
+import com.navidabbasian.kibord.core.ui.components.TicketCard
+import com.navidabbasian.kibord.core.ui.components.blobShape
+import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.components.shineSweep
+import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.util.toPersianDigits
 
 private data class GameGuide(
     val gameId: String,
@@ -126,37 +142,28 @@ private val guides = listOf(
     ),
 )
 
-/** تب آموزش هاب — راهنمای هر بازی به‌صورت بخش بازشونده */
+/** تب آموزش هاب — دفترچه‌ی فانتزی: سربرگ‌های گرادیانی کج و گام‌های سنگریزه‌ای */
 @Composable
 fun HowToPlayScreen() {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 24.dp),
+                    .padding(top = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    Icons.Default.AutoStories,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(48.dp)
-                )
+                BobbingEmoji(emoji = "📖", fontSize = 52.sp)
                 Spacer(modifier = Modifier.height(8.dp))
+                StickerTitle(text = "آموزش بازی‌ها", accent = VioletPrimary, rotation = 2f)
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "آموزش بازی‌ها",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "هر بازی چطوری بازی می‌شه؟",
+                    text = "هر بازی چطوری بازی می‌شه؟ 🤔",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -164,69 +171,113 @@ fun HowToPlayScreen() {
         }
         items(count = gameCatalog.size, key = { gameCatalog[it].id }) { index ->
             val game = gameCatalog[index]
-            GuideCard(game = game, guide = guides.find { it.gameId == game.id })
+            GuideCard(game = game, guide = guides.find { it.gameId == game.id }, index = index)
         }
     }
 }
 
 @Composable
-private fun GuideCard(game: GameInfo, guide: GameGuide?) {
+private fun GuideCard(game: GameInfo, guide: GameGuide?, index: Int) {
+    val sound = LocalSoundManager.current
     var expanded by rememberSaveable(game.id) { mutableStateOf(false) }
     val available = guide != null
+    val extras = kiExtras
+    val tilt = if (index % 2 == 0) -1.2f else 1.2f
+    val headerShape = blobShape(seed = index * 3 + 1)
 
-    GlassCard(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(),
-        onClick = if (available) ({ expanded = !expanded }) else null
+            .offset(x = if (index % 2 == 0) (-4).dp else 4.dp)
+            .graphicsLayer { rotationZ = tilt }
+            .animateContentSize()
     ) {
+        // ---- سربرگ گرادیانی سنگریزه‌ای ----
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .then(if (!expanded) Modifier.breathing(intensity = 0.012f, periodMs = 3200 + index * 400, phase = index * 1.3f) else Modifier)
+                .background(
+                    Brush.linearGradient(listOf(lerp(game.accent, Color.White, 0.08f), game.accent, game.accentDark)),
+                    headerShape
+                )
+                .border(2.dp, Color.White.copy(alpha = 0.38f), headerShape)
+                .shineSweep(periodMs = 4200 + index * 400, phase = index * 0.5f)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = available
+                ) {
+                    sound?.playButtonClick()
+                    expanded = !expanded
+                }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(game.accent.copy(alpha = 0.25f), CircleShape),
+                    .size(50.dp)
+                    .graphicsLayer { rotationZ = -tilt * 4f }
+                    .background(Color.White.copy(alpha = 0.25f), blobShape(seed = index * 7 + 3)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = game.emoji, fontSize = 24.sp)
+                BobbingEmoji(emoji = game.emoji, fontSize = 26.sp, phase = index * 1.4f)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = game.title,
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
                 modifier = Modifier.weight(1f)
             )
             if (available) {
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White
                 )
             } else {
                 ComingSoonBadge()
             }
         }
 
+        // ---- بدنه‌ی راهنما ----
         if (expanded && guide != null) {
-            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth()
+                    .background(extras.glassStrong, blobShape(seed = index * 5 + 2))
+                    .border(1.dp, extras.glassBorder, blobShape(seed = index * 5 + 2))
+                    .padding(16.dp)
+            ) {
                 guide.steps.forEachIndexed { i, (title, desc) ->
-                    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                    Row(
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .offset(x = if (i % 2 == 0) 0.dp else 8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
-                                .background(game.accent.copy(alpha = 0.3f), CircleShape),
+                                .size(38.dp)
+                                .graphicsLayer { rotationZ = if (i % 2 == 0) -6f else 6f }
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(lerp(game.accent, Color.White, 0.2f), game.accent),
+                                        center = Offset(0.3f, 0.25f),
+                                        radius = 120f
+                                    ),
+                                    blobShape(seed = index * 11 + i)
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "${i + 1}".map { persianDigit(it) }.joinToString(""),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = (i + 1).toPersianDigits(),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
@@ -246,37 +297,36 @@ private fun GuideCard(game: GameInfo, guide: GameGuide?) {
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            game.accent.copy(alpha = 0.12f),
-                            androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                        )
-                        .padding(14.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+                TicketCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    accent = game.accent,
+                    tilt = if (index % 2 == 0) -1f else 1f
                 ) {
-                    Text(
-                        text = "💡 نکته‌ها",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    guide.tips.forEach { tip ->
-                        Text(
-                            text = "• $tip",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 21.sp,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            BobbingEmoji(emoji = "💡", fontSize = 18.sp, phase = index * 2f)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "نکته‌ها",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        guide.tips.forEach { tip ->
+                            Text(
+                                text = "✦ $tip",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 21.sp,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-private fun persianDigit(c: Char): Char =
-    if (c in '0'..'9') ('۰' + (c - '0')) else c

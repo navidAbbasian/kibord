@@ -42,6 +42,9 @@ import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.ui.TeamScoreChips
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
+import androidx.compose.foundation.layout.offset
+import com.navidabbasian.kibord.core.ui.components.PointCoin
 
 /** انتخاب تعداد تیم‌ها */
 @Composable
@@ -73,29 +76,21 @@ fun RivalTeamCountScreen(onTeamCountSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(2, 3).forEachIndexed { i, count ->
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                tilt = if (i % 2 == 0) -1.6f else 1.6f,
-                onClick = {
-                    sound?.playButtonClick()
-                    onTeamCountSelected(count)
-                }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 26.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "${count.toPersianDigits()} تیم",
-                        style = MaterialTheme.typography.displayMedium,
-                        color = accent
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(26.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(2, 3).forEachIndexed { i, count ->
+                ChoiceBubble(
+                    main = count.toPersianDigits(),
+                    sub = "تیم",
+                    size = 148.dp,
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.5f,
+                    modifier = Modifier.offset(y = if (i % 2 == 0) 0.dp else 30.dp),
+                    onClick = { onTeamCountSelected(count) }
+                )
             }
-            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
@@ -245,34 +240,19 @@ fun RivalBoardScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf(2, 4, 6).forEach { points ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                        ) {
+                            listOf(2, 4, 6).forEachIndexed { qIndex, points ->
                                 val cell = RivalCell(catIndex, points)
                                 val used = cell in state.usedCells
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(if (used) extras.glass else accent.copy(alpha = 0.85f))
-                                        .then(
-                                            if (used) Modifier
-                                            else Modifier.clickable {
-                                                sound?.playButtonClick()
-                                                onCellSelected(cell)
-                                            }
-                                        )
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = points.toPersianDigits(),
-                                        color = if (used) {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                        } else Color.White,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 20.sp
-                                    )
-                                }
+                                PointCoin(
+                                    value = points.toPersianDigits(),
+                                    used = used,
+                                    phase = (catIndex * 3 + qIndex) * 0.9f,
+                                    onClick = { onCellSelected(cell) }
+                                )
                             }
                         }
                     }

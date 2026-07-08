@@ -35,6 +35,8 @@ import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
+import androidx.compose.foundation.layout.offset
 
 /** انتخاب تعداد تیم‌ها: ۲ یا ۳ تیم دونفره */
 @Composable
@@ -61,34 +63,21 @@ fun GgTeamCountScreen(onTeamCountSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(2 to "۴ نفر", 3 to "۶ نفر").forEachIndexed { i, (count, people) ->
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                tilt = if (i % 2 == 0) -1.6f else 1.6f,
-                onClick = {
-                    sound?.playButtonClick()
-                    onTeamCountSelected(count)
-                }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 26.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "${count.toPersianDigits()} تیم",
-                        style = MaterialTheme.typography.displayMedium,
-                        color = accent
-                    )
-                    Text(
-                        text = people,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(26.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(2 to "۴ نفر", 3 to "۶ نفر").forEachIndexed { i, (count, people) ->
+                ChoiceBubble(
+                    main = count.toPersianDigits(),
+                    sub = "تیم — $people",
+                    size = 148.dp,
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.5f,
+                    modifier = Modifier.offset(y = if (i % 2 == 0) 0.dp else 30.dp),
+                    onClick = { onTeamCountSelected(count) }
+                )
             }
-            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
@@ -203,46 +192,26 @@ fun GgSetupScreen(onStart: (categoryCount: Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(
-            Triple(3, "کوتاه", "حدود ۱۵ دقیقه — ۹ سوال"),
-            Triple(4, "متوسط", "حدود ۲۰ دقیقه — ۱۲ سوال"),
-            Triple(6, "کامل", "حدود ۳۵ دقیقه — ۱۸ سوال"),
-        ).forEachIndexed { i, (count, title, subtitle) ->
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                tilt = if (i % 2 == 0) -1.4f else 1.4f,
-                onClick = {
-                    sound?.playButtonClick()
-                    onStart(count)
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${count.toPersianDigits()}",
-                        style = MaterialTheme.typography.displayMedium,
-                        color = accent
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(
+                Triple(3, "کوتاه", "۹ سوال"),
+                Triple(4, "متوسط", "۱۲ سوال"),
+                Triple(6, "کامل", "۱۸ سوال"),
+            ).forEachIndexed { i, (count, title, subtitle) ->
+                ChoiceBubble(
+                    main = count.toPersianDigits(),
+                    sub = "$title\n$subtitle",
+                    size = 112.dp,
+                    mainFontSize = 30.sp,
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.2f,
+                    modifier = Modifier.offset(y = if (i == 1) 34.dp else 0.dp),
+                    onClick = { onStart(count) }
+                )
             }
-            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }

@@ -21,6 +21,8 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
+import androidx.compose.foundation.layout.offset
 
 /** انتخاب تعداد بازیکنان دور: ۴ / ۶ / ۸ / ۱۰ */
 @Composable
@@ -56,38 +58,22 @@ fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
         options.chunked(2).forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally)
             ) {
                 row.forEachIndexed { colIndex, count ->
-                    GlassCard(
-                        modifier = Modifier.weight(1f),
-                        tilt = if ((rowIndex + colIndex) % 2 == 0) -1.8f else 1.8f,
-                        onClick = {
-                            sound?.playButtonClick()
-                            onPlayerCountSelected(count)
-                        }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = count.toPersianDigits(),
-                                style = MaterialTheme.typography.displayMedium,
-                                color = accent
-                            )
-                            Text(
-                                text = "نفر — ${(count / 2).toPersianDigits()} تیم",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    val zig = (rowIndex + colIndex) % 2 == 0
+                    ChoiceBubble(
+                        main = count.toPersianDigits(),
+                        sub = "نفر — ${(count / 2).toPersianDigits()} تیم",
+                        size = 136.dp,
+                        tilt = if (zig) -3f else 3f,
+                        phase = (rowIndex * 2 + colIndex) * 1.3f,
+                        modifier = Modifier.offset(y = if (zig) 0.dp else 22.dp),
+                        onClick = { onPlayerCountSelected(count) }
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }

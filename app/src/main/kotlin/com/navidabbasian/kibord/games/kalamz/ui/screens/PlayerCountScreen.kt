@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Box
+import com.navidabbasian.kibord.core.util.toPersianDigits
 
 private data class PlayerOption(val count: Int, val icon: ImageVector, val color: Color)
 
@@ -97,42 +101,21 @@ fun PlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
                 .navigationBarsPadding()
         ) {
             items(options) { option ->
-                GlassCard(
-                    onClick = {
-                        sound?.playButtonClick()
-                        onPlayerCountSelected(option.count)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    cornerRadius = 24.dp,
-                    tilt = if (options.indexOf(option) % 2 == 0) -1.8f else 1.8f,
-                    borderColor = option.color.copy(alpha = 0.45f)
+                val i = options.indexOf(option)
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            option.icon,
-                            contentDescription = null,
-                            tint = option.color,
-                            modifier = Modifier.size(30.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            "${option.count} نفر",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            "${option.count / 2} تیم",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    ChoiceBubble(
+                        main = option.count.toPersianDigits(),
+                        sub = "نفر — ${(option.count / 2).toPersianDigits()} تیم",
+                        size = 128.dp,
+                        accent = option.color,
+                        tilt = if (i % 2 == 0) -3f else 3f,
+                        phase = i * 1.1f,
+                        modifier = Modifier.offset(y = if (i % 2 == 0) 0.dp else 12.dp),
+                        onClick = { onPlayerCountSelected(option.count) }
+                    )
                 }
             }
         }

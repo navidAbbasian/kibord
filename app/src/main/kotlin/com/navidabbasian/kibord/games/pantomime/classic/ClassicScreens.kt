@@ -42,6 +42,10 @@ import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.model.PCategory
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
+import androidx.compose.foundation.layout.offset
+import com.navidabbasian.kibord.core.ui.components.PointCoin
+import com.navidabbasian.kibord.core.ui.components.TeamMedallions
 
 /** ورود نام دو تیم */
 @Composable
@@ -157,46 +161,26 @@ fun ClassicRoundsScreen(onRoundsSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(
-            Triple(3, "کوتاه", "۶ اجرا — حدود ۱۵ دقیقه"),
-            Triple(5, "متوسط", "۱۰ اجرا — حدود ۲۵ دقیقه"),
-            Triple(7, "طولانی", "۱۴ اجرا — حدود ۳۵ دقیقه"),
-        ).forEachIndexed { i, (rounds, title, subtitle) ->
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                tilt = if (i % 2 == 0) -1.4f else 1.4f,
-                onClick = {
-                    sound?.playButtonClick()
-                    onRoundsSelected(rounds)
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = rounds.toPersianDigits(),
-                        style = MaterialTheme.typography.displayMedium,
-                        color = accent
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(
+                Triple(3, "کوتاه", "۶ اجرا"),
+                Triple(5, "متوسط", "۱۰ اجرا"),
+                Triple(7, "طولانی", "۱۴ اجرا"),
+            ).forEachIndexed { i, (rounds, title, subtitle) ->
+                ChoiceBubble(
+                    main = rounds.toPersianDigits(),
+                    sub = "$title\n$subtitle",
+                    size = 112.dp,
+                    mainFontSize = 30.sp,
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.2f,
+                    modifier = Modifier.offset(y = if (i == 1) 34.dp else 0.dp),
+                    onClick = { onRoundsSelected(rounds) }
+                )
             }
-            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
@@ -223,39 +207,13 @@ fun ClassicPickScreen(
             .statusBarsPadding()
     ) {
         // ---- امتیازها و راند ----
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-        ) {
-            repeat(2) { i ->
-                val color = teamColors.getOrElse(i) { teamColors[0] }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .background(
-                            color.copy(alpha = if (i == state.performingTeam) 1f else 0.55f),
-                            RoundedCornerShape(18.dp)
-                        )
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = state.teamDisplayName(i),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = state.scores[i].toPersianDigits(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 22.sp
-                    )
-                }
-            }
-        }
+        TeamMedallions(
+            count = 2,
+            nameOf = state::teamDisplayName,
+            scoreOf = { state.scores[it] },
+            highlight = state.performingTeam,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+        )
 
         Text(
             text = "راند ${state.currentRound.toPersianDigits()} از ${state.totalRounds.toPersianDigits()} — اجرای ${state.teamDisplayName(state.performingTeam)}",
@@ -298,51 +256,26 @@ fun ClassicPickScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(2, 4, 6).forEach { points ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                        ) {
+                            listOf(2, 4, 6).forEachIndexed { qIndex, points ->
                                 val available = hasWords(category, points)
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(if (available) accent.copy(alpha = 0.85f) else extras.glass)
-                                        .then(
-                                            if (available) Modifier.clickable {
-                                                sound?.playButtonClick()
-                                                onPickWord(category, points)
-                                            } else Modifier
-                                        )
-                                        .padding(vertical = 11.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = points.toPersianDigits(),
-                                        color = if (available) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 18.sp
-                                    )
-                                }
+                                PointCoin(
+                                    value = points.toPersianDigits(),
+                                    used = !available,
+                                    phase = (catIndex * 3 + qIndex) * 0.8f,
+                                    onClick = { onPickWord(category, points) }
+                                )
                             }
                             if (goldenAvailable && hasGolden(category)) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(extras.gold)
-                                        .clickable {
-                                            sound?.playButtonClick()
-                                            onPickGolden(category)
-                                        }
-                                        .padding(vertical = 11.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "🏆${30.toPersianDigits()}",
-                                        color = Color(0xFF3D2E00),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 16.sp
-                                    )
-                                }
+                                PointCoin(
+                                    value = 30.toPersianDigits(),
+                                    golden = true,
+                                    phase = catIndex * 1.4f,
+                                    onClick = { onPickGolden(category) }
+                                )
                             }
                         }
                     }

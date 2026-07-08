@@ -92,74 +92,73 @@ fun KiBordBottomNav(
     val extras = kiExtras
     val barShape = rememberMorphingBlobShape(phase = 0.7f, periodMs = 7200)
 
-    Box(
+    Row(
         modifier = modifier
+            .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .height(86.dp)
+            .height(76.dp)
+            .background(
+                if (extras.isDark) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.97f)
+                } else {
+                    Color.White.copy(alpha = 0.95f)
+                },
+                barShape
+            )
+            .border(2.dp, extras.glassBorderStrong, barShape),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // ---- بدنه‌ی ارگانیک نوار ----
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp)
-                .fillMaxWidth()
-                .height(62.dp)
-                .background(
-                    if (extras.isDark) {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.97f)
-                    } else {
-                        Color.White.copy(alpha = 0.95f)
-                    },
-                    barShape
-                )
-                .border(2.dp, extras.glassBorderStrong, barShape),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NavItem(
-                icon = Icons.Default.Settings,
-                label = "تنظیمات",
-                selected = currentTab == HubTab.SETTINGS,
-                seed = 3,
-                onClick = { onTabSelected(HubTab.SETTINGS) }
-            )
-            // جای خالی زیر سنگ شناور خانه
-            Spacer(modifier = Modifier.weight(1f))
-            NavItem(
-                icon = Icons.Default.MenuBook,
-                label = "آموزش",
-                selected = currentTab == HubTab.HOW_TO_PLAY,
-                seed = 8,
-                onClick = { onTabSelected(HubTab.HOW_TO_PLAY) }
-            )
-        }
-
-        // ---- سنگ شناور خانه: از نوار بیرون زده ----
-        HomePebble(
+        NavPebbleItem(
+            icon = Icons.Default.Settings,
+            label = "تنظیمات",
+            selected = currentTab == HubTab.SETTINGS,
+            pebbleSize = 44.dp,
+            iconSize = 21.dp,
+            phase = 1.1f,
+            onClick = { onTabSelected(HubTab.SETTINGS) }
+        )
+        // خانه ۱۵٪ بزرگ‌تر از دو تب کناری
+        NavPebbleItem(
+            icon = Icons.Default.Home,
+            label = "خانه",
             selected = currentTab == HubTab.HOME,
-            onClick = { onTabSelected(HubTab.HOME) },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (-24).dp)
+            pebbleSize = 51.dp,
+            iconSize = 25.dp,
+            phase = 2.4f,
+            onClick = { onTabSelected(HubTab.HOME) }
+        )
+        NavPebbleItem(
+            icon = Icons.Default.MenuBook,
+            label = "آموزش",
+            selected = currentTab == HubTab.HOW_TO_PLAY,
+            pebbleSize = 44.dp,
+            iconSize = 21.dp,
+            phase = 3.7f,
+            onClick = { onTabSelected(HubTab.HOW_TO_PLAY) }
         )
     }
 }
 
+/** آیتم ناوبری: آیکن داخل سنگریزه‌ی مورف‌شونده — بنفش وقتی فعال، شیشه‌ای وقتی غیرفعال */
 @Composable
-private fun RowScope.NavItem(
+private fun RowScope.NavPebbleItem(
     icon: ImageVector,
     label: String,
     selected: Boolean,
-    seed: Int,
+    pebbleSize: androidx.compose.ui.unit.Dp,
+    iconSize: androidx.compose.ui.unit.Dp,
+    phase: Float,
     onClick: () -> Unit
 ) {
     val sound = LocalSoundManager.current
     val extras = kiExtras
-    val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val pebble = rememberMorphingBlobShape(phase = phase, periodMs = 4800)
     val bounce by animateFloatAsState(
-        targetValue = if (selected) 1.15f else 1f,
+        targetValue = if (selected) 1.04f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "tab_bounce"
+        label = "pebble_bounce"
     )
+
     Column(
         modifier = Modifier
             .weight(1f)
@@ -172,66 +171,18 @@ private fun RowScope.NavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // آیکن تب فعال داخل سنگریزه‌ی بنفشِ کم‌رنگ می‌نشیند
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(pebbleSize)
+                .then(
+                    if (selected) Modifier.breathing(intensity = 0.025f, periodMs = 2000, phase = phase)
+                    else Modifier
+                )
                 .graphicsLayer {
                     scaleX = bounce
                     scaleY = bounce
                     rotationZ = if (selected) -4f else 0f
                 }
-                .background(
-                    if (selected) VioletPrimary.copy(alpha = 0.22f) else Color.Transparent,
-                    blobShape(seed = seed)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = tint,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = tint
-        )
-    }
-}
-
-@Composable
-private fun HomePebble(
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val sound = LocalSoundManager.current
-    val extras = kiExtras
-    val pebble = rememberMorphingBlobShape(phase = 2.4f, periodMs = 4800)
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.88f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "home_scale"
-    )
-
-    Box(modifier = modifier.size(74.dp), contentAlignment = Alignment.Center) {
-        // هاله‌ی ضربان‌دار
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(62.dp)
-                    .breathing(intensity = 0.16f, periodMs = 1800)
-                    .background(VioletPrimary.copy(alpha = 0.3f), pebble)
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(58.dp)
-                .graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = -3f }
                 .background(
                     if (selected) {
                         Brush.radialGradient(
@@ -241,7 +192,7 @@ private fun HomePebble(
                                 VioletDeep
                             ),
                             center = androidx.compose.ui.geometry.Offset(0.32f, 0.25f),
-                            radius = 170f
+                            radius = 150f
                         )
                     } else {
                         Brush.radialGradient(listOf(extras.glassStrong, extras.glassStrong))
@@ -249,32 +200,25 @@ private fun HomePebble(
                     pebble
                 )
                 .border(
-                    2.5.dp,
-                    if (selected) Color.White.copy(alpha = 0.55f) else extras.glassBorderStrong,
+                    2.dp,
+                    if (selected) Color.White.copy(alpha = 0.55f) else extras.glassBorder,
                     pebble
-                )
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = { sound?.playButtonClick(); onClick() }
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = "خانه",
+                imageVector = icon,
+                contentDescription = label,
                 tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(27.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
-        // جرقه‌ی معلق کنار سنگ فعال
-        if (selected) {
-            BobbingEmoji(
-                emoji = "✨",
-                fontSize = 13.sp,
-                phase = 1.2f,
-                modifier = Modifier.align(Alignment.TopEnd)
-            )
-        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

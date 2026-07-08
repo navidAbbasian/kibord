@@ -53,6 +53,8 @@ sealed class GgPhase {
     data object Bid : GgPhase()
     /** ۳۰ ثانیه شمارش با دکمه */
     data object Play : GgPhase()
+    /** ۱۰ ثانیه بازبینی نهایی شمارش با دکمه‌های کم/زیاد */
+    data object Review : GgPhase()
     data object Result : GgPhase()
     data object Winner : GgPhase()
 }
@@ -74,6 +76,10 @@ data class GandeGooUiState(
     val claim: Int = 5,
     val timeLeftMillis: Long = TURN_MILLIS,
     val counted: Int = 0,
+    /** ویدیو چک: توقف بازی برای داوری انسانی جواب */
+    val isVideoCheck: Boolean = false,
+    /** زمان باقی‌مانده‌ی بازبینی نهایی شمارش */
+    val reviewTimeLeftMillis: Long = REVIEW_MILLIS,
     val lastOutcome: GgOutcome? = null,
 ) {
     val selectedQuestion: GgQuestion?
@@ -92,6 +98,7 @@ data class GandeGooUiState(
 
     companion object {
         const val TURN_MILLIS = 30_000L
+        const val REVIEW_MILLIS = 10_000L
     }
 }
 

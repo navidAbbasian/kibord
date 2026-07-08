@@ -16,6 +16,7 @@ import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgBidScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgBoardScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgPlayScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgResultScreen
+import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgReviewScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgSetupScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgTeamCountScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgTeamNamesScreen
@@ -109,6 +110,30 @@ fun GandeGooGame(
                             viewModel.incrementCount()
                         },
                         onUndo = {
+                            sound?.playWordSkip()
+                            viewModel.decrementCount()
+                        },
+                        onStartVideoCheck = {
+                            sound?.playButtonClick()
+                            sound?.vibrate(60)
+                            viewModel.startVideoCheck()
+                        },
+                        onEndVideoCheck = {
+                            sound?.playButtonClick()
+                            viewModel.endVideoCheck()
+                        }
+                    )
+                }
+
+                GgPhase.Review -> {
+                    BackHandler { }
+                    GgReviewScreen(
+                        state = state,
+                        onIncrement = {
+                            sound?.playCorrectWord()
+                            viewModel.incrementCount()
+                        },
+                        onDecrement = {
                             sound?.playWordSkip()
                             viewModel.decrementCount()
                         }

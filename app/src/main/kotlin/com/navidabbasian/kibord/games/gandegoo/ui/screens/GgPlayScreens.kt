@@ -61,6 +61,10 @@ import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgOutcome
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.components.TicketCard
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.StickerTitle
+import com.navidabbasian.kibord.core.ui.components.blobShape
+import androidx.compose.foundation.border
 
 /** ثبت نتیجه‌ی گنده‌گویی حضوری: تیم برنده‌ی مزایده و عدد ادعا */
 @Composable
@@ -220,6 +224,8 @@ fun GgPlayScreen(
     state: GandeGooUiState,
     onCount: () -> Unit,
     onUndo: () -> Unit,
+    onStartVideoCheck: () -> Unit,
+    onEndVideoCheck: () -> Unit,
 ) {
     val extras = kiExtras
     val teamColors = extras.teamColors
@@ -239,6 +245,7 @@ fun GgPlayScreen(
         label = "gg_progress"
     )
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -350,7 +357,7 @@ fun GgPlayScreen(
                 Box(
                     modifier = Modifier
                         .size(46.dp)
-                        .background(extras.glassStrong, CircleShape),
+                        .background(extras.glassStrong, blobShape(seed = 4)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -366,7 +373,250 @@ fun GgPlayScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.width(18.dp))
+            // ---- ویدیو چک: توقف بازی برای داوری ----
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .graphicsLayer { rotationZ = 1.5f }
+                    .background(extras.glassStrong, blobShape(seed = 9))
+                    .border(1.5.dp, extras.warning.copy(alpha = 0.7f), blobShape(seed = 9))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onStartVideoCheck
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text(text = "📹", fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "ویدیو چک",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
+    }
+
+    // ---- روکش ویدیو چک: زمان یخ زده تا داورها جواب را بررسی کنند ----
+    if (state.isVideoCheck) {
+        GgVideoCheckOverlay(
+            state = state,
+            onBackToGame = onEndVideoCheck
+        )
+    }
+    }
+}
+
+/** روکش تمام‌صفحه‌ی ویدیو چک — بازی و تایمر متوقف است */
+@Composable
+private fun GgVideoCheckOverlay(
+    state: GandeGooUiState,
+    onBackToGame: () -> Unit,
+) {
+    val extras = kiExtras
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* بلعیدن لمس‌ها — شمارش پشت روکش نخورد */ },
+        contentAlignment = Alignment.Center
+    ) {
+        TicketCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
+            accent = extras.warning,
+            tilt = -1.5f
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BobbingEmoji(emoji = "📹", fontSize = 46.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                StickerTitle(text = "ویدیو چک", accent = extras.warning, rotation = -2f, fontSize = 26.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "بازی متوقف شد ⏸\nصحت جواب‌ها رو با خیال راحت بررسی کنید",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 24.sp
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "⏱ ${(state.timeLeftMillis / 1000).toInt().toPersianDigits()} ثانیه مانده — " +
+                        "شمارش: ${state.counted.toPersianDigits()} از ${state.claim.toPersianDigits()}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                KButton(
+                    text = "برگشت به بازی ▶️",
+                    onClick = onBackToGame,
+                    accent = extras.warning
+                )
+            }
+        }
+    }
+}
+
+/** بازبینی نهایی: ۱۰ ثانیه فرصت اصلاح شمارش با دکمه‌های کم/زیاد */
+@Composable
+fun GgReviewScreen(
+    state: GandeGooUiState,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+) {
+    val extras = kiExtras
+    val teamColors = extras.teamColors
+    val teamColor = teamColors.getOrElse(state.claimingTeam) { teamColors[0] }
+    val seconds = (state.reviewTimeLeftMillis / 1000).toInt()
+
+    val reviewProgress by animateFloatAsState(
+        targetValue = state.reviewTimeLeftMillis.toFloat() / GandeGooUiState.REVIEW_MILLIS,
+        animationSpec = tween(120),
+        label = "review_progress"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        BobbingEmoji(emoji = "🧐", fontSize = 50.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        StickerTitle(text = "بازبینی نهایی", rotation = 2f, fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "شمارش درست بود؟ تا آخر وقت می‌تونید اصلاحش کنید",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ---- شمارش‌گر معکوس بازبینی ----
+        Box(
+            modifier = Modifier
+                .size(92.dp)
+                .then(if (seconds <= 3) Modifier.breathing(intensity = 0.06f, periodMs = 600) else Modifier),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(92.dp)) {
+                drawArc(
+                    color = extras.glassStrong,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    style = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round)
+                )
+                drawArc(
+                    color = if (seconds <= 3) extras.danger else extras.warning,
+                    startAngle = -90f,
+                    sweepAngle = 360f * reviewProgress,
+                    useCenter = false,
+                    style = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+            Text(
+                text = seconds.toPersianDigits(),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                color = if (seconds <= 3) extras.danger else MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // ---- عدد نهایی و دکمه‌های اصلاح ----
+        Text(
+            text = state.teamDisplayName(state.claimingTeam),
+            style = MaterialTheme.typography.titleLarge,
+            color = teamColor
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .graphicsLayer { rotationZ = 4f }
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(lerp(extras.success, Color.White, 0.2f), extras.success),
+                            center = androidx.compose.ui.geometry.Offset(0.3f, 0.25f),
+                            radius = 190f
+                        ),
+                        blobShape(seed = 21)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onIncrement
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "زیاد کن", tint = Color.White, modifier = Modifier.size(30.dp))
+            }
+            Spacer(modifier = Modifier.width(24.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = state.counted.toPersianDigits(),
+                    fontSize = 72.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "از ${state.claim.toPersianDigits()} ادعا",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(24.dp))
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .graphicsLayer { rotationZ = -4f }
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(lerp(extras.danger, Color.White, 0.2f), extras.danger),
+                            center = androidx.compose.ui.geometry.Offset(0.3f, 0.25f),
+                            radius = 190f
+                        ),
+                        blobShape(seed = 27)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDecrement
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = "کم کن", tint = Color.White, modifier = Modifier.size(30.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "بعد از پایان وقت، امتیاز با همین عدد حساب می‌شه",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(bottom = 20.dp)
+        )
     }
 }
 

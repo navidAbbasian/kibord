@@ -118,6 +118,8 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
                 phase = GgPhase.Play,
                 timeLeftMillis = GandeGooUiState.TURN_MILLIS,
                 counted = 0,
+                isVideoCheck = false,
+                reviewTimeLeftMillis = GandeGooUiState.REVIEW_MILLIS,
             )
         }
         startTicker()
@@ -125,20 +127,53 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
 
     fun incrementCount() {
         val state = _uiState.value
-        if (state.phase != GgPhase.Play) return
-        val newCount = state.counted + 1
-        _uiState.update { it.copy(counted = newCount) }
-        if (newCount >= state.claim) {
-            // به ادعا رسید — موفقیت کامل، بدون انتظار برای پایان تایمر
-            emitSound(GgSoundEvent.FULL_SUCCESS)
-            resolveAttempt()
+        when (state.phase) {
+            GgPhase.Play -> {
+                if (state.isVideoCheck) return
+                val newCount = state.counted + 1
+                _uiState.update { it.copy(counted = newCount) }
+                if (newCount >= state.claim) {
+                    // به ادعا رسید — جشن، و بعد بازبینی نهایی
+                    emitSound(GgSoundEvent.FULL_SUCCESS)
+                    enterReview()
+                }
+            }
+            // در بازبینی فقط عدد اصلاح می‌شود؛ رسیدن به ادعا چیزی را نمی‌بندد
+            GgPhase.Review -> _uiState.update { it.copy(counted = (it.counted + 1).coerceAtMost(99)) }
+            else -> return
         }
     }
 
     fun decrementCount() {
         val state = _uiState.value
-        if (state.phase != GgPhase.Play) return
+        if (state.phase != GgPhase.Play && state.phase != GgPhase.Review) return
+        if (state.phase == GgPhase.Play && state.isVideoCheck) return
         _uiState.update { it.copy(counted = (it.counted - 1).coerceAtLeast(0)) }
+    }
+
+    // ---- ویدیو چک: توقف بازی برای داوری انسانی ----
+
+    fun startVideoCheck() {
+        val state = _uiState.value
+        if (state.phase != GgPhase.Play || state.isVideoCheck) return
+        _uiState.update { it.copy(isVideoCheck = true) }
+    }
+
+    fun endVideoCheck() {
+        if (!_uiState.value.isVideoCheck) return
+        _uiState.update { it.copy(isVideoCheck = false) }
+    }
+
+    /** ورود به ۱۰ ثانیه‌ی بازبینی نهایی شمارش */
+    private fun enterReview() {
+        lastWholeSecond = (GandeGooUiState.REVIEW_MILLIS / 1000).toInt()
+        _uiState.update {
+            it.copy(
+                phase = GgPhase.Review,
+                isVideoCheck = false,
+                reviewTimeLeftMillis = GandeGooUiState.REVIEW_MILLIS,
+            )
+        }
     }
 
     private fun startTicker() {
@@ -151,19 +186,41 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
                 val delta = now - last
                 last = now
                 val state = _uiState.value
-                if (state.phase != GgPhase.Play) continue
 
-                val newLeft = (state.timeLeftMillis - delta).coerceAtLeast(0)
-                val second = (newLeft / 1000).toInt()
-                if (second != lastWholeSecond) {
-                    lastWholeSecond = second
-                    emitSound(if (second <= 5) GgSoundEvent.TICK_WARNING else GgSoundEvent.TICK)
-                }
-                _uiState.update { it.copy(timeLeftMillis = newLeft) }
+                when {
+                    // ویدیو چک: زمان یخ می‌زند
+                    state.phase == GgPhase.Play && state.isVideoCheck -> continue
 
-                if (newLeft <= 0) {
-                    emitSound(GgSoundEvent.TIME_UP)
-                    resolveAttempt()
+                    state.phase == GgPhase.Play -> {
+                        val newLeft = (state.timeLeftMillis - delta).coerceAtLeast(0)
+                        val second = (newLeft / 1000).toInt()
+                        if (second != lastWholeSecond) {
+                            lastWholeSecond = second
+                            emitSound(if (second <= 5) GgSoundEvent.TICK_WARNING else GgSoundEvent.TICK)
+                        }
+                        _uiState.update { it.copy(timeLeftMillis = newLeft) }
+
+                        if (newLeft <= 0) {
+                            emitSound(GgSoundEvent.TIME_UP)
+                            enterReview()
+                        }
+                    }
+
+                    state.phase == GgPhase.Review -> {
+                        val newLeft = (state.reviewTimeLeftMillis - delta).coerceAtLeast(0)
+                        val second = (newLeft / 1000).toInt()
+                        if (second != lastWholeSecond) {
+                            lastWholeSecond = second
+                            emitSound(GgSoundEvent.TICK)
+                        }
+                        _uiState.update { it.copy(reviewTimeLeftMillis = newLeft) }
+
+                        if (newLeft <= 0) {
+                            resolveAttempt()
+                        }
+                    }
+
+                    else -> continue
                 }
             }
         }

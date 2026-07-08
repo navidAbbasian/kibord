@@ -44,10 +44,15 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
+import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.components.rememberMorphingBlobShape
 import com.navidabbasian.kibord.core.ui.theme.VioletDeep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -85,42 +90,56 @@ fun KiBordBottomNav(
     modifier: Modifier = Modifier
 ) {
     val extras = kiExtras
-    Row(
+    val barShape = rememberMorphingBlobShape(phase = 0.7f, periodMs = 7200)
+
+    Box(
         modifier = modifier
-            .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .height(64.dp)
-            .clip(RoundedCornerShape(32.dp))
-            .background(
-                if (extras.isDark) {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
-                } else {
-                    Color.White.copy(alpha = 0.94f)
-                }
-            )
-            .background(
-                Brush.verticalGradient(
-                    listOf(extras.glassBorder.copy(alpha = 0.08f), Color.Transparent)
-                )
-            ),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+            .height(86.dp)
     ) {
-        NavItem(
-            icon = Icons.Default.Settings,
-            label = "تنظیمات",
-            selected = currentTab == HubTab.SETTINGS,
-            onClick = { onTabSelected(HubTab.SETTINGS) }
-        )
-        NavHomeItem(
+        // ---- بدنه‌ی ارگانیک نوار ----
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .fillMaxWidth()
+                .height(62.dp)
+                .background(
+                    if (extras.isDark) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.97f)
+                    } else {
+                        Color.White.copy(alpha = 0.95f)
+                    },
+                    barShape
+                )
+                .border(2.dp, extras.glassBorderStrong, barShape),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavItem(
+                icon = Icons.Default.Settings,
+                label = "تنظیمات",
+                selected = currentTab == HubTab.SETTINGS,
+                seed = 3,
+                onClick = { onTabSelected(HubTab.SETTINGS) }
+            )
+            // جای خالی زیر سنگ شناور خانه
+            Spacer(modifier = Modifier.weight(1f))
+            NavItem(
+                icon = Icons.Default.MenuBook,
+                label = "آموزش",
+                selected = currentTab == HubTab.HOW_TO_PLAY,
+                seed = 8,
+                onClick = { onTabSelected(HubTab.HOW_TO_PLAY) }
+            )
+        }
+
+        // ---- سنگ شناور خانه: از نوار بیرون زده ----
+        HomePebble(
             selected = currentTab == HubTab.HOME,
-            onClick = { onTabSelected(HubTab.HOME) }
-        )
-        NavItem(
-            icon = Icons.Default.MenuBook,
-            label = "آموزش",
-            selected = currentTab == HubTab.HOW_TO_PLAY,
-            onClick = { onTabSelected(HubTab.HOW_TO_PLAY) }
+            onClick = { onTabSelected(HubTab.HOME) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-24).dp)
         )
     }
 }
@@ -130,12 +149,14 @@ private fun RowScope.NavItem(
     icon: ImageVector,
     label: String,
     selected: Boolean,
+    seed: Int,
     onClick: () -> Unit
 ) {
     val sound = LocalSoundManager.current
+    val extras = kiExtras
     val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     val bounce by animateFloatAsState(
-        targetValue = if (selected) 1.18f else 1f,
+        targetValue = if (selected) 1.15f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "tab_bounce"
     )
@@ -151,15 +172,28 @@ private fun RowScope.NavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = tint,
+        // آیکن تب فعال داخل سنگریزه‌ی بنفشِ کم‌رنگ می‌نشیند
+        Box(
             modifier = Modifier
-                .size(22.dp)
-                .graphicsLayer { scaleX = bounce; scaleY = bounce }
-        )
-        Spacer(modifier = Modifier.height(2.dp))
+                .size(34.dp)
+                .graphicsLayer {
+                    scaleX = bounce
+                    scaleY = bounce
+                    rotationZ = if (selected) -4f else 0f
+                }
+                .background(
+                    if (selected) VioletPrimary.copy(alpha = 0.22f) else Color.Transparent,
+                    blobShape(seed = seed)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(22.dp)
+            )
+        }
         Text(
             text = label,
             fontSize = 10.sp,
@@ -170,38 +204,54 @@ private fun RowScope.NavItem(
 }
 
 @Composable
-private fun RowScope.NavHomeItem(selected: Boolean, onClick: () -> Unit) {
+private fun HomePebble(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val sound = LocalSoundManager.current
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight(),
-        contentAlignment = Alignment.Center
-    ) {
-        // هاله‌ی ضربان‌دار دور دکمه‌ی خانه
+    val extras = kiExtras
+    val pebble = rememberMorphingBlobShape(phase = 2.4f, periodMs = 4800)
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1f else 0.88f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "home_scale"
+    )
+
+    Box(modifier = modifier.size(74.dp), contentAlignment = Alignment.Center) {
+        // هاله‌ی ضربان‌دار
         if (selected) {
             Box(
                 modifier = Modifier
-                    .size(50.dp)
-                    .breathing(intensity = 0.14f, periodMs = 1800)
-                    .background(VioletPrimary.copy(alpha = 0.35f), CircleShape)
+                    .size(62.dp)
+                    .breathing(intensity = 0.16f, periodMs = 1800)
+                    .background(VioletPrimary.copy(alpha = 0.3f), pebble)
             )
         }
         Box(
             modifier = Modifier
-                .size(50.dp)
+                .size(58.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = -3f }
                 .background(
                     if (selected) {
-                        Brush.linearGradient(listOf(VioletPrimary, VioletDeep))
-                    } else {
-                        Brush.linearGradient(
-                            listOf(
-                                kiExtras.glassStrong,
-                                kiExtras.glassStrong
-                            )
+                        Brush.radialGradient(
+                            colors = listOf(
+                                androidx.compose.ui.graphics.lerp(VioletPrimary, Color.White, 0.2f),
+                                VioletPrimary,
+                                VioletDeep
+                            ),
+                            center = androidx.compose.ui.geometry.Offset(0.32f, 0.25f),
+                            radius = 170f
                         )
+                    } else {
+                        Brush.radialGradient(listOf(extras.glassStrong, extras.glassStrong))
                     },
-                    CircleShape
+                    pebble
+                )
+                .border(
+                    2.5.dp,
+                    if (selected) Color.White.copy(alpha = 0.55f) else extras.glassBorderStrong,
+                    pebble
                 )
                 .clickable(
                     indication = null,
@@ -214,7 +264,16 @@ private fun RowScope.NavHomeItem(selected: Boolean, onClick: () -> Unit) {
                 imageVector = Icons.Default.Home,
                 contentDescription = "خانه",
                 tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.size(27.dp)
+            )
+        }
+        // جرقه‌ی معلق کنار سنگ فعال
+        if (selected) {
+            BobbingEmoji(
+                emoji = "✨",
+                fontSize = 13.sp,
+                phase = 1.2f,
+                modifier = Modifier.align(Alignment.TopEnd)
             )
         }
     }

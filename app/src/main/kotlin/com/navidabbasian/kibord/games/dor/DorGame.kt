@@ -25,6 +25,7 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.dor.model.DorPhase
 import com.navidabbasian.kibord.games.dor.model.DorSoundEvent
 import com.navidabbasian.kibord.games.dor.ui.screens.DorCategoryScreen
@@ -79,80 +80,82 @@ fun DorGame(
     }
 
     KiBackground {
-        when (val phase = state.phase) {
-            DorPhase.PlayerCount -> {
-                BackHandler { onExitToHub() }
-                DorPlayerCountScreen(onPlayerCountSelected = viewModel::setPlayerCount)
-            }
-
-            DorPhase.PlayerNames -> {
-                BackHandler { viewModel.navigateBack() }
-                DorPlayerNamesScreen(
-                    playerNames = state.playerNames,
-                    onNameChanged = viewModel::updatePlayerName,
-                    onConfirm = viewModel::confirmNames
-                )
-            }
-
-            DorPhase.Categories -> {
-                BackHandler { viewModel.navigateBack() }
-                DorCategoryScreen(
-                    categories = state.categories,
-                    selectedIds = state.selectedCategoryIds,
-                    onToggle = viewModel::toggleCategory,
-                    onSelectAll = viewModel::selectAllCategories,
-                    onAddWord = viewModel::addCustomWord,
-                    onConfirm = viewModel::confirmCategories
-                )
-            }
-
-            DorPhase.Mode -> {
-                BackHandler { viewModel.navigateBack() }
-                DorModeScreen(onModeSelected = viewModel::selectMode)
-            }
-
-            DorPhase.Playing -> {
-                BackHandler { viewModel.pauseGame() }
-                DorGameScreen(
-                    state = state,
-                    nextPlayerName = viewModel.nextPlayerName(),
-                    onCenterTap = viewModel::onCenterTap,
-                    onSkip = viewModel::skipWord,
-                    onPause = viewModel::pauseGame
-                )
-
-                if (state.showPauseDialog) {
-                    PauseDialog(
-                        onResume = viewModel::resumeGame,
-                        onEndGame = {
+        PhaseTransition(key = state.phase::class) {
+            when (val phase = state.phase) {
+                DorPhase.PlayerCount -> {
+                    BackHandler { onExitToHub() }
+                    DorPlayerCountScreen(onPlayerCountSelected = viewModel::setPlayerCount)
+                }
+    
+                DorPhase.PlayerNames -> {
+                    BackHandler { viewModel.navigateBack() }
+                    DorPlayerNamesScreen(
+                        playerNames = state.playerNames,
+                        onNameChanged = viewModel::updatePlayerName,
+                        onConfirm = viewModel::confirmNames
+                    )
+                }
+    
+                DorPhase.Categories -> {
+                    BackHandler { viewModel.navigateBack() }
+                    DorCategoryScreen(
+                        categories = state.categories,
+                        selectedIds = state.selectedCategoryIds,
+                        onToggle = viewModel::toggleCategory,
+                        onSelectAll = viewModel::selectAllCategories,
+                        onAddWord = viewModel::addCustomWord,
+                        onConfirm = viewModel::confirmCategories
+                    )
+                }
+    
+                DorPhase.Mode -> {
+                    BackHandler { viewModel.navigateBack() }
+                    DorModeScreen(onModeSelected = viewModel::selectMode)
+                }
+    
+                DorPhase.Playing -> {
+                    BackHandler { viewModel.pauseGame() }
+                    DorGameScreen(
+                        state = state,
+                        nextPlayerName = viewModel.nextPlayerName(),
+                        onCenterTap = viewModel::onCenterTap,
+                        onSkip = viewModel::skipWord,
+                        onPause = viewModel::pauseGame
+                    )
+    
+                    if (state.showPauseDialog) {
+                        PauseDialog(
+                            onResume = viewModel::resumeGame,
+                            onEndGame = {
+                                viewModel.playAgain()
+                                onExitToHub()
+                            }
+                        )
+                    }
+                }
+    
+                is DorPhase.TeamEliminated -> {
+                    BackHandler { viewModel.continueAfterElimination() }
+                    DorEliminatedScreen(
+                        team = phase.team,
+                        onContinue = viewModel::continueAfterElimination
+                    )
+                }
+    
+                is DorPhase.Winner -> {
+                    BackHandler {
+                        viewModel.playAgain()
+                        onExitToHub()
+                    }
+                    DorWinnerScreen(
+                        winner = phase.team,
+                        onPlayAgain = viewModel::playAgain,
+                        onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()
                         }
                     )
                 }
-            }
-
-            is DorPhase.TeamEliminated -> {
-                BackHandler { viewModel.continueAfterElimination() }
-                DorEliminatedScreen(
-                    team = phase.team,
-                    onContinue = viewModel::continueAfterElimination
-                )
-            }
-
-            is DorPhase.Winner -> {
-                BackHandler {
-                    viewModel.playAgain()
-                    onExitToHub()
-                }
-                DorWinnerScreen(
-                    winner = phase.team,
-                    onPlayAgain = viewModel::playAgain,
-                    onExitToHub = {
-                        viewModel.playAgain()
-                        onExitToHub()
-                    }
-                )
             }
         }
     }

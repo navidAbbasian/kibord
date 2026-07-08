@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.gandegoo.model.GgPhase
 import com.navidabbasian.kibord.games.gandegoo.model.GgSoundEvent
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgBidScreen
@@ -57,84 +58,86 @@ fun GandeGooGame(
     }
 
     KiBackground {
-        when (state.phase) {
-            GgPhase.TeamCount -> {
-                BackHandler { onExitToHub() }
-                GgTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
-            }
-
-            GgPhase.TeamNames -> {
-                BackHandler { viewModel.navigateBack() }
-                GgTeamNamesScreen(
-                    teamCount = state.teamCount,
-                    teamNames = state.teamNames,
-                    onNameChanged = viewModel::updateTeamName,
-                    onConfirm = viewModel::confirmTeamNames
-                )
-            }
-
-            GgPhase.Setup -> {
-                BackHandler { viewModel.navigateBack() }
-                GgSetupScreen(onStart = viewModel::startGame)
-            }
-
-            GgPhase.Board -> {
-                BackHandler { onExitToHub() }
-                GgBoardScreen(
-                    state = state,
-                    onCellSelected = viewModel::selectCell
-                )
-            }
-
-            GgPhase.Bid -> {
-                BackHandler { viewModel.cancelBid() }
-                GgBidScreen(
-                    state = state,
-                    onClaimingTeamChanged = viewModel::setClaimingTeam,
-                    onClaimChanged = viewModel::setClaim,
-                    onStart = viewModel::startAttempt,
-                    onCancel = viewModel::cancelBid
-                )
-            }
-
-            GgPhase.Play -> {
-                // حین شمارش، بازگشت غیرفعال است تا دست خراب نشود
-                BackHandler { }
-                GgPlayScreen(
-                    state = state,
-                    onCount = {
-                        sound?.playCorrectWord()
-                        viewModel.incrementCount()
-                    },
-                    onUndo = {
-                        sound?.playWordSkip()
-                        viewModel.decrementCount()
-                    }
-                )
-            }
-
-            GgPhase.Result -> {
-                BackHandler { viewModel.proceedAfterResult() }
-                GgResultScreen(
-                    state = state,
-                    onProceed = viewModel::proceedAfterResult
-                )
-            }
-
-            GgPhase.Winner -> {
-                BackHandler {
-                    viewModel.playAgain()
-                    onExitToHub()
+        PhaseTransition(key = state.phase::class) {
+            when (state.phase) {
+                GgPhase.TeamCount -> {
+                    BackHandler { onExitToHub() }
+                    GgTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
                 }
-                GgWinnerScreen(
-                    state = state,
-                    winners = viewModel.winners(),
-                    onPlayAgain = viewModel::playAgain,
-                    onExitToHub = {
+    
+                GgPhase.TeamNames -> {
+                    BackHandler { viewModel.navigateBack() }
+                    GgTeamNamesScreen(
+                        teamCount = state.teamCount,
+                        teamNames = state.teamNames,
+                        onNameChanged = viewModel::updateTeamName,
+                        onConfirm = viewModel::confirmTeamNames
+                    )
+                }
+    
+                GgPhase.Setup -> {
+                    BackHandler { viewModel.navigateBack() }
+                    GgSetupScreen(onStart = viewModel::startGame)
+                }
+    
+                GgPhase.Board -> {
+                    BackHandler { onExitToHub() }
+                    GgBoardScreen(
+                        state = state,
+                        onCellSelected = viewModel::selectCell
+                    )
+                }
+    
+                GgPhase.Bid -> {
+                    BackHandler { viewModel.cancelBid() }
+                    GgBidScreen(
+                        state = state,
+                        onClaimingTeamChanged = viewModel::setClaimingTeam,
+                        onClaimChanged = viewModel::setClaim,
+                        onStart = viewModel::startAttempt,
+                        onCancel = viewModel::cancelBid
+                    )
+                }
+    
+                GgPhase.Play -> {
+                    // حین شمارش، بازگشت غیرفعال است تا دست خراب نشود
+                    BackHandler { }
+                    GgPlayScreen(
+                        state = state,
+                        onCount = {
+                            sound?.playCorrectWord()
+                            viewModel.incrementCount()
+                        },
+                        onUndo = {
+                            sound?.playWordSkip()
+                            viewModel.decrementCount()
+                        }
+                    )
+                }
+    
+                GgPhase.Result -> {
+                    BackHandler { viewModel.proceedAfterResult() }
+                    GgResultScreen(
+                        state = state,
+                        onProceed = viewModel::proceedAfterResult
+                    )
+                }
+    
+                GgPhase.Winner -> {
+                    BackHandler {
                         viewModel.playAgain()
                         onExitToHub()
                     }
-                )
+                    GgWinnerScreen(
+                        state = state,
+                        winners = viewModel.winners(),
+                        onPlayAgain = viewModel::playAgain,
+                        onExitToHub = {
+                            viewModel.playAgain()
+                            onExitToHub()
+                        }
+                    )
+                }
             }
         }
     }

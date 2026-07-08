@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.pantomime.model.PantoSoundEvent
 import com.navidabbasian.kibord.games.pantomime.ui.PantoPerformScreen
@@ -54,90 +55,92 @@ fun RivalPantomimeGame(
     }
 
     KiBackground {
-        when (state.phase) {
-            RivalPhase.TeamCount -> {
-                BackHandler { onExitToHub() }
-                RivalTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
-            }
-
-            RivalPhase.TeamNames -> {
-                BackHandler { viewModel.navigateBack() }
-                RivalTeamNamesScreen(
-                    teamCount = state.teamCount,
-                    teamNames = state.teamNames,
-                    onNameChanged = viewModel::updateTeamName,
-                    onConfirm = viewModel::confirmTeamNames
-                )
-            }
-
-            RivalPhase.Board -> {
-                BackHandler { onExitToHub() }
-                RivalBoardScreen(
-                    state = state,
-                    onCellSelected = viewModel::selectCell
-                )
-            }
-
-            RivalPhase.Reveal -> {
-                BackHandler { }
-                state.attempt?.let { attempt ->
-                    PantoWordRevealScreen(
-                        attempt = attempt,
-                        performerTeamName = state.teamDisplayName(state.pickingTeam),
-                        teamColor = teamColors.getOrElse(state.pickingTeam) { teamColors[0] },
-                        onStartPerform = viewModel::startPerform
+        PhaseTransition(key = state.phase::class) {
+            when (state.phase) {
+                RivalPhase.TeamCount -> {
+                    BackHandler { onExitToHub() }
+                    RivalTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
+                }
+    
+                RivalPhase.TeamNames -> {
+                    BackHandler { viewModel.navigateBack() }
+                    RivalTeamNamesScreen(
+                        teamCount = state.teamCount,
+                        teamNames = state.teamNames,
+                        onNameChanged = viewModel::updateTeamName,
+                        onConfirm = viewModel::confirmTeamNames
                     )
                 }
-            }
-
-            RivalPhase.Perform -> {
-                BackHandler { }
-                state.attempt?.let { attempt ->
-                    PantoPerformScreen(
-                        attempt = attempt,
-                        timeLeftMillis = state.timeLeftMillis,
-                        performerTeamName = state.teamDisplayName(state.pickingTeam),
-                        teamColor = teamColors.getOrElse(state.pickingTeam) { teamColors[0] },
-                        onSuccess = viewModel::markSuccess,
-                        onFail = viewModel::markFail
+    
+                RivalPhase.Board -> {
+                    BackHandler { onExitToHub() }
+                    RivalBoardScreen(
+                        state = state,
+                        onCellSelected = viewModel::selectCell
                     )
                 }
-            }
-
-            RivalPhase.Result -> {
-                BackHandler { viewModel.proceedAfterResult() }
-                state.lastResult?.let { result ->
-                    PantoResultScreen(
-                        result = result,
-                        performerTeamName = state.teamDisplayName(result.performingTeam),
-                        teamColor = teamColors.getOrElse(result.performingTeam) { teamColors[0] },
-                        scoresContent = {
-                            TeamScoreChips(
-                                count = state.teamCount,
-                                nameOf = state::teamDisplayName,
-                                scoreOf = { state.scores[it] },
-                            )
-                        },
-                        onProceed = viewModel::proceedAfterResult,
-                        proceedLabel = if (state.allCellsPlayed) "کی برد؟ 🏆" else "ادامه"
-                    )
+    
+                RivalPhase.Reveal -> {
+                    BackHandler { }
+                    state.attempt?.let { attempt ->
+                        PantoWordRevealScreen(
+                            attempt = attempt,
+                            performerTeamName = state.teamDisplayName(state.pickingTeam),
+                            teamColor = teamColors.getOrElse(state.pickingTeam) { teamColors[0] },
+                            onStartPerform = viewModel::startPerform
+                        )
+                    }
                 }
-            }
-
-            RivalPhase.Winner -> {
-                BackHandler {
-                    viewModel.playAgain()
-                    onExitToHub()
+    
+                RivalPhase.Perform -> {
+                    BackHandler { }
+                    state.attempt?.let { attempt ->
+                        PantoPerformScreen(
+                            attempt = attempt,
+                            timeLeftMillis = state.timeLeftMillis,
+                            performerTeamName = state.teamDisplayName(state.pickingTeam),
+                            teamColor = teamColors.getOrElse(state.pickingTeam) { teamColors[0] },
+                            onSuccess = viewModel::markSuccess,
+                            onFail = viewModel::markFail
+                        )
+                    }
                 }
-                RivalWinnerScreen(
-                    state = state,
-                    winners = viewModel.winners(),
-                    onPlayAgain = viewModel::playAgain,
-                    onExitToHub = {
+    
+                RivalPhase.Result -> {
+                    BackHandler { viewModel.proceedAfterResult() }
+                    state.lastResult?.let { result ->
+                        PantoResultScreen(
+                            result = result,
+                            performerTeamName = state.teamDisplayName(result.performingTeam),
+                            teamColor = teamColors.getOrElse(result.performingTeam) { teamColors[0] },
+                            scoresContent = {
+                                TeamScoreChips(
+                                    count = state.teamCount,
+                                    nameOf = state::teamDisplayName,
+                                    scoreOf = { state.scores[it] },
+                                )
+                            },
+                            onProceed = viewModel::proceedAfterResult,
+                            proceedLabel = if (state.allCellsPlayed) "کی برد؟ 🏆" else "ادامه"
+                        )
+                    }
+                }
+    
+                RivalPhase.Winner -> {
+                    BackHandler {
                         viewModel.playAgain()
                         onExitToHub()
                     }
-                )
+                    RivalWinnerScreen(
+                        state = state,
+                        winners = viewModel.winners(),
+                        onPlayAgain = viewModel::playAgain,
+                        onExitToHub = {
+                            viewModel.playAgain()
+                            onExitToHub()
+                        }
+                    )
+                }
             }
         }
     }

@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.pantomime.model.PantoSoundEvent
 import com.navidabbasian.kibord.games.pantomime.ui.PantoPerformScreen
@@ -62,108 +63,110 @@ fun ClassicPantomimeGame(
     }
 
     KiBackground {
-        when (val phase = state.phase) {
-            ClassicPhase.TeamNames -> {
-                BackHandler { onExitToHub() }
-                ClassicTeamNamesScreen(
-                    teamNames = state.teamNames,
-                    onNameChanged = viewModel::updateTeamName,
-                    onConfirm = viewModel::confirmTeamNames
-                )
-            }
-
-            ClassicPhase.Rounds -> {
-                BackHandler { viewModel.navigateBack() }
-                ClassicRoundsScreen(onRoundsSelected = viewModel::setRounds)
-            }
-
-            ClassicPhase.Pick -> {
-                BackHandler { onExitToHub() }
-                ClassicPickScreen(
-                    state = state,
-                    hasWords = viewModel::hasWords,
-                    hasGolden = viewModel::hasGolden,
-                    onPickWord = viewModel::pickWord,
-                    onPickGolden = viewModel::pickGolden
-                )
-            }
-
-            ClassicPhase.Reveal -> {
-                // بازگشت غیرفعال: کلمه قرعه خورده و نباید بسوزد
-                BackHandler { }
-                state.attempt?.let { attempt ->
-                    PantoWordRevealScreen(
-                        attempt = attempt,
-                        performerTeamName = state.teamDisplayName(state.performingTeam),
-                        teamColor = teamColors.getOrElse(state.performingTeam) { teamColors[0] },
-                        onStartPerform = viewModel::startPerform
+        PhaseTransition(key = state.phase::class) {
+            when (val phase = state.phase) {
+                ClassicPhase.TeamNames -> {
+                    BackHandler { onExitToHub() }
+                    ClassicTeamNamesScreen(
+                        teamNames = state.teamNames,
+                        onNameChanged = viewModel::updateTeamName,
+                        onConfirm = viewModel::confirmTeamNames
                     )
                 }
-            }
-
-            ClassicPhase.Perform -> {
-                BackHandler { }
-                state.attempt?.let { attempt ->
-                    PantoPerformScreen(
-                        attempt = attempt,
-                        timeLeftMillis = state.timeLeftMillis,
-                        performerTeamName = state.teamDisplayName(state.performingTeam),
-                        teamColor = teamColors.getOrElse(state.performingTeam) { teamColors[0] },
-                        onSuccess = viewModel::markSuccess,
-                        onFail = viewModel::markFail
+    
+                ClassicPhase.Rounds -> {
+                    BackHandler { viewModel.navigateBack() }
+                    ClassicRoundsScreen(onRoundsSelected = viewModel::setRounds)
+                }
+    
+                ClassicPhase.Pick -> {
+                    BackHandler { onExitToHub() }
+                    ClassicPickScreen(
+                        state = state,
+                        hasWords = viewModel::hasWords,
+                        hasGolden = viewModel::hasGolden,
+                        onPickWord = viewModel::pickWord,
+                        onPickGolden = viewModel::pickGolden
                     )
                 }
-            }
-
-            ClassicPhase.Result -> {
-                BackHandler { viewModel.proceedAfterResult() }
-                state.lastResult?.let { result ->
-                    PantoResultScreen(
-                        result = result,
-                        performerTeamName = state.teamDisplayName(result.performingTeam),
-                        teamColor = teamColors.getOrElse(result.performingTeam) { teamColors[0] },
-                        scoresContent = {
-                            TeamScoreChips(
-                                count = 2,
-                                nameOf = state::teamDisplayName,
-                                scoreOf = { state.scores[it] },
-                            )
-                        },
-                        onProceed = viewModel::proceedAfterResult
-                    )
+    
+                ClassicPhase.Reveal -> {
+                    // بازگشت غیرفعال: کلمه قرعه خورده و نباید بسوزد
+                    BackHandler { }
+                    state.attempt?.let { attempt ->
+                        PantoWordRevealScreen(
+                            attempt = attempt,
+                            performerTeamName = state.teamDisplayName(state.performingTeam),
+                            teamColor = teamColors.getOrElse(state.performingTeam) { teamColors[0] },
+                            onStartPerform = viewModel::startPerform
+                        )
+                    }
                 }
-            }
-
-            is ClassicPhase.GoldenLoss -> {
-                BackHandler {
-                    viewModel.playAgain()
-                    onExitToHub()
+    
+                ClassicPhase.Perform -> {
+                    BackHandler { }
+                    state.attempt?.let { attempt ->
+                        PantoPerformScreen(
+                            attempt = attempt,
+                            timeLeftMillis = state.timeLeftMillis,
+                            performerTeamName = state.teamDisplayName(state.performingTeam),
+                            teamColor = teamColors.getOrElse(state.performingTeam) { teamColors[0] },
+                            onSuccess = viewModel::markSuccess,
+                            onFail = viewModel::markFail
+                        )
+                    }
                 }
-                ClassicGoldenLossScreen(
-                    state = state,
-                    loserTeam = phase.loserTeam,
-                    onPlayAgain = viewModel::playAgain,
-                    onExitToHub = {
+    
+                ClassicPhase.Result -> {
+                    BackHandler { viewModel.proceedAfterResult() }
+                    state.lastResult?.let { result ->
+                        PantoResultScreen(
+                            result = result,
+                            performerTeamName = state.teamDisplayName(result.performingTeam),
+                            teamColor = teamColors.getOrElse(result.performingTeam) { teamColors[0] },
+                            scoresContent = {
+                                TeamScoreChips(
+                                    count = 2,
+                                    nameOf = state::teamDisplayName,
+                                    scoreOf = { state.scores[it] },
+                                )
+                            },
+                            onProceed = viewModel::proceedAfterResult
+                        )
+                    }
+                }
+    
+                is ClassicPhase.GoldenLoss -> {
+                    BackHandler {
                         viewModel.playAgain()
                         onExitToHub()
                     }
-                )
-            }
-
-            ClassicPhase.Winner -> {
-                BackHandler {
-                    viewModel.playAgain()
-                    onExitToHub()
+                    ClassicGoldenLossScreen(
+                        state = state,
+                        loserTeam = phase.loserTeam,
+                        onPlayAgain = viewModel::playAgain,
+                        onExitToHub = {
+                            viewModel.playAgain()
+                            onExitToHub()
+                        }
+                    )
                 }
-                ClassicWinnerScreen(
-                    state = state,
-                    winners = viewModel.winners(),
-                    onPlayAgain = viewModel::playAgain,
-                    onExitToHub = {
+    
+                ClassicPhase.Winner -> {
+                    BackHandler {
                         viewModel.playAgain()
                         onExitToHub()
                     }
-                )
+                    ClassicWinnerScreen(
+                        state = state,
+                        winners = viewModel.winners(),
+                        onPlayAgain = viewModel::playAgain,
+                        onExitToHub = {
+                            viewModel.playAgain()
+                            onExitToHub()
+                        }
+                    )
+                }
             }
         }
     }

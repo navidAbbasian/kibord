@@ -60,6 +60,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgOutcome
 import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.components.TicketCard
 
 /** ثبت نتیجه‌ی گنده‌گویی حضوری: تیم برنده‌ی مزایده و عدد ادعا */
 @Composable
@@ -85,7 +86,7 @@ fun GgBidScreen(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        GlassCard(modifier = Modifier.fillMaxWidth(), borderColor = accent.copy(alpha = 0.6f)) {
+        TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1.5f) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -44,6 +44,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.model.PantoAttempt
 import com.navidabbasian.kibord.games.pantomime.model.PantoResult
 import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.components.TicketCard
 
 /** نمایش مخفیانه‌ی کلمه به اجراکننده — فقط او صفحه را ببیند! */
 @Composable
@@ -95,10 +96,10 @@ fun PantoWordRevealScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        GlassCard(
+        TicketCard(
             modifier = Modifier.fillMaxWidth(),
-            strong = true,
-            borderColor = if (attempt.isGolden) extras.gold.copy(alpha = 0.7f) else teamColor.copy(alpha = 0.6f),
+            golden = attempt.isGolden,
+            tilt = -1.5f,
             onClick = if (!revealed) ({ revealed = true }) else null
         ) {
             Box(

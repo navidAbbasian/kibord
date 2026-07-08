@@ -96,7 +96,7 @@ fun KiBordBottomNav(
         modifier = modifier
             .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .height(76.dp)
+            .height(66.dp)
             .background(
                 if (extras.isDark) {
                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.97f)
@@ -213,12 +213,5 @@ private fun RowScope.NavPebbleItem(
                 modifier = Modifier.size(iconSize)
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

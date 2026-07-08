@@ -51,6 +51,9 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.kalamz.model.Player
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.navidabbasian.kibord.core.ui.components.BlobTextField
+import androidx.compose.foundation.layout.offset
+import com.navidabbasian.kibord.core.util.toPersianDigits
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -165,14 +168,18 @@ fun WordEntryScreen(
                 // BringIntoViewRequester → وقتی فیلد فوکوس می‌گیره خودش رو از زیر کیبورد می‌کشه بیرون
                 val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
-                OutlinedTextField(
+                BlobTextField(
                     value = word,
                     onValueChange = { newVal ->
                         words = words.toMutableList().also { it[index] = newVal }
                     },
-                    label = { Text("کلمه ${index + 1}", fontSize = 13.sp) },
+                    placeholder = "کلمه ${(index + 1).toPersianDigits()}",
+                    color = accentFocus,
+                    badge = (index + 1).toPersianDigits(),
+                    tilt = if (index % 2 == 0) -0.9f else 0.9f,
+                    phase = index * 1.1f,
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .offset(x = if (index % 2 == 0) (-5).dp else 5.dp)
                         .bringIntoViewRequester(bringIntoViewRequester)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
@@ -182,20 +189,7 @@ fun WordEntryScreen(
                                     bringIntoViewRequester.bringIntoView()
                                 }
                             }
-                        },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentFocus,
-                        unfocusedBorderColor = kiExtras.glassBorder,
-                        focusedLabelColor = accentFocus,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        cursorColor = accentFocus,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedContainerColor = kiExtras.glass,
-                        unfocusedContainerColor = kiExtras.glass,
-                    )
+                        }
                 )
             }
 

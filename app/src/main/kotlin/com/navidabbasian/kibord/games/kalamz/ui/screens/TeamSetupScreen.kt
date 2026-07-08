@@ -29,6 +29,7 @@ import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.kalamz.model.Team
+import com.navidabbasian.kibord.core.ui.components.BlobTextField
 
 @Composable
 fun TeamSetupScreen(
@@ -102,21 +103,27 @@ fun TeamSetupScreen(
                             value = team.name,
                             onValueChange = { onTeamNameChanged(team.id, it) },
                             label = "نام تیم",
-                            accentColor = teamColor
+                            accentColor = teamColor,
+                            tilt = -0.8f,
+                            phase = team.id * 2.1f
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         GlassTextField(
                             value = team.player1.name,
                             onValueChange = { onPlayerNameChanged(team.player1.id, it) },
                             label = "بازیکن ۱",
-                            accentColor = teamColor
+                            accentColor = teamColor,
+                            tilt = 0.8f,
+                            phase = team.id * 2.1f + 1f
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         GlassTextField(
                             value = team.player2.name,
                             onValueChange = { onPlayerNameChanged(team.player2.id, it) },
                             label = "بازیکن ۲",
-                            accentColor = teamColor
+                            accentColor = teamColor,
+                            tilt = -0.8f,
+                            phase = team.id * 2.1f + 2f
                         )
                     }
                 }
@@ -144,25 +151,16 @@ private fun GlassTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    accentColor: Color = MaterialTheme.colorScheme.primary
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    tilt: Float = 0f,
+    phase: Float = 0f,
 ) {
-    OutlinedTextField(
+    BlobTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 13.sp) },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = accentColor,
-            unfocusedBorderColor = kiExtras.glassBorder,
-            focusedLabelColor = accentColor,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            cursorColor = accentColor,
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = kiExtras.glass,
-            unfocusedContainerColor = kiExtras.glass,
-        )
+        placeholder = label,
+        color = accentColor,
+        tilt = tilt,
+        phase = phase,
     )
 }

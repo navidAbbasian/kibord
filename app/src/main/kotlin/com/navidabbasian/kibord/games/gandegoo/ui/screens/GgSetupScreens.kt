@@ -37,6 +37,7 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import androidx.compose.foundation.layout.offset
+import com.navidabbasian.kibord.core.ui.components.BlobTextField
 
 /** انتخاب تعداد تیم‌ها: ۲ یا ۳ تیم دونفره */
 @Composable
@@ -119,39 +120,18 @@ fun GgTeamNamesScreen(
 
         repeat(teamCount) { i ->
             val color = teamColors.getOrElse(i) { teamColors[0] }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .background(color, CircleShape)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                OutlinedTextField(
-                    value = teamNames.getOrElse(i) { "" },
-                    onValueChange = { onNameChanged(i, it.take(20)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = {
-                        Text(
-                            text = "تیم ${(i + 1).toPersianDigits()}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = color,
-                        unfocusedBorderColor = kiExtras.glassBorder,
-                        focusedContainerColor = kiExtras.glass,
-                        unfocusedContainerColor = kiExtras.glass,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = color,
-                    )
-                )
-            }
+            BlobTextField(
+                value = teamNames.getOrElse(i) { "" },
+                onValueChange = { onNameChanged(i, it.take(20)) },
+                placeholder = "تیم ${(i + 1).toPersianDigits()}",
+                color = color,
+                badge = (i + 1).toPersianDigits(),
+                tilt = if (i % 2 == 0) -1.2f else 1.2f,
+                phase = i * 1.6f,
+                modifier = Modifier
+                    .padding(vertical = 7.dp)
+                    .offset(x = if (i % 2 == 0) (-6).dp else 6.dp)
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))

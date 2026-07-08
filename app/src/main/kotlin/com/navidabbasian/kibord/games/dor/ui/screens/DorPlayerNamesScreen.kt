@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.core.ui.components.BlobTextField
+import androidx.compose.foundation.layout.offset
 
 /**
  * ورود نام بازیکنان — به ترتیب نشستنِ دور:
@@ -83,37 +85,16 @@ fun DorPlayerNamesScreen(
             items(count = playerNames.size) { i ->
                 val teamIndex = i % teamCount
                 val color = teamColors.getOrElse(teamIndex) { teamColors[0] }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .background(color, CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    OutlinedTextField(
-                        value = playerNames[i],
-                        onValueChange = { onNameChanged(i, it.take(24)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = {
-                            Text(
-                                text = "بازیکن ${(i + 1).toPersianDigits()}",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = color,
-                            unfocusedBorderColor = kiExtras.glassBorder,
-                            focusedContainerColor = kiExtras.glass,
-                            unfocusedContainerColor = kiExtras.glass,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = color,
-                        )
-                    )
-                }
+                BlobTextField(
+                    value = playerNames[i],
+                    onValueChange = { onNameChanged(i, it.take(24)) },
+                    placeholder = "بازیکن ${(i + 1).toPersianDigits()}",
+                    color = color,
+                    badge = (i + 1).toPersianDigits(),
+                    tilt = if (i % 2 == 0) -1f else 1f,
+                    phase = i * 1.2f,
+                    modifier = Modifier.offset(x = if (i % 2 == 0) (-6).dp else 6.dp)
+                )
             }
         }
 

@@ -1,11 +1,19 @@
 package com.navidabbasian.kibord.core.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -17,6 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
@@ -27,6 +38,84 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import kotlin.math.sin
+
+/**
+ * تنفس آرام: مقیاس عنصر به‌نرمی کم و زیاد می‌شود.
+ * با phase متفاوت، عناصر هم‌زمان نفس نمی‌کشند و صفحه زنده‌تر است.
+ */
+fun Modifier.breathing(
+    intensity: Float = 0.02f,
+    periodMs: Int = 2600,
+    phase: Float = 0f,
+): Modifier = composed {
+    val transition = rememberInfiniteTransition(label = "breath")
+    val t by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing)),
+        label = "breath_t"
+    )
+    graphicsLayer {
+        val s = 1f + intensity * sin(t + phase)
+        scaleX = s
+        scaleY = s
+    }
+}
+
+/** درخشش لغزان: نوار نور مورب که هر چند ثانیه روی سطح می‌گذرد */
+fun Modifier.shineSweep(periodMs: Int = 3400, phase: Float = 0f): Modifier = composed {
+    val transition = rememberInfiniteTransition(label = "shine")
+    val t by transition.animateFloat(
+        initialValue = -0.6f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing)),
+        label = "shine_t"
+    )
+    drawWithContent {
+        drawContent()
+        val tt = (t + phase) % 2.2f - 0.6f
+        val x = size.width * tt
+        val band = size.width * 0.28f
+        drawRect(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.White.copy(alpha = 0.16f),
+                    Color.Transparent
+                ),
+                start = androidx.compose.ui.geometry.Offset(x - band, 0f),
+                end = androidx.compose.ui.geometry.Offset(x + band, size.height)
+            )
+        )
+    }
+}
+
+/**
+ * جابه‌جایی صحنه‌ای بین فازهای بازی: صفحه‌ی جدید با پرش فنری و محو
+ * وارد می‌شود و قبلی کوچک و محو می‌شود. key را کلاسِ فاز بدهید.
+ */
+@Composable
+fun PhaseTransition(
+    key: Any?,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedContent(
+        targetState = key,
+        modifier = modifier,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(260)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+                )) togetherWith (fadeOut(animationSpec = tween(160)) +
+                scaleOut(targetScale = 1.06f, animationSpec = tween(180)))
+        },
+        label = "phase"
+    ) { _ ->
+        content()
+    }
+}
 
 /** ایموجی معلق: بالا و پایین می‌رود و نرم تاب می‌خورد */
 @Composable

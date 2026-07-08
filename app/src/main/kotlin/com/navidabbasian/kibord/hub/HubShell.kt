@@ -40,8 +40,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.graphicsLayer
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
+import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.theme.VioletDeep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 
@@ -53,10 +60,12 @@ fun HubShell(onOpenGame: (String) -> Unit) {
     var tab by rememberSaveable { mutableStateOf(HubTab.HOME) }
 
     KiBackground {
-        when (tab) {
-            HubTab.HOME -> HubScreen(onOpenGame = onOpenGame)
-            HubTab.HOW_TO_PLAY -> HowToPlayScreen()
-            HubTab.SETTINGS -> SettingsScreen()
+        PhaseTransition(key = tab) {
+            when (tab) {
+                HubTab.HOME -> HubScreen(onOpenGame = onOpenGame)
+                HubTab.HOW_TO_PLAY -> HowToPlayScreen()
+                HubTab.SETTINGS -> SettingsScreen()
+            }
         }
         KiBordBottomNav(
             currentTab = tab,
@@ -125,6 +134,11 @@ private fun RowScope.NavItem(
 ) {
     val sound = LocalSoundManager.current
     val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val bounce by animateFloatAsState(
+        targetValue = if (selected) 1.18f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "tab_bounce"
+    )
     Column(
         modifier = Modifier
             .weight(1f)
@@ -137,7 +151,14 @@ private fun RowScope.NavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier
+                .size(22.dp)
+                .graphicsLayer { scaleX = bounce; scaleY = bounce }
+        )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
@@ -157,12 +178,21 @@ private fun RowScope.NavHomeItem(selected: Boolean, onClick: () -> Unit) {
             .fillMaxHeight(),
         contentAlignment = Alignment.Center
     ) {
+        // هاله‌ی ضربان‌دار دور دکمه‌ی خانه
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .breathing(intensity = 0.14f, periodMs = 1800)
+                    .background(VioletPrimary.copy(alpha = 0.35f), CircleShape)
+            )
+        }
         Box(
             modifier = Modifier
                 .size(50.dp)
                 .background(
                     if (selected) {
-                        Brush.linearGradient(listOf(VioletPrimary, Color(0xFF6D28D9)))
+                        Brush.linearGradient(listOf(VioletPrimary, VioletDeep))
                     } else {
                         Brush.linearGradient(
                             listOf(

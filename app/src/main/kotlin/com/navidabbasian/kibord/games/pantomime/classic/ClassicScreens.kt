@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
@@ -160,9 +161,10 @@ fun ClassicRoundsScreen(onRoundsSelected: (Int) -> Unit) {
             Triple(3, "کوتاه", "۶ اجرا — حدود ۱۵ دقیقه"),
             Triple(5, "متوسط", "۱۰ اجرا — حدود ۲۵ دقیقه"),
             Triple(7, "طولانی", "۱۴ اجرا — حدود ۳۵ دقیقه"),
-        ).forEach { (rounds, title, subtitle) ->
+        ).forEachIndexed { i, (rounds, title, subtitle) ->
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
+                tilt = if (i % 2 == 0) -1.4f else 1.4f,
                 onClick = {
                     sound?.playButtonClick()
                     onRoundsSelected(rounds)
@@ -275,7 +277,11 @@ fun ClassicPickScreen(
         ) {
             items(count = state.categories.size, key = { state.categories[it].id }) { catIndex ->
                 val category = state.categories[catIndex]
-                GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 20.dp) {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    tilt = if (catIndex % 2 == 0) -1f else 1f
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -418,62 +424,66 @@ fun ClassicWinnerScreen(
     val extras = kiExtras
     val teamColors = extras.teamColors
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "🏆", fontSize = 84.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = "کی برد؟",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
-            style = MaterialTheme.typography.displayMedium,
-            color = teamColors.getOrElse(winners.firstOrNull() ?: 0) { teamColors[0] },
-            textAlign = TextAlign.Center
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = "🏆", fontSize = 84.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "کی برد؟",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
+                style = MaterialTheme.typography.displayMedium,
+                color = teamColors.getOrElse(winners.firstOrNull() ?: 0) { teamColors[0] },
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                repeat(2) { i ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = if (i in winners) "🥇" else "🥈", fontSize = 20.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    repeat(2) { i ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = if (i in winners) "🥇" else "🥈", fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = state.teamDisplayName(i),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = teamColors.getOrElse(i) { teamColors[0] }
+                                )
+                            }
                             Text(
-                                text = state.teamDisplayName(i),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = teamColors.getOrElse(i) { teamColors[0] }
+                                text = state.scores[i].toPersianDigits(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                        Text(
-                            text = state.scores[i].toPersianDigits(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
-        KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
-        Spacer(modifier = Modifier.height(12.dp))
-        KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
     }
 }

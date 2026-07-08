@@ -110,7 +110,11 @@ fun GgBoardScreen(
         ) {
             items(count = state.categories.size, key = { state.categories[it].id }) { catIndex ->
                 val category = state.categories[catIndex]
-                GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 20.dp) {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    tilt = if (catIndex % 2 == 0) -1f else 1f
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

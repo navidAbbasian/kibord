@@ -28,8 +28,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
@@ -48,14 +50,10 @@ fun GgTeamCountScreen(onTeamCountSelected: (Int) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(36.dp))
-        Text(text = "🎭", fontSize = 56.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "چند تیم هستید؟",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
+        BobbingEmoji(emoji = "🎭", fontSize = 60.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "چند تیم هستید؟", rotation = -2f)
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = "هر تیم دو نفره است",
             style = MaterialTheme.typography.titleMedium,
@@ -63,9 +61,10 @@ fun GgTeamCountScreen(onTeamCountSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(2 to "۴ نفر", 3 to "۶ نفر").forEach { (count, people) ->
+        listOf(2 to "۴ نفر", 3 to "۶ نفر").forEachIndexed { i, (count, people) ->
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
+                tilt = if (i % 2 == 0) -1.6f else 1.6f,
                 onClick = {
                     sound?.playButtonClick()
                     onTeamCountSelected(count)
@@ -192,14 +191,10 @@ fun GgSetupScreen(onStart: (categoryCount: Int) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(36.dp))
-        Text(text = "🧮", fontSize = 52.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "چند کتگوری؟",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
+        BobbingEmoji(emoji = "🧮", fontSize = 56.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "چند کتگوری؟", rotation = 2f)
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = "هر کتگوری سه سوال ۲۰، ۴۰ و ۶۰ امتیازی دارد",
             style = MaterialTheme.typography.bodyMedium,
@@ -212,9 +207,10 @@ fun GgSetupScreen(onStart: (categoryCount: Int) -> Unit) {
             Triple(3, "کوتاه", "حدود ۱۵ دقیقه — ۹ سوال"),
             Triple(4, "متوسط", "حدود ۲۰ دقیقه — ۱۲ سوال"),
             Triple(6, "کامل", "حدود ۳۵ دقیقه — ۱۸ سوال"),
-        ).forEach { (count, title, subtitle) ->
+        ).forEachIndexed { i, (count, title, subtitle) ->
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
+                tilt = if (i % 2 == 0) -1.4f else 1.4f,
                 onClick = {
                     sound?.playButtonClick()
                     onStart(count)

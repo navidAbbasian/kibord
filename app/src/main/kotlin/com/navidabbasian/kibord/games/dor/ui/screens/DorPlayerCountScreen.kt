@@ -53,14 +53,15 @@ fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
         Spacer(modifier = Modifier.height(28.dp))
 
         val options = listOf(4, 6, 8, 10)
-        options.chunked(2).forEach { row ->
+        options.chunked(2).forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                row.forEach { count ->
+                row.forEachIndexed { colIndex, count ->
                     GlassCard(
                         modifier = Modifier.weight(1f),
+                        tilt = if ((rowIndex + colIndex) % 2 == 0) -1.8f else 1.8f,
                         onClick = {
                             sound?.playButtonClick()
                             onPlayerCountSelected(count)

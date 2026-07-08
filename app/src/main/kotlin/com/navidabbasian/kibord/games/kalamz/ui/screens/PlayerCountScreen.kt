@@ -106,6 +106,7 @@ fun PlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
                         .fillMaxWidth()
                         .height(100.dp),
                     cornerRadius = 24.dp,
+                    tilt = if (options.indexOf(option) % 2 == 0) -1.8f else 1.8f,
                     borderColor = option.color.copy(alpha = 0.45f)
                 ) {
                     Column(

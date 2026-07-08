@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
@@ -72,9 +73,10 @@ fun RivalTeamCountScreen(onTeamCountSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        listOf(2, 3).forEach { count ->
+        listOf(2, 3).forEachIndexed { i, count ->
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
+                tilt = if (i % 2 == 0) -1.6f else 1.6f,
                 onClick = {
                     sound?.playButtonClick()
                     onTeamCountSelected(count)
@@ -222,7 +224,11 @@ fun RivalBoardScreen(
         ) {
             items(count = state.categories.size, key = { state.categories[it].id }) { catIndex ->
                 val category = state.categories[catIndex]
-                GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 20.dp) {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    tilt = if (catIndex % 2 == 0) -1f else 1f
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -286,71 +292,75 @@ fun RivalWinnerScreen(
 ) {
     val teamColors = kiExtras.teamColors
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "🏆", fontSize = 84.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = "کی برد؟",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = if (winners.size > 1) {
-                "مساوی! ${winners.joinToString(" و ") { state.teamDisplayName(it) }}"
-            } else {
-                state.teamDisplayName(winners.firstOrNull() ?: 0)
-            },
-            style = MaterialTheme.typography.displayMedium,
-            color = teamColors.getOrElse(winners.firstOrNull() ?: 0) { teamColors[0] },
-            textAlign = TextAlign.Center
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = "🏆", fontSize = 84.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "کی برد؟",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (winners.size > 1) {
+                    "مساوی! ${winners.joinToString(" و ") { state.teamDisplayName(it) }}"
+                } else {
+                    state.teamDisplayName(winners.firstOrNull() ?: 0)
+                },
+                style = MaterialTheme.typography.displayMedium,
+                color = teamColors.getOrElse(winners.firstOrNull() ?: 0) { teamColors[0] },
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                (0 until state.teamCount)
-                    .sortedByDescending { state.scores[it] }
-                    .forEachIndexed { rank, team ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.height(20.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    (0 until state.teamCount)
+                        .sortedByDescending { state.scores[it] }
+                        .forEachIndexed { rank, team ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (team in winners) "🥇" else "${(rank + 1).toPersianDigits()}",
+                                        fontSize = 20.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = state.teamDisplayName(team),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = teamColors.getOrElse(team) { teamColors[0] }
+                                    )
+                                }
                                 Text(
-                                    text = if (team in winners) "🥇" else "${(rank + 1).toPersianDigits()}",
-                                    fontSize = 20.sp
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = state.teamDisplayName(team),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = teamColors.getOrElse(team) { teamColors[0] }
+                                    text = state.scores[team].toPersianDigits(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            Text(
-                                text = state.scores[team].toPersianDigits(),
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
                         }
-                    }
+                }
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
-        KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
-        Spacer(modifier = Modifier.height(12.dp))
-        KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
     }
 }

@@ -55,7 +55,8 @@ fun DorModeScreen(onModeSelected: (DorGameMode) -> Unit) {
             onClick = {
                 sound?.playButtonClick()
                 onModeSelected(DorGameMode.QUICK)
-            }
+            },
+            tilt = -1.5f
         )
         Spacer(modifier = Modifier.height(16.dp))
         ModeCard(
@@ -66,7 +67,8 @@ fun DorModeScreen(onModeSelected: (DorGameMode) -> Unit) {
             onClick = {
                 sound?.playButtonClick()
                 onModeSelected(DorGameMode.PROFESSIONAL)
-            }
+            },
+            tilt = 1.5f
         )
     }
 }
@@ -78,10 +80,12 @@ private fun ModeCard(
     subtitle: String,
     mode: DorGameMode,
     onClick: () -> Unit,
+    tilt: Float = 0f,
 ) {
     val accent = LocalGameAccent.current
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
+        tilt = tilt,
         onClick = onClick
     ) {
         Column(

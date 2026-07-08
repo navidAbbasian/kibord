@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -37,6 +38,7 @@ fun ResultsScreen(teams: List<Team>, onPlayAgain: () -> Unit, onExitToHub: () ->
     val winnerScore = sortedTeams.firstOrNull()?.totalScore ?: 0
 
     Box(modifier = Modifier.fillMaxSize()) {
+        ConfettiOverlay()
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
             Spacer(modifier = Modifier.height(52.dp))
 

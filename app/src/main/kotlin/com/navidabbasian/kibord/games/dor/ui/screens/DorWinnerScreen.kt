@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -51,55 +53,59 @@ fun DorWinnerScreen(
         label = "trophy_scale"
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "🏆", fontSize = 88.sp, modifier = Modifier.scale(trophyScale))
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "کی برد؟",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = winner?.players?.joinToString(" و ") ?: "هیچ‌کس!",
-            style = MaterialTheme.typography.displayMedium,
-            color = color,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+        ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = "🏆", fontSize = 88.sp, modifier = Modifier.scale(trophyScale))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "کی برد؟",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = winner?.players?.joinToString(" و ") ?: "هیچ‌کس!",
+                style = MaterialTheme.typography.displayMedium,
+                color = color,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (winner != null) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "زمان باقی‌مانده: ${formatMillisAsClock(winner.remainingTimeMillis)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    val correctCount = winner.events.count { it.type == DorGameEvent.EventType.WORD_GUESSED }
-                    Text(
-                        text = "کلمات درست: ${correctCount.toPersianDigits()}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            if (winner != null) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "زمان باقی‌مانده: ${formatMillisAsClock(winner.remainingTimeMillis)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        val correctCount = winner.events.count { it.type == DorGameEvent.EventType.WORD_GUESSED }
+                        Text(
+                            text = "کلمات درست: ${correctCount.toPersianDigits()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
-        KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
-        Spacer(modifier = Modifier.height(12.dp))
-        KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
     }
 }

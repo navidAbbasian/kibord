@@ -37,6 +37,8 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgCell
+import com.navidabbasian.kibord.core.ui.components.PointCoin
+import com.navidabbasian.kibord.core.ui.components.TeamMedallions
 
 /** جدول کتگوری‌ها: هر ردیف یک کتگوری با سه خانه‌ی امتیازی */
 @Composable
@@ -54,41 +56,13 @@ fun GgBoardScreen(
             .statusBarsPadding()
     ) {
         // ---- امتیاز تیم‌ها ----
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-        ) {
-            repeat(state.teamCount) { i ->
-                val color = teamColors.getOrElse(i) { teamColors[0] }
-                val isPicking = i == state.pickingTeam
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .background(
-                            color.copy(alpha = if (isPicking) 1f else 0.55f),
-                            RoundedCornerShape(18.dp)
-                        )
-                        .padding(horizontal = 18.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = state.teamDisplayName(i),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = state.scores[i].toPersianDigits(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 22.sp
-                    )
-                }
-            }
-        }
+        TeamMedallions(
+            count = state.teamCount,
+            nameOf = state::teamDisplayName,
+            scoreOf = { state.scores[it] },
+            highlight = state.pickingTeam,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        )
 
         Text(
             text = "نوبت انتخاب: ${state.teamDisplayName(state.pickingTeam)}",
@@ -131,35 +105,19 @@ fun GgBoardScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                        ) {
                             category.questions.forEachIndexed { qIndex, question ->
                                 val cell = GgCell(catIndex, qIndex)
                                 val used = cell in state.usedCells
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(if (used) kiExtras.glass else accent.copy(alpha = 0.85f))
-                                        .then(
-                                            if (used) Modifier
-                                            else Modifier.clickable {
-                                                sound?.playButtonClick()
-                                                onCellSelected(cell)
-                                            }
-                                        )
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = question.points.toPersianDigits(),
-                                        color = if (used) {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        } else Color.White,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 20.sp,
-                                        textDecoration = if (used) TextDecoration.LineThrough else null
-                                    )
-                                }
+                                PointCoin(
+                                    value = question.points.toPersianDigits(),
+                                    used = used,
+                                    phase = (catIndex * 3 + qIndex) * 0.9f,
+                                    onClick = { onCellSelected(cell) }
+                                )
                             }
                         }
                     }

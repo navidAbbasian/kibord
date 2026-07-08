@@ -74,6 +74,8 @@ fun ChoiceBubble(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "bubble_press"
     )
+    // سنگریزه‌ی دفرمه‌ی در حال دگردیسی — نه دایره، نه مربع
+    val blob = rememberMorphingBlobShape(phase = phase)
 
     Box(
         modifier = modifier
@@ -90,9 +92,9 @@ fun ChoiceBubble(
                     center = Offset(0.35f, 0.25f),
                     radius = 500f
                 ),
-                CircleShape
+                blob
             )
-            .border(3.dp, Color.White.copy(alpha = 0.45f), CircleShape)
+            .border(3.dp, Color.White.copy(alpha = 0.45f), blob)
             .clickable(interactionSource = interaction, indication = null) {
                 sound?.playButtonClick()
                 onClick()

@@ -43,6 +43,7 @@ import com.navidabbasian.kibord.core.util.formatMillisAsClock
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.model.PantoAttempt
 import com.navidabbasian.kibord.games.pantomime.model.PantoResult
+import com.navidabbasian.kibord.core.ui.components.breathing
 
 /** نمایش مخفیانه‌ی کلمه به اجراکننده — فقط او صفحه را ببیند! */
 @Composable
@@ -202,7 +203,12 @@ fun PantoPerformScreen(
 
         Spacer(modifier = Modifier.height(22.dp))
 
-        Box(modifier = Modifier.size(210.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(210.dp)
+                .then(if (urgent) Modifier.breathing(intensity = 0.05f, periodMs = 600) else Modifier),
+            contentAlignment = Alignment.Center
+        ) {
             Canvas(modifier = Modifier.size(210.dp)) {
                 drawArc(
                     color = extras.glassStrong,

@@ -59,6 +59,7 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgOutcome
+import com.navidabbasian.kibord.core.ui.components.breathing
 
 /** ثبت نتیجه‌ی گنده‌گویی حضوری: تیم برنده‌ی مزایده و عدد ادعا */
 @Composable
@@ -247,7 +248,12 @@ fun GgPlayScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // ---- تایمر دایره‌ای ----
-        Box(modifier = Modifier.size(110.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(110.dp)
+                .then(if (urgent) Modifier.breathing(intensity = 0.06f, periodMs = 600) else Modifier),
+            contentAlignment = Alignment.Center
+        ) {
             Canvas(modifier = Modifier.size(110.dp)) {
                 drawArc(
                     color = extras.glassStrong,

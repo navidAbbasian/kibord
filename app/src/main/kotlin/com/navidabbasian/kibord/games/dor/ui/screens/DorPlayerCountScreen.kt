@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import androidx.compose.foundation.layout.offset
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.offset
 fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
     val sound = LocalSoundManager.current
     val accent = LocalGameAccent.current
+    val teamColors = kiExtras.teamColors
 
     Column(
         modifier = Modifier
@@ -62,12 +64,15 @@ fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
             ) {
                 row.forEachIndexed { colIndex, count ->
                     val zig = (rowIndex + colIndex) % 2 == 0
+                    val index = rowIndex * 2 + colIndex
                     ChoiceBubble(
                         main = count.toPersianDigits(),
                         sub = "نفر — ${(count / 2).toPersianDigits()} تیم",
                         size = 136.dp,
+                        // همان نگاشت رنگی کلمز: ۴→۱ ... ۱۲→۵
+                        accent = teamColors[(index + 1) % teamColors.size],
                         tilt = if (zig) -3f else 3f,
-                        phase = (rowIndex * 2 + colIndex) * 1.3f,
+                        phase = index * 1.3f,
                         modifier = Modifier.offset(y = if (zig) 0.dp else 22.dp),
                         onClick = { onPlayerCountSelected(count) }
                     )

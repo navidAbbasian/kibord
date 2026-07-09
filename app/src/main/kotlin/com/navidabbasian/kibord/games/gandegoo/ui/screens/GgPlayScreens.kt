@@ -501,12 +501,13 @@ private fun GgVideoCheckOverlay(
     }
 }
 
-/** بازبینی نهایی: ۱۰ ثانیه فرصت اصلاح شمارش با دکمه‌های کم/زیاد */
+/** بازبینی نهایی: ۱۵ ثانیه فرصت اصلاح شمارش با دکمه‌های کم/زیاد — یا تایید فوری */
 @Composable
 fun GgReviewScreen(
     state: GandeGooUiState,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
+    onConfirm: () -> Unit,
 ) {
     val extras = kiExtras
     val teamColors = extras.teamColors
@@ -641,14 +642,26 @@ fun GgReviewScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "بعد از پایان وقت، امتیاز با همین عدد حساب می‌شه",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(
             modifier = Modifier
+                .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(bottom = 20.dp)
-        )
+                .padding(bottom = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            KButton(
+                text = "همینه، تایید!",
+                onClick = onConfirm,
+                accent = extras.success,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "تایید کنی یا وقت تموم شه، امتیاز با همین عدد حساب می‌شه",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

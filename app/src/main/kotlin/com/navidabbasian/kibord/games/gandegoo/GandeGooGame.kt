@@ -145,7 +145,8 @@ fun GandeGooGame(
                         onDecrement = {
                             sound?.playWordSkip()
                             viewModel.decrementCount()
-                        }
+                        },
+                        onConfirm = viewModel::confirmReview
                     )
                 }
     

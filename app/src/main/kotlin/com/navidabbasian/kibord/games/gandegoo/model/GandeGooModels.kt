@@ -54,7 +54,7 @@ sealed class GgPhase {
     data object Bid : GgPhase()
     /** ۳۰ ثانیه شمارش با دکمه */
     data object Play : GgPhase()
-    /** ۱۰ ثانیه بازبینی نهایی شمارش با دکمه‌های کم/زیاد */
+    /** ۱۵ ثانیه بازبینی نهایی شمارش با دکمه‌های کم/زیاد و امکان تایید فوری */
     data object Review : GgPhase()
     data object Result : GgPhase()
     data object Winner : GgPhase()
@@ -103,7 +103,7 @@ data class GandeGooUiState(
 
     companion object {
         const val TURN_MILLIS = 30_000L
-        const val REVIEW_MILLIS = 10_000L
+        const val REVIEW_MILLIS = 15_000L
         /** هر خانه‌ی تازه این‌قدر حق تعویض سوال دارد */
         const val SWAPS_PER_QUESTION = 3
         /** کمینه‌ی دسته‌ها برای شروع بازی */

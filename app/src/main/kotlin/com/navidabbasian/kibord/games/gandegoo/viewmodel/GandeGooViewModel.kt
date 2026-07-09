@@ -214,7 +214,13 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(isVideoCheck = false) }
     }
 
-    /** ورود به ۱۰ ثانیه‌ی بازبینی نهایی شمارش */
+    /** تایید فوری شمارش در بازبینی — بدون انتظار برای پایان وقت */
+    fun confirmReview() {
+        if (_uiState.value.phase != GgPhase.Review) return
+        resolveAttempt()
+    }
+
+    /** ورود به ۱۵ ثانیه‌ی بازبینی نهایی شمارش */
     private fun enterReview() {
         lastWholeSecond = (GandeGooUiState.REVIEW_MILLIS / 1000).toInt()
         _uiState.update {

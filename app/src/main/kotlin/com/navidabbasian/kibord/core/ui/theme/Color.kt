@@ -52,6 +52,10 @@ val teamColorsOnDark = listOf(
     Color(0xFFCFF0A0), // لیمویی
 )
 
+/** رنگ تیم به‌صورت چرخشی — وقتی تیم‌ها از پالت بیشتر شدند، رنگ‌ها از سر گرفته می‌شوند */
+fun List<Color>.teamColorFor(index: Int): Color =
+    if (isEmpty()) Color.White else this[((index % size) + size) % size]
+
 // کمی عمیق‌تر: مناسب پس‌زمینه‌ی روشن و متنِ سفید روی تراشه‌ها
 val teamColorsOnLight = listOf(
     Color(0xFFF17E95), // گلبهی پررنگ

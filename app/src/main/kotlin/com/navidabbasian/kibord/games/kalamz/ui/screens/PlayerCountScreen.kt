@@ -56,6 +56,8 @@ fun PlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
         PlayerOption(12, Icons.Default.Groups,    teamColors[5]),
         PlayerOption(14, Icons.Default.Whatshot,  teamColors[6]),
         PlayerOption(16, Icons.Default.PersonAdd, teamColors[7]),
+        PlayerOption(18, Icons.Default.Groups2,   teamColors[0]),
+        PlayerOption(20, Icons.Default.Groups3,   teamColors[4]),
     )
 
     Column(

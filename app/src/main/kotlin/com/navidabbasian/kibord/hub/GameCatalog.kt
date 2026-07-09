@@ -44,7 +44,7 @@ val gameCatalog = listOf(
         emoji = "🗣️",
         accent = KalamzAccent,
         accentDark = KalamzAccentDark,
-        players = "۴ تا ۱۶ نفر",
+        players = "۴ تا ۲۰ نفر",
         route = Routes.KALAMZ,
     ),
     GameInfo(
@@ -54,7 +54,7 @@ val gameCatalog = listOf(
         emoji = "💣",
         accent = DorAccent,
         accentDark = DorAccentDark,
-        players = "۴ تا ۱۰ نفر",
+        players = "۴ تا ۱۲ نفر",
         route = Routes.DOR,
     ),
     GameInfo(

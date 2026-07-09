@@ -24,6 +24,7 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.games.kalamz.model.GamePhase
 import com.navidabbasian.kibord.games.kalamz.model.GameUiState
 import com.navidabbasian.kibord.games.kalamz.ui.components.TimerDisplay
@@ -89,7 +90,7 @@ private fun TurnActiveContent(
     onResumeTimer: () -> Unit
 ) {
     val sound = LocalSoundManager.current
-    val teamColor = kiExtras.teamColors.getOrElse(state.currentTeamIndex) { kiExtras.teamColors[0] }
+    val teamColor = kiExtras.teamColors.teamColorFor(state.currentTeamIndex)
 
     // Timer-tick and warning sounds
     // تیک‌تاک روی تمام مدت نوبت پخش می‌شه؛ در ۵ ثانیه آخر به هشدار تبدیل می‌شه

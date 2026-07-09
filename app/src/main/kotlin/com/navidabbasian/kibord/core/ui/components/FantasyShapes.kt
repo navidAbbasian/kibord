@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 
 /**
@@ -239,7 +240,7 @@ fun TeamMedallions(
         verticalAlignment = Alignment.Bottom
     ) {
         repeat(count) { i ->
-            val color = teamColors.getOrElse(i) { teamColors[0] }
+            val color = teamColors.teamColorFor(i)
             val active = highlight < 0 || i == highlight
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.Center) {

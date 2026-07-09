@@ -28,6 +28,7 @@ import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.games.kalamz.model.Team
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 
@@ -80,7 +81,7 @@ fun TeamSetupScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             teams.forEach { team ->
-                val teamColor = teamColors.getOrElse(team.id) { teamColors[0] }
+                val teamColor = teamColors.teamColorFor(team.id)
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),

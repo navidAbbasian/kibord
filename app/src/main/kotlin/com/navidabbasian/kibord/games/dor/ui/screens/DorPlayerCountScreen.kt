@@ -24,7 +24,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import androidx.compose.foundation.layout.offset
 
-/** انتخاب تعداد بازیکنان دور: ۴ / ۶ / ۸ / ۱۰ */
+/** انتخاب تعداد بازیکنان دور: ۴ / ۶ / ۸ / ۱۰ / ۱۲ */
 @Composable
 fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
     val sound = LocalSoundManager.current
@@ -54,7 +54,7 @@ fun DorPlayerCountScreen(onPlayerCountSelected: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        val options = listOf(4, 6, 8, 10)
+        val options = listOf(4, 6, 8, 10, 12)
         options.chunked(2).forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),

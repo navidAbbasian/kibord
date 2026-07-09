@@ -43,6 +43,7 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.games.kalamz.model.Player
 import com.navidabbasian.kibord.games.kalamz.model.RoundType
 import com.navidabbasian.kibord.games.kalamz.model.Team
@@ -67,7 +68,7 @@ fun TurnIntroScreen(
         animationSpec = infiniteRepeatable(tween(900, easing = EaseInOutSine), RepeatMode.Reverse), label = "p"
     )
 
-    val teamColor = kiExtras.teamColors.getOrElse(team.id) { kiExtras.teamColors[0] }
+    val teamColor = kiExtras.teamColors.teamColorFor(team.id)
     val roundAccent = when (round) {
         RoundType.DESCRIBE  -> kiExtras.gold
         RoundType.ONE_WORD  -> BlueAccent

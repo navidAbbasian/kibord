@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.games.kalamz.model.Team
 
 @Composable
@@ -25,7 +26,7 @@ fun TeamScoreCard(
     modifier: Modifier = Modifier
 ) {
     val extras = kiExtras
-    val teamColor = extras.teamColors.getOrElse(team.id) { extras.teamColors[0] }
+    val teamColor = extras.teamColors.teamColorFor(team.id)
     val borderColor = if (isWinner) teamColor.copy(alpha = 0.6f) else extras.glassBorder
     val bgColor = if (isWinner) teamColor.copy(alpha = 0.2f) else extras.glass
 

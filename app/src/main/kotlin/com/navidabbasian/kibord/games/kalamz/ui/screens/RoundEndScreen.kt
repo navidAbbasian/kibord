@@ -22,6 +22,7 @@ import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.games.kalamz.model.RoundType
 import com.navidabbasian.kibord.games.kalamz.model.Team
 
@@ -73,7 +74,7 @@ fun RoundEndScreen(
 
                     teamScores.sortedByDescending { it.second }.forEachIndexed { index, (teamId, score) ->
                         val team = teams.find { it.id == teamId } ?: return@forEachIndexed
-                        val teamColor = extras.teamColors.getOrElse(teamId) { extras.teamColors[0] }
+                        val teamColor = extras.teamColors.teamColorFor(teamId)
                         val medalIcon = medals.getOrElse(index) { Icons.Default.Circle }
                         val medalColor = when (index) {
                             0 -> Color(0xFFFFD700)

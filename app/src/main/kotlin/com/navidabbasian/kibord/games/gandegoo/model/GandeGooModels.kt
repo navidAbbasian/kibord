@@ -75,6 +75,8 @@ data class GandeGooUiState(
     /** نوبت انتخاب کتگوری با کدام تیم است */
     val pickingTeam: Int = 0,
     val selectedCell: GgCell? = null,
+    /** تعویض‌های باقی‌مانده‌ی سوالِ خانه‌ی انتخاب‌شده */
+    val swapsLeft: Int = SWAPS_PER_QUESTION,
     val claimingTeam: Int = 0,
     val claim: Int = 5,
     val timeLeftMillis: Long = TURN_MILLIS,
@@ -102,6 +104,8 @@ data class GandeGooUiState(
     companion object {
         const val TURN_MILLIS = 30_000L
         const val REVIEW_MILLIS = 10_000L
+        /** هر خانه‌ی تازه این‌قدر حق تعویض سوال دارد */
+        const val SWAPS_PER_QUESTION = 3
         /** کمینه‌ی دسته‌ها برای شروع بازی */
         const val MIN_CATEGORIES = 2
     }

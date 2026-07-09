@@ -72,6 +72,7 @@ fun GgBidScreen(
     state: GandeGooUiState,
     onClaimingTeamChanged: (Int) -> Unit,
     onClaimChanged: (Int) -> Unit,
+    onSwapQuestion: () -> Unit,
     onStart: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -122,7 +123,38 @@ fun GgBidScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ---- تعویض سوال: تراشه‌ی سنگریزه‌ای با سهمیه‌ی محدود ----
+        val canSwap = state.swapsLeft > 0
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .graphicsLayer {
+                    rotationZ = -1.5f
+                    alpha = if (canSwap) 1f else 0.45f
+                }
+                .background(kiExtras.glassStrong, blobShape(seed = 14))
+                .border(1.5.dp, accent.copy(alpha = 0.7f), blobShape(seed = 14))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = canSwap,
+                    onClick = onSwapQuestion
+                )
+                .padding(horizontal = 14.dp, vertical = 9.dp)
+        ) {
+            Text(text = "🔄", fontSize = 15.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = if (canSwap) "تعویض سوال — ${state.swapsLeft.toPersianDigits()} بار مونده"
+                else "تعویض‌ها تموم شد",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
         Text(
             text = "گنده‌گویی کنید! 🎭",
             style = MaterialTheme.typography.titleLarge,

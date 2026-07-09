@@ -44,6 +44,10 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     private var tickerJob: Job? = null
     private var lastWholeSecond = -1
 
+    /** سوال‌های نمایش‌داده‌شده برای خانه‌ی فعلی — تعویض همان‌ها را دوباره نمی‌آورد */
+    private val shownThisCell = mutableSetOf<String>()
+    private var lastSwapCell: GgCell? = null
+
     init {
         repository.load()
         _uiState.update { it.copy(availableCategories = repository.allCategories) }
@@ -82,6 +86,8 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     fun startGame() {
         val ids = _uiState.value.chosenCategoryIds
         if (ids.size < GandeGooUiState.MIN_CATEGORIES) return
+        lastSwapCell = null
+        shownThisCell.clear()
         val categories = repository.buildGameCategories(ids)
         _uiState.update {
             it.copy(
@@ -99,12 +105,44 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     fun selectCell(cell: GgCell) {
         val state = _uiState.value
         if (cell in state.usedCells) return
+        // سهمیه‌ی تعویض فقط برای خانه‌ی تازه ریست می‌شود — لغو و انتخاب دوباره‌ی همان خانه سهمیه‌ی نو نمی‌دهد
+        val freshCell = cell != lastSwapCell
+        if (freshCell) {
+            lastSwapCell = cell
+            shownThisCell.clear()
+            state.categories.getOrNull(cell.categoryIndex)
+                ?.questions?.getOrNull(cell.questionIndex)
+                ?.text?.let(shownThisCell::add)
+        }
         _uiState.update {
             it.copy(
                 selectedCell = cell,
+                swapsLeft = if (freshCell) GandeGooUiState.SWAPS_PER_QUESTION else it.swapsLeft,
                 claimingTeam = it.pickingTeam,
                 claim = 5,
                 phase = GgPhase.Bid,
+            )
+        }
+    }
+
+    /** تعویض سوال خانه‌ی انتخاب‌شده با سوالی تازه از همان سطح امتیازی */
+    fun swapQuestion() {
+        val state = _uiState.value
+        if (state.phase != GgPhase.Bid || state.swapsLeft <= 0) return
+        val cell = state.selectedCell ?: return
+        val category = state.categories.getOrNull(cell.categoryIndex) ?: return
+        val current = category.questions.getOrNull(cell.questionIndex) ?: return
+        val replacement = repository.pickFreshQuestion(category.id, current.points, shownThisCell) ?: return
+        shownThisCell += replacement.text
+        _uiState.update { s ->
+            s.copy(
+                categories = s.categories.mapIndexed { ci, cat ->
+                    if (ci != cell.categoryIndex) cat
+                    else cat.copy(questions = cat.questions.mapIndexed { qi, q ->
+                        if (qi == cell.questionIndex) replacement else q
+                    })
+                },
+                swapsLeft = s.swapsLeft - 1,
             )
         }
     }
@@ -322,6 +360,8 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
 
     fun playAgain() {
         tickerJob?.cancel()
+        lastSwapCell = null
+        shownThisCell.clear()
         val old = _uiState.value
         _uiState.update {
             GandeGooUiState(

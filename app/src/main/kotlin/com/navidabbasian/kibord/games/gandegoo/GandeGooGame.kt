@@ -100,6 +100,10 @@ fun GandeGooGame(
                         state = state,
                         onClaimingTeamChanged = viewModel::setClaimingTeam,
                         onClaimChanged = viewModel::setClaim,
+                        onSwapQuestion = {
+                            sound?.playWordSkip()
+                            viewModel.swapQuestion()
+                        },
                         onStart = viewModel::startAttempt,
                         onCancel = viewModel::cancelBid
                     )

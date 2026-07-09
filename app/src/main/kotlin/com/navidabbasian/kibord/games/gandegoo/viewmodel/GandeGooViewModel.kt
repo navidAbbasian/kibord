@@ -46,6 +46,7 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
 
     init {
         repository.load()
+        _uiState.update { it.copy(availableCategories = repository.allCategories) }
     }
 
     private fun emitSound(event: GgSoundEvent) {
@@ -68,11 +69,22 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(phase = GgPhase.Setup) }
     }
 
-    fun startGame(categoryCount: Int) {
-        val categories = repository.pickCategories(categoryCount)
+    /** افزودن/برداشتن یک دسته در صفحه‌ی انتخاب */
+    fun toggleCategory(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                chosenCategoryIds = if (id in state.chosenCategoryIds) state.chosenCategoryIds - id
+                else state.chosenCategoryIds + id
+            )
+        }
+    }
+
+    fun startGame() {
+        val ids = _uiState.value.chosenCategoryIds
+        if (ids.size < GandeGooUiState.MIN_CATEGORIES) return
+        val categories = repository.buildGameCategories(ids)
         _uiState.update {
             it.copy(
-                categoryCount = categoryCount,
                 categories = categories,
                 usedCells = emptySet(),
                 scores = List(3) { 0 },
@@ -230,7 +242,12 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         tickerJob?.cancel()
         val state = _uiState.value
         val cell = state.selectedCell ?: return
-        val points = state.selectedQuestion?.points ?: return
+        val question = state.selectedQuestion ?: return
+        val points = question.points
+
+        // فقط سوالی که واقعاً بازی شد در سابقه‌ی «بازی‌شده» ثبت می‌شود؛
+        // سوال‌های تعویض‌شده در بازی‌های بعدی دوباره می‌آیند.
+        state.selectedCategory?.let { repository.markQuestionPlayed(it.id, question) }
         val n = state.teamCount
         val claim = state.claim
         val counted = state.counted
@@ -310,7 +327,8 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
             GandeGooUiState(
                 teamCount = old.teamCount,
                 teamNames = old.teamNames,
-                categoryCount = old.categoryCount,
+                availableCategories = old.availableCategories,
+                chosenCategoryIds = old.chosenCategoryIds,
                 phase = GgPhase.Setup,
             )
         }

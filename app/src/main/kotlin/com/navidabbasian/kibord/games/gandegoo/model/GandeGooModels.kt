@@ -47,6 +47,7 @@ data class GgOutcome(
 sealed class GgPhase {
     data object TeamCount : GgPhase()
     data object TeamNames : GgPhase()
+    /** انتخاب دستی دسته‌های بازی از کل بانک — حداقل دو دسته */
     data object Setup : GgPhase()
     data object Board : GgPhase()
     /** ثبت نتیجه‌ی گنده‌گویی حضوری: کدام تیم با چه ادعایی */
@@ -64,8 +65,10 @@ data class GandeGooUiState(
     val teamCount: Int = 2,
     val teamNames: List<String> = List(3) { "" },
     val scores: List<Int> = List(3) { 0 },
-    /** تعداد کتگوری‌های این بازی (۳/۴/۶) */
-    val categoryCount: Int = 6,
+    /** کل دسته‌های بانک — برای صفحه‌ی انتخاب دسته */
+    val availableCategories: List<GgCategory> = emptyList(),
+    /** شناسه‌ی دسته‌های انتخاب‌شده در صفحه‌ی چیدن بازی، به ترتیب انتخاب */
+    val chosenCategoryIds: Set<String> = emptySet(),
     /** کتگوری‌های انتخاب‌شده برای این بازی */
     val categories: List<GgCategory> = emptyList(),
     val usedCells: Set<GgCell> = emptySet(),
@@ -99,6 +102,8 @@ data class GandeGooUiState(
     companion object {
         const val TURN_MILLIS = 30_000L
         const val REVIEW_MILLIS = 10_000L
+        /** کمینه‌ی دسته‌ها برای شروع بازی */
+        const val MIN_CATEGORIES = 2
     }
 }
 

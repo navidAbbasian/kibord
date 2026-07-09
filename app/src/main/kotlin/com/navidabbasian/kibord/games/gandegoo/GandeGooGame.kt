@@ -78,7 +78,12 @@ fun GandeGooGame(
     
                 GgPhase.Setup -> {
                     BackHandler { viewModel.navigateBack() }
-                    GgSetupScreen(onStart = viewModel::startGame)
+                    GgSetupScreen(
+                        availableCategories = state.availableCategories,
+                        chosenIds = state.chosenCategoryIds,
+                        onToggleCategory = viewModel::toggleCategory,
+                        onStart = viewModel::startGame
+                    )
                 }
     
                 GgPhase.Board -> {

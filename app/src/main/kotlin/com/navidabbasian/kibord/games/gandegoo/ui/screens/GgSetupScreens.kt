@@ -38,6 +38,24 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import androidx.compose.foundation.layout.offset
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import com.navidabbasian.kibord.core.ui.components.blobShape
+import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
+import com.navidabbasian.kibord.games.gandegoo.model.GgCategory
 
 /** انتخاب تعداد تیم‌ها: ۲ یا ۳ تیم دونفره */
 @Composable
@@ -146,52 +164,157 @@ fun GgTeamNamesScreen(
     }
 }
 
-/** انتخاب تعداد کتگوری‌های بازی */
+/** انتخاب دستی دسته‌های بازی: جستجو در کل بانک و برداشتن هر تعداد دلخواه (حداقل ۲) */
 @Composable
-fun GgSetupScreen(onStart: (categoryCount: Int) -> Unit) {
-    val sound = LocalSoundManager.current
+fun GgSetupScreen(
+    availableCategories: List<GgCategory>,
+    chosenIds: Set<String>,
+    onToggleCategory: (String) -> Unit,
+    onStart: () -> Unit,
+) {
     val accent = LocalGameAccent.current
+    var query by rememberSaveable { mutableStateOf("") }
+    val filtered = remember(query, availableCategories) {
+        val q = query.trim()
+        if (q.isEmpty()) availableCategories
+        else availableCategories.filter { q in it.name }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(horizontal = 24.dp),
+            .imePadding()
+            .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(36.dp))
-        BobbingEmoji(emoji = "🧮", fontSize = 56.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        StickerTitle(text = "چند کتگوری؟", rotation = 2f)
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        BobbingEmoji(emoji = "🧮", fontSize = 38.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        StickerTitle(text = "دسته‌ها رو انتخاب کن", rotation = 2f, fontSize = 22.sp)
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "هر کتگوری سه سوال ۲۰، ۴۰ و ۶۰ امتیازی دارد",
+            text = "هر دسته سه سوال ۲۰، ۴۰ و ۶۰ امتیازی داره — هر چندتا خواستی بردار",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+        BlobTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = "جستجو بین دسته‌ها…",
+            badge = "🔍",
+            tilt = -0.8f,
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // ---- شمارنده‌ی انتخاب ----
+        Text(
+            text = if (chosenIds.isEmpty()) "هنوز دسته‌ای انتخاب نشده"
+            else "${chosenIds.size.toPersianDigits()} دسته — ${(chosenIds.size * 3).toPersianDigits()} خانه‌ی امتیازی",
+            style = MaterialTheme.typography.labelLarge,
+            color = if (chosenIds.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else accent,
+            modifier = Modifier
+                .graphicsLayer { rotationZ = -1f }
+                .background(
+                    if (chosenIds.isEmpty()) kiExtras.glass else accent.copy(alpha = 0.15f),
+                    RoundedCornerShape(50)
+                )
+                .padding(horizontal = 14.dp, vertical = 5.dp)
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 12.dp)
         ) {
-            listOf(
-                Triple(3, "کوتاه", "۹ سوال"),
-                Triple(4, "متوسط", "۱۲ سوال"),
-                Triple(6, "کامل", "۱۸ سوال"),
-            ).forEachIndexed { i, (count, title, subtitle) ->
-                ChoiceBubble(
-                    main = count.toPersianDigits(),
-                    sub = "$title\n$subtitle",
-                    size = 112.dp,
-                    mainFontSize = 30.sp,
-                    tilt = if (i % 2 == 0) -3f else 3f,
-                    phase = i * 1.2f,
-                    modifier = Modifier.offset(y = if (i == 1) 34.dp else 0.dp),
-                    onClick = { onStart(count) }
+            items(count = filtered.size, key = { filtered[it].id }) { i ->
+                val category = filtered[i]
+                GgCategoryChip(
+                    category = category,
+                    selected = category.id in chosenIds,
+                    index = i,
+                    onToggle = { onToggleCategory(category.id) }
                 )
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(vertical = 10.dp)
+        ) {
+            val enough = chosenIds.size >= GandeGooUiState.MIN_CATEGORIES
+            KButton(
+                text = if (enough) "بریم بازی!" else "حداقل ۲ دسته انتخاب کن",
+                onClick = onStart,
+                enabled = enough,
+            )
+        }
+    }
+}
+
+/** تراشه‌ی دسته: سنگریزه‌ی شیشه‌ای که با انتخاب به رنگ بازی درمی‌آید */
+@Composable
+private fun GgCategoryChip(
+    category: GgCategory,
+    selected: Boolean,
+    index: Int,
+    onToggle: () -> Unit,
+) {
+    val sound = LocalSoundManager.current
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val shape = blobShape(seed = category.id.hashCode())
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .graphicsLayer { rotationZ = if (index % 2 == 0) -1.2f else 1.2f }
+            .background(
+                if (selected) Brush.verticalGradient(listOf(lerp(accent, Color.White, 0.12f), accent))
+                else Brush.verticalGradient(listOf(extras.glassStrong, extras.glassStrong)),
+                shape
+            )
+            .border(
+                2.dp,
+                if (selected) Color.White.copy(alpha = 0.55f) else extras.glassBorder,
+                shape
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                sound?.playButtonClick()
+                onToggle()
+            }
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = category.emoji, fontSize = 18.sp)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = category.name,
+            style = MaterialTheme.typography.labelLarge,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            maxLines = 2,
+            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        if (selected) {
+            Text(text = "✔", fontSize = 15.sp, color = Color.White)
         }
     }
 }

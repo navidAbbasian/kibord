@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.audio.SoundManager
+import com.navidabbasian.kibord.core.content.ContentBank
 import com.navidabbasian.kibord.core.settings.LocalSettingsRepository
 import com.navidabbasian.kibord.core.settings.SettingsRepository
 import com.navidabbasian.kibord.core.settings.ThemeMode
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         soundManager = SoundManager(this)
         settingsRepository = SettingsRepository(this)
+
+        // به‌روزرسانی دوره‌ای بانک کلمات و سوالات از مخزن گیت‌هاب (حداکثر روزی یک بار)
+        lifecycleScope.launch {
+            ContentBank.refreshIfStale(applicationContext)
+        }
 
         // همگام‌سازی پرچم‌های صدا/موسیقی/لرزش با تنظیمات ذخیره‌شده
         lifecycleScope.launch {

@@ -100,7 +100,7 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
         repository.resetUsed()
         _uiState.update {
             it.copy(
-                categories = repository.categories.shuffled().take(6),
+                categories = repository.pickCategories(6),
                 usedCells = emptySet(),
                 scores = List(3) { 0 },
                 pickingTeam = 0,
@@ -236,7 +236,7 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
             RivalUiState(
                 teamCount = old.teamCount,
                 teamNames = old.teamNames,
-                categories = repository.categories.shuffled().take(6),
+                categories = repository.pickCategories(6),
                 phase = RivalPhase.Board,
             )
         }

@@ -224,7 +224,7 @@ fun RivalBoardScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
                         ) {
-                            listOf(2, 4, 6).forEachIndexed { qIndex, points ->
+                            category.tiers.forEachIndexed { qIndex, points ->
                                 val cell = RivalCell(catIndex, points)
                                 val used = cell in state.usedCells
                                 PointCoin(

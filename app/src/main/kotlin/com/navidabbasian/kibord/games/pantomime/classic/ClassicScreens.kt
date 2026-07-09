@@ -170,9 +170,9 @@ fun ClassicRoundsScreen(onRoundsSelected: (Int) -> Unit) {
 fun ClassicPickScreen(
     state: ClassicUiState,
     hasWords: (PCategory, Int) -> Boolean,
-    hasGolden: (PCategory) -> Boolean,
+    hasGolden: () -> Boolean,
     onPickWord: (PCategory, Int) -> Unit,
-    onPickGolden: (PCategory) -> Unit,
+    onPickGolden: () -> Unit,
 ) {
     val sound = LocalSoundManager.current
     val accent = LocalGameAccent.current
@@ -213,6 +213,34 @@ fun ClassicPickScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            // ---- موضوع طلایی: سنگریزه‌ی دفرمه‌ی طلایی بالای همه‌ی کتگوری‌ها ----
+            if (goldenAvailable && hasGolden()) {
+                item(key = "golden") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        ChoiceBubble(
+                            main = 30.toPersianDigits(),
+                            sub = "موضوع طلایی",
+                            accent = extras.gold,
+                            size = 94.dp,
+                            tilt = -2.5f,
+                            phase = 0.6f,
+                            onClick = onPickGolden
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "ریسک بزرگ: ۳ دقیقه، شکست = باخت کل بازی",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             items(count = state.categories.size, key = { state.categories[it].id }) { catIndex ->
                 val category = state.categories[catIndex]
                 GlassCard(
@@ -240,21 +268,13 @@ fun ClassicPickScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
                         ) {
-                            listOf(2, 4, 6).forEachIndexed { qIndex, points ->
+                            category.tiers.forEachIndexed { qIndex, points ->
                                 val available = hasWords(category, points)
                                 PointCoin(
                                     value = points.toPersianDigits(),
                                     used = !available,
                                     phase = (catIndex * 3 + qIndex) * 0.8f,
                                     onClick = { onPickWord(category, points) }
-                                )
-                            }
-                            if (goldenAvailable && hasGolden(category)) {
-                                PointCoin(
-                                    value = 30.toPersianDigits(),
-                                    golden = true,
-                                    phase = catIndex * 1.4f,
-                                    onClick = { onPickGolden(category) }
                                 )
                             }
                         }

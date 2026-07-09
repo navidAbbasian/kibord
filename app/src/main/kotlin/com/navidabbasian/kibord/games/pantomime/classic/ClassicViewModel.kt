@@ -102,7 +102,7 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
 
     fun hasWords(category: PCategory, points: Int): Boolean = repository.hasWords(category, points)
 
-    fun hasGolden(category: PCategory): Boolean = repository.hasGolden(category)
+    fun hasGolden(): Boolean = repository.hasGoldenWord()
 
     fun pickWord(category: PCategory, points: Int) {
         val word = repository.drawWord(category, points) ?: return
@@ -121,10 +121,10 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun pickGolden(category: PCategory) {
+    fun pickGolden() {
         val state = _uiState.value
         if (state.goldenUsed[state.performingTeam]) return
-        val word = repository.drawGolden(category) ?: return
+        val word = repository.drawGoldenWord() ?: return
         _uiState.update {
             it.copy(
                 goldenUsed = it.goldenUsed.mapIndexed { i, used -> used || i == it.performingTeam },
@@ -132,8 +132,8 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
                     word = word,
                     points = PantoRules.GOLDEN_POINTS,
                     isGolden = true,
-                    categoryName = category.name,
-                    categoryEmoji = category.emoji,
+                    categoryName = "موضوع طلایی",
+                    categoryEmoji = "⭐",
                     durationMillis = PantoRules.durationFor(0, isGolden = true),
                 ),
                 phase = ClassicPhase.Reveal,

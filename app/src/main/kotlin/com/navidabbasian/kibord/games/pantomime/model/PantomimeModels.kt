@@ -10,9 +10,17 @@ data class PCategory(
     val words2: List<String> = emptyList(),
     val words4: List<String> = emptyList(),
     val words6: List<String> = emptyList(),
+    /** قدیمی — موضوع طلایی حالا بانک جداگانه است (goldenWords در کتگوری golden) */
     val golden: String = "",
+    /** امتیاز اضافه‌ی هر رده — ضرب‌المثل ۱+ دارد یعنی ۳/۵/۷ به‌جای ۲/۴/۶ */
+    val bonus: Int = 0,
+    /** فقط برای کتگوری ویژه‌ی id="golden": بانک کلمات انتزاعی یک‌بارمصرف */
+    val goldenWords: List<String> = emptyList(),
 ) {
-    fun wordsFor(points: Int): List<String> = when (points) {
+    /** امتیازهای سه رده‌ی این کتگوری با احتساب bonus */
+    val tiers: List<Int> get() = listOf(2 + bonus, 4 + bonus, 6 + bonus)
+
+    fun wordsFor(points: Int): List<String> = when (points - bonus) {
         2 -> words2
         4 -> words4
         else -> words6
@@ -43,11 +51,11 @@ data class PantoResult(
 object PantoRules {
     const val GOLDEN_POINTS = 30
 
-    /** ۲ امتیازی: ۶۰ ثانیه، ۴: ۹۰، ۶: ۱۲۰، طلایی: ۱۸۰ */
+    /** رده‌ی ساده (۲/۳ امتیازی): ۶۰ ثانیه، متوسط (۴/۵): ۹۰، سخت (۶/۷): ۱۲۰، طلایی: ۱۸۰ */
     fun durationFor(points: Int, isGolden: Boolean): Long = when {
         isGolden -> 180_000L
-        points <= 2 -> 60_000L
-        points == 4 -> 90_000L
+        points <= 3 -> 60_000L
+        points <= 5 -> 90_000L
         else -> 120_000L
     }
 

@@ -44,9 +44,21 @@ data class GgOutcome(
     }
 }
 
+/** حالت بازی: کامل با هر سه سطح امتیازی، سریع فقط با سوال‌های ۲۰ امتیازی */
+enum class GgMode {
+    FULL,
+    QUICK;
+
+    /** سطح‌های امتیازی این حالت */
+    val tiers: List<Int>
+        get() = if (this == QUICK) listOf(20) else listOf(20, 40, 60)
+}
+
 sealed class GgPhase {
     data object TeamCount : GgPhase()
     data object TeamNames : GgPhase()
+    /** انتخاب حالت بازی: کامل یا سریع */
+    data object Mode : GgPhase()
     /** انتخاب دستی دسته‌های بازی از کل بانک — حداقل دو دسته */
     data object Setup : GgPhase()
     data object Board : GgPhase()
@@ -65,6 +77,8 @@ data class GandeGooUiState(
     val teamCount: Int = 2,
     val teamNames: List<String> = List(3) { "" },
     val scores: List<Int> = List(3) { 0 },
+    /** حالت بازی: کامل یا سریع */
+    val mode: GgMode = GgMode.FULL,
     /** کل دسته‌های بانک — برای صفحه‌ی انتخاب دسته */
     val availableCategories: List<GgCategory> = emptyList(),
     /** شناسه‌ی دسته‌های انتخاب‌شده در صفحه‌ی چیدن بازی، به ترتیب انتخاب */
@@ -93,7 +107,8 @@ data class GandeGooUiState(
     val selectedCategory: GgCategory?
         get() = selectedCell?.let { categories.getOrNull(it.categoryIndex) }
 
-    val totalCells: Int get() = categories.size * 3
+    /** در حالت سریع هر دسته فقط یک خانه دارد؛ جمع واقعی سوال‌های چیده‌شده */
+    val totalCells: Int get() = categories.sumOf { it.questions.size }
 
     val allCellsPlayed: Boolean get() = categories.isNotEmpty() && usedCells.size >= totalCells
 

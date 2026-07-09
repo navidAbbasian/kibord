@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.games.gandegoo.data.GandeGooRepository
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgCell
+import com.navidabbasian.kibord.games.gandegoo.model.GgMode
 import com.navidabbasian.kibord.games.gandegoo.model.GgOutcome
 import com.navidabbasian.kibord.games.gandegoo.model.GgPhase
 import com.navidabbasian.kibord.games.gandegoo.model.GgSoundEvent
@@ -70,7 +71,12 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun confirmTeamNames() {
-        _uiState.update { it.copy(phase = GgPhase.Setup) }
+        _uiState.update { it.copy(phase = GgPhase.Mode) }
+    }
+
+    /** انتخاب حالت بازی (کامل/سریع) و رفتن به صفحه‌ی انتخاب دسته‌ها */
+    fun setMode(mode: GgMode) {
+        _uiState.update { it.copy(mode = mode, phase = GgPhase.Setup) }
     }
 
     /** افزودن/برداشتن یک دسته در صفحه‌ی انتخاب */
@@ -84,11 +90,12 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startGame() {
-        val ids = _uiState.value.chosenCategoryIds
+        val state = _uiState.value
+        val ids = state.chosenCategoryIds
         if (ids.size < GandeGooUiState.MIN_CATEGORIES) return
         lastSwapCell = null
         shownThisCell.clear()
-        val categories = repository.buildGameCategories(ids)
+        val categories = repository.buildGameCategories(ids, state.mode.tiers)
         _uiState.update {
             it.copy(
                 categories = categories,
@@ -373,6 +380,7 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
             GandeGooUiState(
                 teamCount = old.teamCount,
                 teamNames = old.teamNames,
+                mode = old.mode,
                 availableCategories = old.availableCategories,
                 chosenCategoryIds = old.chosenCategoryIds,
                 phase = GgPhase.Setup,
@@ -384,7 +392,8 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { state ->
             when (state.phase) {
                 GgPhase.TeamNames -> state.copy(phase = GgPhase.TeamCount)
-                GgPhase.Setup -> state.copy(phase = GgPhase.TeamNames)
+                GgPhase.Mode -> state.copy(phase = GgPhase.TeamNames)
+                GgPhase.Setup -> state.copy(phase = GgPhase.Mode)
                 GgPhase.Bid -> state.copy(phase = GgPhase.Board, selectedCell = null)
                 else -> state
             }

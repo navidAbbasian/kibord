@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.lerp
 import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgCategory
+import com.navidabbasian.kibord.games.gandegoo.model.GgMode
 
 /** انتخاب تعداد تیم‌ها: ۲ یا ۳ تیم دونفره */
 @Composable
@@ -164,11 +165,62 @@ fun GgTeamNamesScreen(
     }
 }
 
+/** انتخاب حالت بازی: کامل (سه سطح امتیازی) یا سریع (فقط ۲۰ امتیازی) */
+@Composable
+fun GgModeScreen(onModeSelected: (GgMode) -> Unit) {
+    val teamColors = kiExtras.teamColors
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(36.dp))
+        BobbingEmoji(emoji = "🎛️", fontSize = 56.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "چطوری بازی کنیم؟", rotation = -2f)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "کامل با هر سه سطح امتیازی، سریع فقط با سوال‌های ۲۰ امتیازی",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(26.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(
+                Triple(GgMode.FULL, "کامل", "هر دسته ۳ سوال\n۲۰ / ۴۰ / ۶۰ امتیازی"),
+                Triple(GgMode.QUICK, "سریع", "هر دسته فقط\nسوال ۲۰ امتیازی"),
+            ).forEachIndexed { i, (mode, title, sub) ->
+                ChoiceBubble(
+                    main = title,
+                    sub = sub,
+                    emoji = if (mode == GgMode.FULL) "🏆" else "⚡",
+                    size = 152.dp,
+                    mainFontSize = 26.sp,
+                    accent = teamColors[(i * 2 + 1) % teamColors.size],
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.5f,
+                    modifier = Modifier.offset(y = if (i % 2 == 0) 0.dp else 30.dp),
+                    onClick = { onModeSelected(mode) }
+                )
+            }
+        }
+    }
+}
+
 /** انتخاب دستی دسته‌های بازی: جستجو در کل بانک و برداشتن هر تعداد دلخواه (حداقل ۲) */
 @Composable
 fun GgSetupScreen(
     availableCategories: List<GgCategory>,
     chosenIds: Set<String>,
+    cellsPerCategory: Int,
     onToggleCategory: (String) -> Unit,
     onStart: () -> Unit,
 ) {
@@ -194,7 +246,8 @@ fun GgSetupScreen(
         StickerTitle(text = "دسته‌ها رو انتخاب کن", rotation = 2f, fontSize = 22.sp)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "هر دسته سه سوال ۲۰، ۴۰ و ۶۰ امتیازی داره — هر چندتا خواستی بردار",
+            text = if (cellsPerCategory == 1) "حالت سریع: هر دسته یک سوال ۲۰ امتیازی داره — هر چندتا خواستی بردار"
+            else "هر دسته سه سوال ۲۰، ۴۰ و ۶۰ امتیازی داره — هر چندتا خواستی بردار",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -214,7 +267,7 @@ fun GgSetupScreen(
         // ---- شمارنده‌ی انتخاب ----
         Text(
             text = if (chosenIds.isEmpty()) "هنوز دسته‌ای انتخاب نشده"
-            else "${chosenIds.size.toPersianDigits()} دسته — ${(chosenIds.size * 3).toPersianDigits()} خانه‌ی امتیازی",
+            else "${chosenIds.size.toPersianDigits()} دسته — ${(chosenIds.size * cellsPerCategory).toPersianDigits()} خانه‌ی امتیازی",
             style = MaterialTheme.typography.labelLarge,
             color = if (chosenIds.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else accent,
             modifier = Modifier

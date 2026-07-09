@@ -17,6 +17,7 @@ import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgBoardScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgPlayScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgResultScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgReviewScreen
+import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgModeScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgSetupScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgTeamCountScreen
 import com.navidabbasian.kibord.games.gandegoo.ui.screens.GgTeamNamesScreen
@@ -52,7 +53,7 @@ fun GandeGooGame(
 
     LaunchedEffect(state.phase) {
         val track = when (state.phase) {
-            GgPhase.TeamCount, GgPhase.TeamNames, GgPhase.Setup -> MusicTrack.HUB
+            GgPhase.TeamCount, GgPhase.TeamNames, GgPhase.Mode, GgPhase.Setup -> MusicTrack.HUB
             else -> MusicTrack.GANDEGOO
         }
         sound?.switchMusic(track)
@@ -76,11 +77,17 @@ fun GandeGooGame(
                     )
                 }
     
+                GgPhase.Mode -> {
+                    BackHandler { viewModel.navigateBack() }
+                    GgModeScreen(onModeSelected = viewModel::setMode)
+                }
+
                 GgPhase.Setup -> {
                     BackHandler { viewModel.navigateBack() }
                     GgSetupScreen(
                         availableCategories = state.availableCategories,
                         chosenIds = state.chosenCategoryIds,
+                        cellsPerCategory = state.mode.tiers.size,
                         onToggleCategory = viewModel::toggleCategory,
                         onStart = viewModel::startGame
                     )

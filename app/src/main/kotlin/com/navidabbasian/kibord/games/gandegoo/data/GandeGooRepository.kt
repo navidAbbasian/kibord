@@ -41,17 +41,22 @@ class GandeGooRepository(private val context: Context) {
         } catch (_: Exception) {
             emptyList()
         }
-        allCategories = (base + custom.filter { c -> base.none { it.id == c.id } })
+        // سوال‌های سفارشیِ هم‌شناسه با دسته‌های بانک، داخل همان دسته ادغام می‌شوند
+        val merged = base.map { b ->
+            val extra = custom.firstOrNull { it.id == b.id } ?: return@map b
+            b.copy(questions = (b.questions + extra.questions).distinct())
+        }
+        allCategories = (merged + custom.filter { c -> base.none { it.id == c.id } })
             .filter { cat -> TIERS.all { tier -> cat.questions.any { it.points == tier } } }
     }
 
-    /** ساخت جدول بازی از دسته‌های انتخابیِ کاربر — از هر سطح یک سوال تازه، بدون ثبت سابقه */
-    fun buildGameCategories(ids: Collection<String>): List<GgCategory> {
+    /** ساخت جدول بازی از دسته‌های انتخابیِ کاربر — از هر سطحِ خواسته‌شده یک سوال تازه، بدون ثبت سابقه */
+    fun buildGameCategories(ids: Collection<String>, tiers: List<Int> = TIERS): List<GgCategory> {
         val byId = allCategories.associateBy { it.id }
         val picked = ids.mapNotNull { byId[it] }
         playedStore.markPlayed(PlayedContentStore.GAME_GANDEGOO, picked.map { it.id })
         return picked.map { cat ->
-            cat.copy(questions = TIERS.mapNotNull { tier -> pickFreshQuestion(cat.id, tier, emptySet()) })
+            cat.copy(questions = tiers.mapNotNull { tier -> pickFreshQuestion(cat.id, tier, emptySet()) })
         }
     }
 

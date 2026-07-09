@@ -95,19 +95,19 @@ fun ContentStudioSection() {
             },
         )
         KButton(
-            text = "💣 کتگوری جدید برای دور",
+            text = "💣 محتوای جدید برای دور",
             style = KButtonStyle.Glass,
             accent = VioletPrimary,
             onClick = { sound?.playButtonClick(); dialog = ContentDialog.DOR },
         )
         KButton(
-            text = "😏 کتگوری جدید برای گنده‌گو",
+            text = "😏 محتوای جدید برای گنده‌گو",
             style = KButtonStyle.Glass,
             accent = VioletPrimary,
             onClick = { sound?.playButtonClick(); dialog = ContentDialog.GANDEGOO },
         )
         KButton(
-            text = "🎭 کتگوری جدید برای پانتومیم",
+            text = "🎭 محتوای جدید برای پانتومیم",
             style = KButtonStyle.Glass,
             accent = VioletPrimary,
             onClick = { sound?.playButtonClick(); dialog = ContentDialog.PANTOMIME },
@@ -593,7 +593,7 @@ private fun MyContentDialog(onDismiss: () -> Unit) {
     ContentDialogFrame(title = "محتوای من", onDismiss = onDismiss) {
         if (isEmpty) {
             Text(
-                text = "هنوز محتوایی نساخته‌اید — از دکمه‌های «کتگوری جدید» شروع کنید.",
+                text = "هنوز محتوایی نساخته‌اید — از دکمه‌های «محتوای جدید» شروع کنید.",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

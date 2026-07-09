@@ -6,6 +6,8 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,8 +45,10 @@ import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.dor.model.DorCategory
 import com.navidabbasian.kibord.games.dor.model.DorWord
+import com.navidabbasian.kibord.games.gandegoo.data.GandeGooRepository
 import com.navidabbasian.kibord.games.gandegoo.model.GgCategory
 import com.navidabbasian.kibord.games.gandegoo.model.GgQuestion
 import com.navidabbasian.kibord.games.pantomime.model.PCategory
@@ -58,7 +62,7 @@ import kotlin.math.abs
  * ساخت کتگوری سفارشی برای دور/گنده‌گو/پانتومیم و ارسال پیشنهاد به مخزن.
  */
 
-private enum class ContentDialog { DOR, GANDEGOO, PANTOMIME }
+private enum class ContentDialog { DOR, GANDEGOO, PANTOMIME, MY_CONTENT }
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -109,6 +113,12 @@ fun ContentStudioSection() {
             onClick = { sound?.playButtonClick(); dialog = ContentDialog.PANTOMIME },
         )
         KButton(
+            text = "📚 محتوای من — دیدنِ افزوده‌های محلی",
+            style = KButtonStyle.Glass,
+            accent = VioletPrimary,
+            onClick = { sound?.playButtonClick(); dialog = ContentDialog.MY_CONTENT },
+        )
+        KButton(
             text = "📤 ارسال محتوای من به گیت‌هاب",
             style = KButtonStyle.Glass,
             accent = VioletPrimary,
@@ -120,6 +130,7 @@ fun ContentStudioSection() {
         ContentDialog.DOR -> DorCategoryDialog(onDismiss = { dialog = null })
         ContentDialog.GANDEGOO -> GgCategoryDialog(onDismiss = { dialog = null })
         ContentDialog.PANTOMIME -> PantoCategoryDialog(onDismiss = { dialog = null })
+        ContentDialog.MY_CONTENT -> MyContentDialog(onDismiss = { dialog = null })
         null -> Unit
     }
 }
@@ -167,6 +178,45 @@ private fun DorCategoryDialog(onDismiss: () -> Unit) {
 @Composable
 private fun GgCategoryDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
+    var addToExisting by remember { mutableStateOf(false) }
+
+    ContentDialogFrame(title = "محتوای گنده‌گو", onDismiss = onDismiss) {
+        // ---- سوییچ: دسته‌ی جدید یا افزودن به دسته‌ی موجود ----
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(false to "دسته‌ی جدید", true to "سوال برای دسته‌ی موجود").forEach { (mode, label) ->
+                val selected = addToExisting == mode
+                Text(
+                    text = label,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) androidx.compose.ui.graphics.Color.White
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .background(
+                            if (selected) VioletPrimary else kiExtras.glass,
+                            RoundedCornerShape(50)
+                        )
+                        .border(
+                            1.dp,
+                            if (selected) VioletPrimary else kiExtras.glassBorder,
+                            RoundedCornerShape(50)
+                        )
+                        .clickable { addToExisting = mode }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (addToExisting) GgAddToExistingContent(onDismiss = onDismiss)
+        else GgNewCategoryContent(onDismiss = onDismiss)
+    }
+}
+
+/** ساخت دسته‌ی کاملاً جدید با یک سوال در هر سطح */
+@Composable
+private fun GgNewCategoryContent(onDismiss: () -> Unit) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("") }
     var q20 by remember { mutableStateOf("") }
@@ -174,28 +224,129 @@ private fun GgCategoryDialog(onDismiss: () -> Unit) {
     var q60 by remember { mutableStateOf("") }
     val valid = name.isNotBlank() && q20.isNotBlank() && q40.isNotBlank() && q60.isNotBlank()
 
-    ContentDialogFrame(title = "کتگوری گنده‌گو", onDismiss = onDismiss) {
-        BlobTextField(value = name, onValueChange = { name = it }, placeholder = "نام کتگوری", color = VioletPrimary, badge = "🏷️")
-        Spacer(modifier = Modifier.height(8.dp))
-        BlobTextField(value = emoji, onValueChange = { emoji = it }, placeholder = "ایموجی (اختیاری)", color = VioletPrimary, badge = "😀")
-        Spacer(modifier = Modifier.height(8.dp))
-        GlassTextArea(value = q20, onValueChange = { q20 = it }, placeholder = "سوال ساده (۲۰ امتیازی) — مثلاً: میوه‌ها نام ببرید", minHeight = 64.dp)
-        Spacer(modifier = Modifier.height(8.dp))
-        GlassTextArea(value = q40, onValueChange = { q40 = it }, placeholder = "سوال متوسط (۴۰ امتیازی)", minHeight = 64.dp)
-        Spacer(modifier = Modifier.height(8.dp))
-        GlassTextArea(value = q60, onValueChange = { q60 = it }, placeholder = "سوال سخت (۶۰ امتیازی)", minHeight = 64.dp)
-        Spacer(modifier = Modifier.height(12.dp))
-        DialogButtons(saveEnabled = valid, onDismiss = onDismiss) {
-            appendCustomCategory(context, CustomContentStore.GANDEGOO,
-                GgCategory(id = customId(name), name = name.trim(), emoji = emoji.trim().ifBlank { "✨" },
-                    questions = listOf(
-                        GgQuestion(20, q20.trim()),
-                        GgQuestion(40, q40.trim()),
-                        GgQuestion(60, q60.trim()),
-                    ))
-            ) { list -> json.encodeToString(list) }
-            onDismiss()
+    BlobTextField(value = name, onValueChange = { name = it }, placeholder = "نام کتگوری", color = VioletPrimary, badge = "🏷️")
+    Spacer(modifier = Modifier.height(8.dp))
+    BlobTextField(value = emoji, onValueChange = { emoji = it }, placeholder = "ایموجی (اختیاری)", color = VioletPrimary, badge = "😀")
+    Spacer(modifier = Modifier.height(8.dp))
+    GlassTextArea(value = q20, onValueChange = { q20 = it }, placeholder = "سوال ساده (۲۰ امتیازی) — مثلاً: میوه‌ها نام ببرید", minHeight = 64.dp)
+    Spacer(modifier = Modifier.height(8.dp))
+    GlassTextArea(value = q40, onValueChange = { q40 = it }, placeholder = "سوال متوسط (۴۰ امتیازی)", minHeight = 64.dp)
+    Spacer(modifier = Modifier.height(8.dp))
+    GlassTextArea(value = q60, onValueChange = { q60 = it }, placeholder = "سوال سخت (۶۰ امتیازی)", minHeight = 64.dp)
+    Spacer(modifier = Modifier.height(12.dp))
+    DialogButtons(saveEnabled = valid, onDismiss = onDismiss) {
+        val id = customId(name)
+        appendGgQuestions(
+            context,
+            GgCategory(id = id, name = name.trim(), emoji = emoji.trim().ifBlank { "✨" }),
+            listOf(
+                GgQuestion(20, q20.trim()),
+                GgQuestion(40, q40.trim()),
+                GgQuestion(60, q60.trim()),
+            ),
+        )
+        onDismiss()
+    }
+}
+
+/** افزودن سوال‌های تازه به یکی از دسته‌های موجود بانک */
+@Composable
+private fun GgAddToExistingContent(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val bankCategories = remember {
+        try {
+            GandeGooRepository(context).apply { load() }.allCategories
+        } catch (_: Exception) {
+            emptyList()
         }
+    }
+    var query by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf<GgCategory?>(null) }
+    var tier by remember { mutableStateOf(20) }
+    var questionsText by remember { mutableStateOf("") }
+    // سوال ممکن است ویرگول داشته باشد؛ فقط خط جدید جداکننده است
+    val questions = questionsText.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    val filtered = remember(query, bankCategories) {
+        val q = query.trim()
+        if (q.isEmpty()) bankCategories else bankCategories.filter { q in it.name }
+    }
+    val valid = selected != null && questions.isNotEmpty()
+
+    BlobTextField(value = query, onValueChange = { query = it }, placeholder = "جستجوی دسته…", color = VioletPrimary, badge = "🔍")
+    Spacer(modifier = Modifier.height(8.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .background(kiExtras.glass, RoundedCornerShape(18.dp))
+            .border(1.dp, kiExtras.glassBorder, RoundedCornerShape(18.dp)),
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().padding(6.dp)) {
+            items(count = filtered.size, key = { filtered[it].id }) { i ->
+                val cat = filtered[i]
+                val isSel = selected?.id == cat.id
+                Text(
+                    text = "${cat.emoji} ${cat.name}",
+                    fontSize = 14.sp,
+                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSel) androidx.compose.ui.graphics.Color.White
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                        .background(
+                            if (isSel) VioletPrimary else androidx.compose.ui.graphics.Color.Transparent,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { selected = cat }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // ---- سطح امتیازی سوال‌های جدید ----
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(20, 40, 60).forEach { t ->
+            val isSel = tier == t
+            Text(
+                text = "${t.toPersianDigits()} امتیازی",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSel) androidx.compose.ui.graphics.Color.White
+                else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .background(
+                        if (isSel) VioletPrimary else kiExtras.glass,
+                        RoundedCornerShape(50)
+                    )
+                    .clickable { tier = t }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    GlassTextArea(
+        value = questionsText,
+        onValueChange = { questionsText = it },
+        placeholder = "سوال‌های جدید — هر سوال در یک خط",
+        minHeight = 96.dp,
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = if (selected == null) "یک دسته انتخاب کن"
+        else "افزودن ${questions.size.toPersianDigits()} سوال ${tier.toPersianDigits()} امتیازی به «${selected?.name}»",
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (valid) MaterialTheme.colorScheme.onSurfaceVariant else kiExtras.danger,
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    DialogButtons(saveEnabled = valid, onDismiss = onDismiss) {
+        selected?.let { cat ->
+            appendGgQuestions(context, cat, questions.map { GgQuestion(tier, it) })
+        }
+        onDismiss()
     }
 }
 
@@ -361,6 +512,145 @@ private inline fun <reified T> appendCustomCategory(
     val itemJson = json.encodeToString(item)
     val updated = existing.filter { json.encodeToString(it) != itemJson } + item
     store.setJson(storeKey, encode(updated))
+}
+
+/**
+ * افزودن سوال به مدخل سفارشی گنده‌گو بر پایه‌ی شناسه‌ی دسته:
+ * اگر مدخلی با همان شناسه باشد سوال‌ها ادغام می‌شوند — این‌طوری هم دسته‌ی
+ * جدید ساخته می‌شود و هم به دسته‌های بانک سوال اضافه می‌شود (مخزن هنگام
+ * بارگذاری، مدخل هم‌شناسه را داخل دسته‌ی بانک ادغام می‌کند).
+ */
+private fun appendGgQuestions(context: Context, category: GgCategory, newQuestions: List<GgQuestion>) {
+    val store = CustomContentStore(context)
+    val existing: List<GgCategory> = try {
+        val text = store.getJson(CustomContentStore.GANDEGOO)
+        if (text.isBlank()) emptyList() else json.decodeFromString(text)
+    } catch (_: Exception) {
+        emptyList()
+    }
+    val prev = existing.firstOrNull { it.id == category.id }
+    val entry = GgCategory(
+        id = category.id,
+        name = category.name,
+        emoji = category.emoji,
+        questions = (prev?.questions.orEmpty() + newQuestions).distinct(),
+    )
+    store.setJson(
+        CustomContentStore.GANDEGOO,
+        json.encodeToString(existing.filter { it.id != category.id } + entry),
+    )
+}
+
+// ---- نمای محتوای محلی ----
+
+private data class LocalCat(val title: String, val items: List<String>)
+
+/** خواندن همه‌ی محتوای سفارشیِ ذخیره‌شده روی دستگاه، گروه‌بندی‌شده بر اساس بازی */
+private fun loadLocalContent(context: Context): List<Pair<String, List<LocalCat>>> {
+    val store = CustomContentStore(context)
+
+    fun read(key: String, map: (String) -> List<LocalCat>): List<LocalCat> = try {
+        val text = store.getJson(key)
+        if (text.isBlank()) emptyList() else map(text)
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    val dor = read(CustomContentStore.DOR) { text ->
+        json.decodeFromString<List<DorCategory>>(text).map { c ->
+            LocalCat("${c.emoji} ${c.name}", c.words.map { it.text })
+        }
+    }
+    val gandegoo = read(CustomContentStore.GANDEGOO) { text ->
+        json.decodeFromString<List<GgCategory>>(text).map { c ->
+            LocalCat("${c.emoji} ${c.name}", c.questions.map { q -> "${q.points.toPersianDigits()} امتیازی — ${q.text}" })
+        }
+    }
+    val pantomime = read(CustomContentStore.PANTOMIME) { text ->
+        json.decodeFromString<List<PCategory>>(text).map { c ->
+            LocalCat(
+                "${c.emoji} ${c.name}",
+                buildList {
+                    c.words2.forEach { add("۲ — $it") }
+                    c.words4.forEach { add("۴ — $it") }
+                    c.words6.forEach { add("۶ — $it") }
+                    if (c.golden.isNotBlank()) add("⭐ طلایی — ${c.golden}")
+                },
+            )
+        }
+    }
+    return listOf("💣 دور" to dor, "😏 گنده‌گو" to gandegoo, "🎭 پانتومیم" to pantomime)
+}
+
+/** نمایش کتگوری‌ها و آیتم‌های افزوده‌شده به‌صورت محلی — فقط خواندنی */
+@Composable
+private fun MyContentDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val sections = remember { loadLocalContent(context) }
+    val isEmpty = sections.all { it.second.isEmpty() }
+    var expanded by remember { mutableStateOf<String?>(null) }
+
+    ContentDialogFrame(title = "محتوای من", onDismiss = onDismiss) {
+        if (isEmpty) {
+            Text(
+                text = "هنوز محتوایی نساخته‌اید — از دکمه‌های «کتگوری جدید» شروع کنید.",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            sections.forEach { (gameTitle, cats) ->
+                if (cats.isNotEmpty()) {
+                    Text(
+                        text = gameTitle,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VioletPrimary,
+                        modifier = Modifier.padding(vertical = 6.dp),
+                    )
+                    cats.forEach { cat ->
+                        val key = "$gameTitle/${cat.title}"
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                                .background(kiExtras.glass, RoundedCornerShape(16.dp))
+                                .border(1.dp, kiExtras.glassBorder, RoundedCornerShape(16.dp))
+                                .clickable { expanded = if (expanded == key) null else key }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = cat.title,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "${cat.items.size.toPersianDigits()} مورد ${if (expanded == key) "▲" else "▼"}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (expanded == key) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = cat.items.joinToString("\n"),
+                                    fontSize = 13.sp,
+                                    lineHeight = 22.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        KButton(text = "بستن", style = KButtonStyle.Glass, accent = VioletPrimary, onClick = onDismiss)
+    }
 }
 
 /** باز کردن صفحه‌ی ثبت issue گیت‌هاب با محتوای سفارشی کاربر؛ اگر طولانی بود، اشتراک‌گذاری متنی */

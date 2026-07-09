@@ -145,6 +145,20 @@ fun SettingsScreen() {
             )
         }
 
+        // ---- بانک محتوا: به‌روزرسانی و افزودن کتگوری ----
+        item {
+            Text(
+                text = "بانک محتوا",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+            )
+        }
+        item {
+            ContentStudioSection()
+        }
+
         // ---- درباره: بلیت ----
         item {
             TicketCard(
@@ -156,7 +170,7 @@ fun SettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                     AboutRow(emoji = "🏆", label = "نام اپ", value = "کی برد؟")
-                    AboutRow(emoji = "🔖", label = "نسخه", value = "۱.۰")
+                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۱.۱")
                     AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۵ بازی دورهمی")
                 }
             }

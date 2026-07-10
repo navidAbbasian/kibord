@@ -12,6 +12,7 @@ import com.navidabbasian.kibord.games.esmfamil.model.EfSettings
 import com.navidabbasian.kibord.games.esmfamil.model.EfSnapshot
 import com.navidabbasian.kibord.games.esmfamil.model.MAX_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
+import com.navidabbasian.kibord.games.esmfamil.model.REVIEW_SECONDS
 import com.navidabbasian.kibord.games.esmfamil.net.EfClient
 import com.navidabbasian.kibord.games.esmfamil.net.EfDiscoveredGame
 import com.navidabbasian.kibord.games.esmfamil.net.EfMessage
@@ -52,6 +53,8 @@ data class EsmFamilUiState(
     val isHost: Boolean get() = role == EfRole.HOST
     val me: EfPlayer? get() = snapshot.player(myName)
     val myTurnToPick: Boolean get() = snapshot.pickerName == myName
+    /** من در فاز اعتراض «اعتراضی ندارم» زده‌ام */
+    val iAmDoneReviewing: Boolean get() = myName in snapshot.reviewDone
     val allMyFieldsFilled: Boolean
         get() = snapshot.settings.topics.isNotEmpty() &&
             snapshot.settings.topics.all { !myAnswers[it].isNullOrBlank() }
@@ -283,10 +286,34 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         else client?.send(EfMessage.Vote(topic, owner, reject))
     }
 
-    /** میزبان: از بازبینی به جدول راند */
-    fun proceedFromReview() = hostOnly {
+    /** «اعتراضی ندارم» — همه بزنند، فاز اعتراض زودتر بسته می‌شود */
+    fun markReviewDone() {
+        val st = _uiState.value
+        if (st.snapshot.phase != EfPhase.REVIEW || st.iAmDoneReviewing) return
+        if (st.isHost) hostMarkReviewDone(st.myName) else client?.send(EfMessage.ReviewDone)
+    }
+
+    /** میزبان در فاز داوری: رد یا برگرداندن یک جواب */
+    fun judgeSetRejected(topic: String, owner: String, rejected: Boolean) = hostOnly {
         val s = _uiState.value.snapshot
-        if (s.phase != EfPhase.REVIEW || s.answers.isEmpty()) return@hostOnly
+        if (s.phase != EfPhase.JUDGE) return@hostOnly
+        mutateSnapshot { snap ->
+            val updated = snap.answers.map { a ->
+                if (a.topic == topic && a.player == owner) a.copy(rejected = rejected) else a
+            }
+            snap.copy(answers = EfScoring.computeScores(updated, snap.currentLetter))
+        }
+    }
+
+    /** میزبان: پایان داوری و اعمال امتیازهای راند */
+    fun proceedFromJudge() = hostOnly {
+        val s = _uiState.value.snapshot
+        if (s.phase != EfPhase.JUDGE || s.answers.isEmpty()) return@hostOnly
+        applyRoundResult()
+    }
+
+    private fun applyRoundResult() {
+        val s = _uiState.value.snapshot
         val roundScores = EfScoring.roundTotals(s.answers)
         mutateSnapshot { snap ->
             snap.copy(
@@ -344,6 +371,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             is EfMessage.StopRound -> hostEndRound(stopper = playerName)
             is EfMessage.Submit -> hostReceiveAnswers(playerName, msg.answers)
             is EfMessage.Vote -> hostApplyVote(playerName, msg.topic, msg.owner, msg.reject)
+            is EfMessage.ReviewDone -> hostMarkReviewDone(playerName)
             else -> Unit
         }
     }
@@ -428,22 +456,70 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
                 )
             }
         }
-        mutateSnapshot { it.copy(answers = EfScoring.computeScores(answers, it.currentLetter)) }
+        mutateSnapshot {
+            it.copy(
+                answers = EfScoring.computeScores(answers, it.currentLetter),
+                secondsLeft = REVIEW_SECONDS,
+                reviewDone = emptyList(),
+            )
+        }
+        startReviewTicker()
+    }
+
+    /** شمارش معکوس ۳۰ ثانیه‌ی فاز اعتراض؛ پایانش فاز داوری میزبان است */
+    private fun startReviewTicker() {
+        tickerJob?.cancel()
+        tickerJob = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                val s = _uiState.value.snapshot
+                if (s.phase != EfPhase.REVIEW) break
+                val left = s.secondsLeft - 1
+                if (left <= 0) {
+                    finishReviewPhase()
+                    break
+                }
+                mutateSnapshot { it.copy(secondsLeft = left) }
+            }
+        }
+    }
+
+    private fun hostMarkReviewDone(playerName: String) {
+        val s = _uiState.value.snapshot
+        if (s.phase != EfPhase.REVIEW || s.answers.isEmpty()) return
+        mutateSnapshot { snap -> snap.copy(reviewDone = (snap.reviewDone + playerName).distinct()) }
+        val snap = _uiState.value.snapshot
+        val connectedNames = snap.players.filter { it.connected }.map { it.name }
+        if (connectedNames.all { it in snap.reviewDone }) {
+            tickerJob?.cancel()
+            finishReviewPhase()
+        }
+    }
+
+    /** پایان فاز اعتراض: اگر اعتراضی نیست یکراست نتیجه، وگرنه داوری میزبان */
+    private fun finishReviewPhase() {
+        val s = _uiState.value.snapshot
+        if (s.phase != EfPhase.REVIEW) return
+        if (s.answers.none { it.rejectVotes.isNotEmpty() }) {
+            applyRoundResult()
+        } else {
+            mutateSnapshot { it.copy(phase = EfPhase.JUDGE, secondsLeft = 0) }
+        }
     }
 
     private fun hostApplyVote(voter: String, topic: String, owner: String, reject: Boolean) {
         val s = _uiState.value.snapshot
         if (s.phase != EfPhase.REVIEW || voter == owner) return
-        val playerCount = s.players.size
+        // در فاز اعتراض فقط اعتراض ثبت می‌شود؛ حکم نهایی با میزبان در فاز داوری است
         mutateSnapshot { snap ->
-            val updated = snap.answers.map { a ->
-                if (a.topic != topic || a.player != owner) a
-                else {
-                    val votes = if (reject) (a.rejectVotes + voter).distinct() else a.rejectVotes - voter
-                    a.copy(rejectVotes = votes, rejected = EfScoring.isRejected(votes.size, playerCount))
+            snap.copy(
+                answers = snap.answers.map { a ->
+                    if (a.topic != topic || a.player != owner) a
+                    else a.copy(
+                        rejectVotes = if (reject) (a.rejectVotes + voter).distinct() else a.rejectVotes - voter
+                    )
                 }
-            }
-            snap.copy(answers = EfScoring.computeScores(updated, snap.currentLetter))
+            )
         }
     }
 

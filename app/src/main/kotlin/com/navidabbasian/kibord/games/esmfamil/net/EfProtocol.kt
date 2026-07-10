@@ -42,10 +42,15 @@ sealed class EfMessage {
     @SerialName("submit")
     data class Submit(val answers: Map<String, String>) : EfMessage()
 
-    /** رای رد/پس‌گرفتن رای برای یک جواب در بازبینی */
+    /** اعتراض/پس‌گرفتن اعتراض به یک جواب در فاز بازبینی */
     @Serializable
     @SerialName("vote")
     data class Vote(val topic: String, val owner: String, val reject: Boolean) : EfMessage()
+
+    /** «اعتراضی ندارم» — اگر همه بزنند، فاز اعتراض زودتر بسته می‌شود */
+    @Serializable
+    @SerialName("review_done")
+    data object ReviewDone : EfMessage()
 }
 
 val efJson = Json {

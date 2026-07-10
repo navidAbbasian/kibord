@@ -329,17 +329,18 @@ fun EfPlayScreen(
     }
 }
 
-/** بازبینی جمعی: جواب‌های همه موضوع‌به‌موضوع + رای رد برای مچ‌گیری */
+/** فاز اعتراض: ۳۰ ثانیه بررسی جمعی جواب‌ها — «اعتراضی ندارم» همه، زودتر می‌بندد */
 @Composable
 fun EfReviewScreen(
     state: EsmFamilUiState,
     onVote: (topic: String, owner: String, reject: Boolean) -> Unit,
-    onProceed: () -> Unit,
+    onDone: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
-    val sound = LocalSoundManager.current
     val snapshot = state.snapshot
+    val doneCount = snapshot.reviewDone.size
+    val connectedCount = snapshot.players.count { it.connected }
 
     Column(
         modifier = Modifier
@@ -349,7 +350,7 @@ fun EfReviewScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(14.dp))
-        StickerTitle(text = "بازبینی — حرف «${snapshot.currentLetter}»", rotation = 2f, fontSize = 22.sp)
+        StickerTitle(text = "اعتراض — حرف «${snapshot.currentLetter}»", rotation = 2f, fontSize = 22.sp)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = if (snapshot.stopperName.isBlank()) "وقت تموم شد ⏰"
@@ -357,7 +358,7 @@ fun EfReviewScreen(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (snapshot.answers.isEmpty()) {
             Spacer(modifier = Modifier.height(40.dp))
@@ -371,6 +372,23 @@ fun EfReviewScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
+            // ---- شمارش معکوس اعتراض ----
+            val urgent = snapshot.secondsLeft <= 5
+            Text(
+                text = "⏳ ${snapshot.secondsLeft.toPersianDigits()} ثانیه برای اعتراض",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (urgent) Color.White else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .then(if (urgent) Modifier.breathing(intensity = 0.05f, periodMs = 600) else Modifier)
+                    .background(
+                        if (urgent) extras.danger else extras.glassStrong,
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 7.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -406,6 +424,168 @@ fun EfReviewScreen(
             }
         }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            KButton(
+                text = if (state.iAmDoneReviewing)
+                    "منتظر بقیه… (${doneCount.toPersianDigits()} از ${connectedCount.toPersianDigits()})"
+                else "اعتراضی ندارم ✋",
+                enabled = snapshot.answers.isNotEmpty() && !state.iAmDoneReviewing,
+                onClick = onDone,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "به کلمه‌ی مشکوک 🚫 بزن؛ حکم نهایی با میزبانه",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** فاز داوری: میزبان اعتراض‌ها را می‌بیند و جواب‌ها را قبول/رد می‌کند */
+@Composable
+fun EfJudgeScreen(
+    state: EsmFamilUiState,
+    onSetRejected: (topic: String, owner: String, rejected: Boolean) -> Unit,
+    onProceed: () -> Unit,
+) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val snapshot = state.snapshot
+    // فقط موضوع‌هایی که جوابِ اعتراض‌خورده دارند نمایش داده می‌شوند
+    val objectedTopics = snapshot.settings.topics.filter { topic ->
+        snapshot.answers.any { it.topic == topic && it.rejectVotes.isNotEmpty() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(14.dp))
+        BobbingEmoji(emoji = "⚖️", fontSize = 40.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        StickerTitle(text = "داوری میزبان", rotation = -2f, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = if (state.isHost) "جواب‌های اعتراض‌خورده رو قبول یا رد کن"
+            else "${snapshot.hostName} داره اعتراض‌ها رو بررسی می‌کنه…",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
+        ) {
+            items(count = objectedTopics.size, key = { objectedTopics[it] }) { t ->
+                val topic = objectedTopics[t]
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    strong = true,
+                    borderColor = extras.warning.copy(alpha = 0.6f),
+                    tilt = if (t % 2 == 0) -0.8f else 0.8f
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text(
+                            text = "🗂 $topic",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accent,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        snapshot.answers
+                            .filter { it.topic == topic && it.rejectVotes.isNotEmpty() }
+                            .forEach { answer ->
+                                val owner = snapshot.player(answer.player)
+                                val color = kiExtras.teamColors.teamColorFor(owner?.colorIndex ?: 0)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = answer.player,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = color,
+                                        )
+                                        Text(
+                                            text = answer.text.ifBlank { "—" },
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                textDecoration = if (answer.rejected) TextDecoration.LineThrough
+                                                else TextDecoration.None
+                                            ),
+                                            color = if (answer.rejected)
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            else MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Text(
+                                        text = "🚫 ${answer.rejectVotes.size.toPersianDigits()}",
+                                        fontSize = 13.sp,
+                                        color = extras.danger,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = answer.score.toPersianDigits(),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .background(
+                                                if (answer.rejected) extras.danger else extras.success,
+                                                RoundedCornerShape(50)
+                                            )
+                                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                                    )
+                                    if (state.isHost) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (answer.rejected) "برگردون ↩️" else "رد کن ❌",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier
+                                                .background(
+                                                    if (answer.rejected) extras.success else extras.danger,
+                                                    RoundedCornerShape(50)
+                                                )
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                ) {
+                                                    sound?.playButtonClick()
+                                                    onSetRejected(topic, answer.player, !answer.rejected)
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -413,14 +593,10 @@ fun EfReviewScreen(
                 .padding(vertical = 10.dp)
         ) {
             if (state.isHost) {
-                KButton(
-                    text = "تایید و ادامه",
-                    enabled = snapshot.answers.isNotEmpty(),
-                    onClick = onProceed,
-                )
+                KButton(text = "تایید و ادامه", onClick = onProceed)
             } else {
                 Text(
-                    text = "به کلمه‌ی مشکوک رای «رد» بده — ادامه با میزبانه",
+                    text = "منتظر حکم میزبان…",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

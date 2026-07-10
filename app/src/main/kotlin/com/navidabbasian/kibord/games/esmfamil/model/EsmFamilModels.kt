@@ -19,6 +19,9 @@ val DEFAULT_TOPICS = listOf(
 const val MIN_PLAYERS = 2
 const val MAX_PLAYERS = 8
 
+/** مهلت فاز اعتراض بعد از امتیازشماری هر راند */
+const val REVIEW_SECONDS = 30
+
 @Serializable
 data class EfPlayer(
     val name: String,
@@ -42,14 +45,14 @@ data class EfAnswer(
     val text: String,
     /** امتیاز محاسبه‌شده پس از اعمال رای‌های رد */
     val score: Int = 0,
-    /** نام رای‌دهندگانِ رد فعلی */
+    /** نام اعتراض‌کنندگان به این جواب */
     val rejectVotes: List<String> = emptyList(),
-    /** ردشده با رای اکثریتِ بقیه‌ی بازیکنان */
+    /** ردشده با حکم میزبان در فاز داوری */
     val rejected: Boolean = false,
 )
 
 @Serializable
-enum class EfPhase { LOBBY, LETTER_PICK, PLAYING, REVIEW, ROUND_RESULT, GAME_OVER }
+enum class EfPhase { LOBBY, LETTER_PICK, PLAYING, REVIEW, JUDGE, ROUND_RESULT, GAME_OVER }
 
 /**
  * عکس لحظه‌ای کامل وضعیت بازی. میزبان تنها مرجع حقیقت است؛
@@ -72,6 +75,8 @@ data class EfSnapshot(
     val stopperName: String = "",
     /** جواب‌های راند برای بازبینی؛ تا رسیدن همه، خالی است */
     val answers: List<EfAnswer> = emptyList(),
+    /** بازیکن‌هایی که در فاز اعتراض «اعتراضی ندارم» زده‌اند */
+    val reviewDone: List<String> = emptyList(),
     /** جمع امتیاز هر بازیکن در همین راند */
     val roundScores: Map<String, Int> = emptyMap(),
 ) {

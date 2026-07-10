@@ -38,6 +38,7 @@ import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.games.esmfamil.model.EfPhase
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfEntryScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfJoinScreen
+import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfJudgeScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfLetterScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfLobbyScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfPlayScreen
@@ -130,7 +131,13 @@ fun EsmFamilGame(
                         EfPhase.REVIEW -> EfReviewScreen(
                             state = state,
                             onVote = viewModel::voteReject,
-                            onProceed = viewModel::proceedFromReview,
+                            onDone = viewModel::markReviewDone,
+                        )
+
+                        EfPhase.JUDGE -> EfJudgeScreen(
+                            state = state,
+                            onSetRejected = viewModel::judgeSetRejected,
+                            onProceed = viewModel::proceedFromJudge,
                         )
 
                         EfPhase.ROUND_RESULT -> EfRoundResultScreen(

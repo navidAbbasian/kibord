@@ -26,7 +26,9 @@ enum class MusicTrack {
     /** گنده‌گو — حین بازی */
     GANDEGOO,
     /** پانتومیم کلاسیک و رقابتی — حین بازی */
-    PANTOMIME
+    PANTOMIME,
+    /** اسم فامیل — حین بازی */
+    ESM_FAMIL
 }
 
 /**
@@ -191,6 +193,7 @@ class SoundManager(context: Context) {
             MusicTrack.DOR -> R.raw.dor_background_music
             MusicTrack.GANDEGOO -> R.raw.kalamz_music_round1
             MusicTrack.PANTOMIME -> R.raw.kalamz_music_round3
+            MusicTrack.ESM_FAMIL -> R.raw.kalamz_music_round2
         }
         try {
             mediaPlayer?.release()

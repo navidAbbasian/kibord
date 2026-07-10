@@ -5,9 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
+import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.gandegoo.model.GgPhase
@@ -31,6 +35,9 @@ fun GandeGooGame(
     viewModel: GandeGooViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
+    var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
 
     LaunchedEffect(Unit) {
@@ -60,10 +67,15 @@ fun GandeGooGame(
     }
 
     KiBackground {
+        ExitConfirmDialog(
+            visible = pendingExit != null,
+            onConfirm = { pendingExit?.invoke(); pendingExit = null },
+            onDismiss = { pendingExit = null },
+        )
         PhaseTransition(key = state.phase::class) {
             when (state.phase) {
                 GgPhase.TeamCount -> {
-                    BackHandler { onExitToHub() }
+                    BackHandler { pendingExit = { onExitToHub() } }
                     GgTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
                 }
     
@@ -94,7 +106,7 @@ fun GandeGooGame(
                 }
     
                 GgPhase.Board -> {
-                    BackHandler { onExitToHub() }
+                    BackHandler { pendingExit = { onExitToHub() } }
                     GgBoardScreen(
                         state = state,
                         onCellSelected = viewModel::selectCell
@@ -166,10 +178,7 @@ fun GandeGooGame(
                 }
     
                 GgPhase.Winner -> {
-                    BackHandler {
-                        viewModel.playAgain()
-                        onExitToHub()
-                    }
+                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     GgWinnerScreen(
                         state = state,
                         winners = viewModel.winners(),

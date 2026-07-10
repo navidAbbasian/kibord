@@ -15,6 +15,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +27,7 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.dor.model.DorPhase
@@ -44,6 +48,9 @@ fun DorGame(
     viewModel: DorViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
+    var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
 
     // رساندن رویدادهای صوتی موتور بازی به مدیر صدا
@@ -80,10 +87,15 @@ fun DorGame(
     }
 
     KiBackground {
+        ExitConfirmDialog(
+            visible = pendingExit != null,
+            onConfirm = { pendingExit?.invoke(); pendingExit = null },
+            onDismiss = { pendingExit = null },
+        )
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 DorPhase.PlayerCount -> {
-                    BackHandler { onExitToHub() }
+                    BackHandler { pendingExit = { onExitToHub() } }
                     DorPlayerCountScreen(onPlayerCountSelected = viewModel::setPlayerCount)
                 }
     
@@ -143,10 +155,7 @@ fun DorGame(
                 }
     
                 is DorPhase.Winner -> {
-                    BackHandler {
-                        viewModel.playAgain()
-                        onExitToHub()
-                    }
+                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     DorWinnerScreen(
                         winner = phase.team,
                         onPlayAgain = viewModel::playAgain,

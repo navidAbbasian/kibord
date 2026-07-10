@@ -8,11 +8,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
+import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -29,6 +33,9 @@ fun ClassicPantomimeGame(
     viewModel: ClassicViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
+    var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
     val teamColors = kiExtras.teamColors
 
@@ -63,10 +70,15 @@ fun ClassicPantomimeGame(
     }
 
     KiBackground {
+        ExitConfirmDialog(
+            visible = pendingExit != null,
+            onConfirm = { pendingExit?.invoke(); pendingExit = null },
+            onDismiss = { pendingExit = null },
+        )
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 ClassicPhase.TeamNames -> {
-                    BackHandler { onExitToHub() }
+                    BackHandler { pendingExit = { onExitToHub() } }
                     ClassicTeamNamesScreen(
                         teamNames = state.teamNames,
                         onNameChanged = viewModel::updateTeamName,
@@ -80,7 +92,7 @@ fun ClassicPantomimeGame(
                 }
     
                 ClassicPhase.Pick -> {
-                    BackHandler { onExitToHub() }
+                    BackHandler { pendingExit = { onExitToHub() } }
                     ClassicPickScreen(
                         state = state,
                         hasWords = viewModel::hasWords,
@@ -137,10 +149,7 @@ fun ClassicPantomimeGame(
                 }
     
                 is ClassicPhase.GoldenLoss -> {
-                    BackHandler {
-                        viewModel.playAgain()
-                        onExitToHub()
-                    }
+                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     ClassicGoldenLossScreen(
                         state = state,
                         loserTeam = phase.loserTeam,
@@ -153,10 +162,7 @@ fun ClassicPantomimeGame(
                 }
     
                 ClassicPhase.Winner -> {
-                    BackHandler {
-                        viewModel.playAgain()
-                        onExitToHub()
-                    }
+                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     ClassicWinnerScreen(
                         state = state,
                         winners = viewModel.winners(),

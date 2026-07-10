@@ -170,7 +170,7 @@ fun SettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                     AboutRow(emoji = "🏆", label = "نام اپ", value = "کی برد؟")
-                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۱.۴")
+                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۴.۱")
                     AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۵ بازی دورهمی")
                 }
             }

@@ -128,6 +128,22 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
                 }
             }
         }
+
+        // ---- بنر پهن بازی چندگوشی: اسم فامیل ----
+        if (gameCatalog.size > 5) {
+            item {
+                Spacer(modifier = Modifier.height(14.dp))
+                AppearWrap(index = 5) {
+                    GameTile(
+                        game = gameCatalog[5],
+                        index = 5,
+                        height = 168.dp,
+                        emojiSize = 44.sp,
+                        onOpenGame = onOpenGame,
+                    )
+                }
+            }
+        }
     }
 }
 

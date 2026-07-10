@@ -38,6 +38,8 @@ val PantomimeClassicAccent = Color(0xFF7FB5F5)
 val PantomimeClassicAccentDark = Color(0xFF5E97E8)
 val PantomimeRivalAccent = Color(0xFFF794C6)
 val PantomimeRivalAccentDark = Color(0xFFEE74B2)
+val EsmFamilAccent = Color(0xFF8FB33E)
+val EsmFamilAccentDark = Color(0xFF78992E)
 
 // ---- رنگ تیم‌ها — پاستلی ----
 // روشن‌تر و لطیف: مناسب پس‌زمینه‌ی تیره

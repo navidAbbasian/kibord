@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.navidabbasian.kibord.core.ui.theme.DorAccent
 import com.navidabbasian.kibord.core.ui.theme.DorAccentDark
+import com.navidabbasian.kibord.core.ui.theme.EsmFamilAccent
+import com.navidabbasian.kibord.core.ui.theme.EsmFamilAccentDark
 import com.navidabbasian.kibord.core.ui.theme.GandeGooAccent
 import com.navidabbasian.kibord.core.ui.theme.GandeGooAccentDark
 import com.navidabbasian.kibord.core.ui.theme.KalamzAccent
@@ -33,6 +35,7 @@ object Routes {
     const val GANDEGOO = "game/gandegoo"
     const val PANTOMIME_CLASSIC = "game/pantomime_classic"
     const val PANTOMIME_RIVAL = "game/pantomime_rival"
+    const val ESM_FAMIL = "game/esm_famil"
 }
 
 /** فهرست بازی‌های هاب — افزودن بازی جدید فقط یک آیتم اینجا و یک مقصد در NavHost است */
@@ -86,5 +89,15 @@ val gameCatalog = listOf(
         accentDark = PantomimeRivalAccentDark,
         players = "۴ یا ۶ نفر",
         route = Routes.PANTOMIME_RIVAL,
+    ),
+    GameInfo(
+        id = "esm_famil",
+        title = "اسم فامیل",
+        tagline = "چندنفره با گوشی‌های خودتون! حرف بیار، بنویس، استپ!",
+        emoji = "✍️",
+        accent = EsmFamilAccent,
+        accentDark = EsmFamilAccentDark,
+        players = "۲ تا ۸ نفر — هر کی با گوشی خودش",
+        route = Routes.ESM_FAMIL,
     ),
 )

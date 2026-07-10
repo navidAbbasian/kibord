@@ -9,12 +9,14 @@ import androidx.navigation.compose.rememberNavController
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.theme.DorAccent
+import com.navidabbasian.kibord.core.ui.theme.EsmFamilAccent
 import com.navidabbasian.kibord.core.ui.theme.GandeGooAccent
 import com.navidabbasian.kibord.core.ui.theme.KalamzAccent
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccent
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccent
 import com.navidabbasian.kibord.games.dor.DorGame
+import com.navidabbasian.kibord.games.esmfamil.EsmFamilGame
 import com.navidabbasian.kibord.games.gandegoo.GandeGooGame
 import com.navidabbasian.kibord.games.kalamz.KalamzGame
 import com.navidabbasian.kibord.games.pantomime.classic.ClassicPantomimeGame
@@ -59,6 +61,11 @@ fun KiBordApp() {
         composable(Routes.PANTOMIME_RIVAL) {
             CompositionLocalProvider(LocalGameAccent provides PantomimeRivalAccent) {
                 RivalPantomimeGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.ESM_FAMIL) {
+            CompositionLocalProvider(LocalGameAccent provides EsmFamilAccent) {
+                EsmFamilGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
     }

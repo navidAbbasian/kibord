@@ -114,6 +114,9 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 role = EfRole.HOST,
                 localScreen = EfLocalScreen.IN_GAME,
+                // اسم محلی باید دقیقاً همان اسمِ ثبت‌شده در بازی باشد وگرنه
+                // مقایسه‌ی نوبت/رای با فاصله‌ی انتهایی کیبورد به هم می‌ریزد
+                myName = name,
                 hostAddress = EfNsd.localIpAddress() ?: "",
                 hostPort = srv.port,
                 connectError = null,
@@ -225,7 +228,8 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     fun joinGame(address: String, port: Int = EfServer.BASE_PORT) {
         val name = _uiState.value.myName.trim()
         if (name.isBlank() || address.isBlank()) return
-        _uiState.update { it.copy(connecting = true, connectError = null) }
+        // اسم محلی از همین‌جا با اسمِ ارسالی به میزبان یکسان می‌شود (بدون فاصله‌های سر و ته)
+        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
         val c = EfClient(
             scope = viewModelScope,
             onMessage = ::handleServerMessage,

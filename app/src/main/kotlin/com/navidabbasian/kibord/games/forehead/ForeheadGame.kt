@@ -1,0 +1,664 @@
+package com.navidabbasian.kibord.games.forehead
+
+import android.app.Application
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.SystemClock
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.audio.MusicTrack
+import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.content.PlayedContentStore
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
+import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GlassCard
+import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.KiBackground
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
+import com.navidabbasian.kibord.core.ui.components.StickerTitle
+import com.navidabbasian.kibord.core.ui.components.blobShape
+import com.navidabbasian.kibord.core.ui.components.breathing
+import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.util.toPersianDigits
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+// ================= مدل =================
+
+@Serializable
+private data class FhWord(val text: String)
+
+@Serializable
+private data class FhCategory(
+    val id: String,
+    val name: String,
+    val emoji: String = "🎲",
+    val words: List<FhWord> = emptyList(),
+)
+
+sealed class FhPhase {
+    data object Category : FhPhase()
+    data object Ready : FhPhase()
+    data object Play : FhPhase()
+    data object Result : FhPhase()
+}
+
+data class FhUiState(
+    val phase: FhPhase = FhPhase.Category,
+    val categories: List<Pair<String, String>> = emptyList(), // (نام، ایموجی)
+    val selectedCategory: String = "",
+    val turnSeconds: Int = 60,
+    val secondsLeft: Int = 0,
+    val currentWord: String = "",
+    val correctWords: List<String> = emptyList(),
+    val passedWords: List<String> = emptyList(),
+)
+
+enum class FhSoundEvent { TICK, TICK_WARNING, TIME_UP, CORRECT, PASS }
+
+// ================= موتور =================
+
+/**
+ * حدس روی پیشونی: گوشی روی پیشونی، بقیه توضیح می‌دهند.
+ * سر را به جلو خم کن = درست، به عقب = رد؛ دکمه‌ها هم هستند.
+ */
+class ForeheadViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val _uiState = MutableStateFlow(FhUiState())
+    val uiState: StateFlow<FhUiState> = _uiState.asStateFlow()
+
+    private val _soundEvents = MutableSharedFlow<FhSoundEvent>(extraBufferCapacity = 16)
+    val soundEvents: SharedFlow<FhSoundEvent> = _soundEvents.asSharedFlow()
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val playedStore = PlayedContentStore(application)
+    private var bank: List<FhCategory> = emptyList()
+    private var deck: ArrayDeque<String> = ArrayDeque()
+    private var tickerJob: Job? = null
+
+    // ---- حسگر حرکت: خم به جلو = درست، خم به عقب = رد ----
+    private val sensorManager =
+        application.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    private var lastGestureAt = 0L
+    private var neutral = true
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if (_uiState.value.phase != FhPhase.Play) return
+            val z = event.values.getOrNull(2) ?: return
+            val now = SystemClock.elapsedRealtime()
+            when {
+                neutral && z > 7f && now - lastGestureAt > 800 -> {
+                    lastGestureAt = now; neutral = false
+                    markCorrect()
+                }
+                neutral && z < -7f && now - lastGestureAt > 800 -> {
+                    lastGestureAt = now; neutral = false
+                    markPass()
+                }
+                kotlin.math.abs(z) < 4f -> neutral = true
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
+
+    init {
+        bank = try {
+            json.decodeFromString<List<FhCategory>>(ContentBank.open(application, "words.json"))
+        } catch (_: Exception) {
+            emptyList()
+        }.filter { it.words.isNotEmpty() }
+        _uiState.update { s -> s.copy(categories = bank.map { it.name to it.emoji }) }
+    }
+
+    private fun emit(e: FhSoundEvent) = _soundEvents.tryEmit(e)
+
+    fun selectCategory(name: String) {
+        _uiState.update { it.copy(selectedCategory = name, phase = FhPhase.Ready) }
+    }
+
+    fun setTurnSeconds(seconds: Int) = _uiState.update { it.copy(turnSeconds = seconds) }
+
+    fun startTurn() {
+        val cat = bank.firstOrNull { it.name == _uiState.value.selectedCategory } ?: return
+        // کلمات بازی‌نشده؛ بعد از دور کامل، سابقه‌ی همان دسته ریست می‌شود
+        val key = "$KEY:${cat.id}"
+        val played = playedStore.played(key)
+        var fresh = cat.words.map { it.text }.filter { it !in played }
+        if (fresh.size < 5) {
+            playedStore.clear(key)
+            fresh = cat.words.map { it.text }
+        }
+        deck = ArrayDeque(fresh.shuffled())
+        neutral = true
+        _uiState.update {
+            it.copy(
+                phase = FhPhase.Play,
+                secondsLeft = it.turnSeconds,
+                correctWords = emptyList(),
+                passedWords = emptyList(),
+                currentWord = deck.removeFirstOrNull() ?: "",
+            )
+        }
+        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensor ->
+            sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        }
+        startTicker()
+    }
+
+    private fun startTicker() {
+        tickerJob?.cancel()
+        tickerJob = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                val s = _uiState.value
+                if (s.phase != FhPhase.Play) break
+                val left = s.secondsLeft - 1
+                emit(if (left <= 5) FhSoundEvent.TICK_WARNING else FhSoundEvent.TICK)
+                if (left <= 0) {
+                    emit(FhSoundEvent.TIME_UP)
+                    endTurn()
+                    break
+                }
+                _uiState.update { it.copy(secondsLeft = left) }
+            }
+        }
+    }
+
+    fun markCorrect() {
+        val s = _uiState.value
+        if (s.phase != FhPhase.Play || s.currentWord.isBlank()) return
+        emit(FhSoundEvent.CORRECT)
+        bank.firstOrNull { it.name == s.selectedCategory }?.let { cat ->
+            playedStore.markPlayed("$KEY:${cat.id}", s.currentWord)
+        }
+        _uiState.update {
+            it.copy(
+                correctWords = it.correctWords + it.currentWord,
+                currentWord = deck.removeFirstOrNull() ?: "",
+            )
+        }
+        if (_uiState.value.currentWord.isBlank()) endTurn()
+    }
+
+    fun markPass() {
+        val s = _uiState.value
+        if (s.phase != FhPhase.Play || s.currentWord.isBlank()) return
+        emit(FhSoundEvent.PASS)
+        _uiState.update {
+            it.copy(
+                passedWords = it.passedWords + it.currentWord,
+                currentWord = deck.removeFirstOrNull() ?: "",
+            )
+        }
+        if (_uiState.value.currentWord.isBlank()) endTurn()
+    }
+
+    private fun endTurn() {
+        tickerJob?.cancel()
+        sensorManager?.unregisterListener(sensorListener)
+        _uiState.update { it.copy(phase = FhPhase.Result) }
+    }
+
+    fun nextPlayerSameCategory() = startTurn()
+
+    fun backToCategories() {
+        tickerJob?.cancel()
+        sensorManager?.unregisterListener(sensorListener)
+        _uiState.update { it.copy(phase = FhPhase.Category) }
+    }
+
+    fun navigateBack() {
+        _uiState.update { s ->
+            when (s.phase) {
+                FhPhase.Ready -> s.copy(phase = FhPhase.Category)
+                else -> s
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        tickerJob?.cancel()
+        sensorManager?.unregisterListener(sensorListener)
+    }
+
+    companion object {
+        const val KEY = "forehead"
+    }
+}
+
+// ================= ریشه و صفحه‌ها =================
+
+/** ریشه‌ی حدس روی پیشونی */
+@Composable
+fun ForeheadGame(
+    onExitToHub: () -> Unit,
+    viewModel: ForeheadViewModel = viewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
+    var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val sound = LocalSoundManager.current
+
+    LaunchedEffect(Unit) {
+        viewModel.soundEvents.collect { event ->
+            when (event) {
+                FhSoundEvent.TICK -> sound?.playTimerTick()
+                FhSoundEvent.TICK_WARNING -> sound?.playTimerWarning()
+                FhSoundEvent.TIME_UP -> {
+                    sound?.playTimerEnd()
+                    sound?.vibrate(200)
+                }
+                FhSoundEvent.CORRECT -> {
+                    sound?.playCorrectWord()
+                    sound?.vibrate(60)
+                }
+                FhSoundEvent.PASS -> sound?.playWordSkip()
+            }
+        }
+    }
+
+    LaunchedEffect(state.phase) {
+        val track = when (state.phase) {
+            FhPhase.Category, FhPhase.Ready -> MusicTrack.HUB
+            else -> MusicTrack.KALAMZ_ROUND_3
+        }
+        sound?.switchMusic(track)
+    }
+
+    KiBackground {
+        ExitConfirmDialog(
+            visible = pendingExit != null,
+            onConfirm = { pendingExit?.invoke(); pendingExit = null },
+            onDismiss = { pendingExit = null },
+        )
+        PhaseTransition(key = state.phase::class) {
+            when (state.phase) {
+                FhPhase.Category -> {
+                    BackHandler { pendingExit = { onExitToHub() } }
+                    FhCategoryScreen(state = state, onSelect = viewModel::selectCategory)
+                }
+
+                FhPhase.Ready -> {
+                    BackHandler { viewModel.navigateBack() }
+                    FhReadyScreen(
+                        state = state,
+                        onSeconds = viewModel::setTurnSeconds,
+                        onStart = viewModel::startTurn,
+                    )
+                }
+
+                FhPhase.Play -> {
+                    BackHandler { }
+                    FhPlayScreen(
+                        state = state,
+                        onCorrect = viewModel::markCorrect,
+                        onPass = viewModel::markPass,
+                    )
+                }
+
+                FhPhase.Result -> {
+                    BackHandler { pendingExit = { onExitToHub() } }
+                    FhResultScreen(
+                        state = state,
+                        onNextPlayer = viewModel::nextPlayerSameCategory,
+                        onCategories = viewModel::backToCategories,
+                        onExitToHub = onExitToHub,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FhCategoryScreen(state: FhUiState, onSelect: (String) -> Unit) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(20.dp))
+        BobbingEmoji(emoji = "🤳", fontSize = 50.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        StickerTitle(text = "حدس روی پیشونی", rotation = -2f, fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "گوشی روی پیشونی! بقیه توضیح می‌دن، تو حدس می‌زنی.\nیه دسته انتخاب کن:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            items(count = state.categories.size, key = { state.categories[it].first }) { i ->
+                val (name, emoji) = state.categories[i]
+                val interaction = remember { MutableInteractionSource() }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(extras.glassStrong, blobShape(seed = i))
+                        .clickable(interactionSource = interaction, indication = null) {
+                            sound?.playButtonClick()
+                            onSelect(name)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = emoji, fontSize = 24.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FhReadyScreen(
+    state: FhUiState,
+    onSeconds: (Int) -> Unit,
+    onStart: () -> Unit,
+) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        BobbingEmoji(emoji = "🤳", fontSize = 56.sp)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "دسته: ${state.selectedCategory}",
+            style = MaterialTheme.typography.titleLarge,
+            color = accent,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(18.dp))
+        Text(
+            text = "گوشی رو بذار روی پیشونیت طوری که بقیه صفحه رو ببینن.\n" +
+                "سر به جلو = درست ✅   سر به عقب = رد ⏭\n(دکمه‌های روی صفحه هم کار می‌کنن)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            lineHeight = 24.sp,
+        )
+        Spacer(modifier = Modifier.height(22.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(60, 90).forEach { sec ->
+                val selected = state.turnSeconds == sec
+                val interaction = remember { MutableInteractionSource() }
+                Text(
+                    text = "${sec.toPersianDigits()} ثانیه",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
+                        .clickable(interactionSource = interaction, indication = null) {
+                            sound?.playButtonClick()
+                            onSeconds(sec)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 9.dp),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(26.dp))
+        KButton(text = "بذار رو پیشونی و شروع کن!", onClick = onStart)
+    }
+}
+
+@Composable
+private fun FhPlayScreen(
+    state: FhUiState,
+    onCorrect: () -> Unit,
+    onPass: () -> Unit,
+) {
+    val extras = kiExtras
+    val accent = LocalGameAccent.current
+    val urgent = state.secondsLeft <= 5
+
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ---- نیمه‌ی بالا: رد ----
+        val passInteraction = remember { MutableInteractionSource() }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.5f)
+                .background(Brush.verticalGradient(listOf(extras.warning.copy(alpha = 0.25f), Color.Transparent)))
+                .clickable(interactionSource = passInteraction, indication = null, onClick = onPass),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "⏭ رد — سر به عقب",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = state.secondsLeft.toPersianDigits(),
+                    fontSize = if (urgent) 52.sp else 40.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (urgent) extras.danger else MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
+
+        // ---- کلمه‌ی بزرگ وسط ----
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 1800)) {
+                Text(
+                    text = state.currentWord,
+                    fontSize = 52.sp,
+                    fontWeight = FontWeight.Black,
+                    color = accent,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 64.sp,
+                )
+            }
+        }
+
+        // ---- نیمه‌ی پایین: درست ----
+        val okInteraction = remember { MutableInteractionSource() }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.5f)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, extras.success.copy(alpha = 0.30f))))
+                .clickable(interactionSource = okInteraction, indication = null, onClick = onCorrect),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Column(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "✅ ${state.correctWords.size.toPersianDigits()}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = extras.success,
+                )
+                Text(
+                    text = "درست — سر به جلو",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FhResultScreen(
+    state: FhUiState,
+    onNextPlayer: () -> Unit,
+    onCategories: () -> Unit,
+    onExitToHub: () -> Unit,
+) {
+    val extras = kiExtras
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (state.correctWords.size >= 5) ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(14.dp))
+            BobbingEmoji(emoji = "🎯", fontSize = 48.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            StickerTitle(text = "نتیجه‌ی نوبت", rotation = -2f, fontSize = 26.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "✅ ${state.correctWords.size.toPersianDigits()} درست    ⏭ ${state.passedWords.size.toPersianDigits()} رد",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                LazyColumn(modifier = Modifier.padding(14.dp)) {
+                    items(count = state.correctWords.size) { i ->
+                        Text(
+                            text = "✅ ${state.correctWords[i]}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = extras.success,
+                            modifier = Modifier.padding(vertical = 2.dp),
+                        )
+                    }
+                    items(count = state.passedWords.size) { i ->
+                        Text(
+                            text = "⏭ ${state.passedWords[i]}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            KButton(text = "نفر بعد — همین دسته", onClick = onNextPlayer)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                Box(modifier = Modifier.weight(1f)) {
+                    KButton(text = "دسته‌ی دیگه", onClick = onCategories, style = KButtonStyle.Glass)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(modifier = Modifier.weight(1f)) {
+                    KButton(text = "خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
+                }
+            }
+        }
+    }
+}

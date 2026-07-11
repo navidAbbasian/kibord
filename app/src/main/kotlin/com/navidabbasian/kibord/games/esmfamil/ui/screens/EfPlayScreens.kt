@@ -25,23 +25,31 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -53,6 +61,7 @@ import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
@@ -62,6 +71,7 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
+import com.navidabbasian.kibord.games.esmfamil.model.JUDGE_SCORES
 import com.navidabbasian.kibord.games.esmfamil.model.PERSIAN_LETTERS
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.viewmodel.EsmFamilUiState
@@ -208,6 +218,69 @@ fun EfLetterScreen(
     }
 }
 
+/** اعلام حرف راند: شمارش معکوس ۵ ثانیه‌ای پیش از باز شدن فرم */
+@Composable
+fun EfCountdownScreen(state: EsmFamilUiState) {
+    val accent = LocalGameAccent.current
+    val sound = LocalSoundManager.current
+    val snapshot = state.snapshot
+
+    LaunchedEffect(snapshot.secondsLeft) {
+        sound?.playTimerWarning()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        StickerTitle(text = "آماده شید!", rotation = -2f)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ---- کاشی بزرگ حرف راند ----
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .breathing(intensity = 0.05f, periodMs = 1200)
+                .graphicsLayer { rotationZ = -4f }
+                .background(
+                    Brush.radialGradient(listOf(lerp(accent, Color.White, 0.2f), accent)),
+                    rememberMorphingBlobShape()
+                )
+                .border(4.dp, Color.White.copy(alpha = 0.6f), rememberMorphingBlobShape()),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = snapshot.currentLetter,
+                fontSize = 72.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "همه‌چیز با حرف «${snapshot.currentLetter}»!",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(30.dp))
+
+        // ---- شماره‌ی معکوس با پرش فنری ----
+        PhaseTransition(key = snapshot.secondsLeft) {
+            Text(
+                text = snapshot.secondsLeft.toPersianDigits(),
+                fontSize = 96.sp,
+                fontWeight = FontWeight.Black,
+                color = accent,
+            )
+        }
+    }
+}
+
 /** فرم راند: حرف بزرگ + تایمر + یک فیلد بلابی برای هر موضوع + استپ */
 @Composable
 fun EfPlayScreen(
@@ -294,15 +367,19 @@ fun EfPlayScreen(
         )
         Spacer(modifier = Modifier.height(10.dp))
 
-        LazyColumn(
+        // ---- فرم موضوعات: اینترِ کیبورد به خانه‌ی بعدی می‌پرد ----
+        val topics = snapshot.settings.topics
+        val focusManager = LocalFocusManager.current
+        val focusRequesters = remember(topics) { topics.map { FocusRequester() } }
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-            contentPadding = PaddingValues(bottom = 8.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            items(count = snapshot.settings.topics.size, key = { snapshot.settings.topics[it] }) { i ->
-                val topic = snapshot.settings.topics[i]
+            topics.forEachIndexed { i, topic ->
+                val last = i == topics.lastIndex
                 BlobTextField(
                     value = state.myAnswers[topic].orEmpty(),
                     onValueChange = { onAnswerChanged(topic, it) },
@@ -310,8 +387,17 @@ fun EfPlayScreen(
                     badge = topic.take(1),
                     tilt = if (i % 2 == 0) -0.7f else 0.7f,
                     phase = i * 1.2f,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = if (last) ImeAction.Done else ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { runCatching { focusRequesters[i + 1].requestFocus() } },
+                        onDone = { focusManager.clearFocus() },
+                    ),
+                    focusRequester = focusRequesters[i],
                 )
             }
+            Spacer(modifier = Modifier.height(6.dp))
         }
 
         Box(
@@ -388,7 +474,31 @@ fun EfReviewScreen(
                     )
                     .padding(horizontal = 16.dp, vertical = 7.dp)
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ---- جمع امتیاز همین راند برای هر بازیکن ----
+            val roundTotals = snapshot.answers
+                .groupBy { it.player }
+                .mapValues { entry -> entry.value.sumOf { it.score } }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                snapshot.players.forEach { p ->
+                    val color = kiExtras.teamColors.teamColorFor(p.colorIndex)
+                    Text(
+                        text = "${p.name}: ${(roundTotals[p.name] ?: 0).toPersianDigits()}",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(listOf(lerp(color, Color.White, 0.15f), color)),
+                                RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             LazyColumn(
                 modifier = Modifier
@@ -450,11 +560,11 @@ fun EfReviewScreen(
     }
 }
 
-/** فاز داوری: میزبان اعتراض‌ها را می‌بیند و جواب‌ها را قبول/رد می‌کند */
+/** فاز داوری: میزبان اعتراض‌ها را می‌بیند و برای هر جواب حکم امتیازی می‌دهد */
 @Composable
 fun EfJudgeScreen(
     state: EsmFamilUiState,
-    onSetRejected: (topic: String, owner: String, rejected: Boolean) -> Unit,
+    onSetScore: (topic: String, owner: String, score: Int) -> Unit,
     onProceed: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
@@ -479,7 +589,7 @@ fun EfJudgeScreen(
         StickerTitle(text = "داوری میزبان", rotation = -2f, fontSize = 24.sp)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (state.isHost) "جواب‌های اعتراض‌خورده رو قبول یا رد کن"
+            text = if (state.isHost) "برای هر جواب اعتراض‌خورده حکم بده: ۰، ۵، ۱۰ یا ۲۰"
             else "${snapshot.hostName} داره اعتراض‌ها رو بررسی می‌کنه…",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -516,69 +626,98 @@ fun EfJudgeScreen(
                             .forEach { answer ->
                                 val owner = snapshot.player(answer.player)
                                 val color = kiExtras.teamColors.teamColorFor(owner?.colorIndex ?: 0)
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(vertical = 5.dp)
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = answer.player,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = color,
-                                        )
-                                        Text(
-                                            text = answer.text.ifBlank { "—" },
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                textDecoration = if (answer.rejected) TextDecoration.LineThrough
-                                                else TextDecoration.None
-                                            ),
-                                            color = if (answer.rejected)
-                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                            else MaterialTheme.colorScheme.onSurface,
-                                        )
-                                    }
-                                    Text(
-                                        text = "🚫 ${answer.rejectVotes.size.toPersianDigits()}",
-                                        fontSize = 13.sp,
-                                        color = extras.danger,
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = answer.score.toPersianDigits(),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.White,
-                                        modifier = Modifier
-                                            .background(
-                                                if (answer.rejected) extras.danger else extras.success,
-                                                RoundedCornerShape(50)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = answer.player,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = color,
                                             )
-                                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                                    )
-                                    if (state.isHost) {
+                                            Text(
+                                                text = answer.text.ifBlank { "—" },
+                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                    textDecoration = if (answer.rejected) TextDecoration.LineThrough
+                                                    else TextDecoration.None
+                                                ),
+                                                color = if (answer.rejected)
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                else MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                        Text(
+                                            text = "🚫 ${answer.rejectVotes.size.toPersianDigits()}",
+                                            fontSize = 13.sp,
+                                            color = extras.danger,
+                                        )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = if (answer.rejected) "برگردون ↩️" else "رد کن ❌",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
+                                            text = answer.score.toPersianDigits(),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Black,
                                             color = Color.White,
                                             modifier = Modifier
                                                 .background(
-                                                    if (answer.rejected) extras.success else extras.danger,
+                                                    if (answer.rejected) extras.danger else extras.success,
                                                     RoundedCornerShape(50)
                                                 )
-                                                .clickable(
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    indication = null,
-                                                ) {
-                                                    sound?.playButtonClick()
-                                                    onSetRejected(topic, answer.player, !answer.rejected)
-                                                }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                .padding(horizontal = 10.dp, vertical = 3.dp)
                                         )
+                                    }
+                                    if (state.isHost) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        // ---- حکم میزبان: هر چهار حالت امتیاز ----
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "حکم:",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            JUDGE_SCORES.forEach { option ->
+                                                val optionColor = when (option) {
+                                                    0 -> extras.danger
+                                                    5 -> extras.warning
+                                                    10 -> extras.success
+                                                    else -> extras.gold
+                                                }
+                                                val selected = answer.score == option
+                                                Text(
+                                                    text = option.toPersianDigits(),
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (selected) Color.White
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier
+                                                        .background(
+                                                            if (selected) optionColor else extras.glass,
+                                                            RoundedCornerShape(50)
+                                                        )
+                                                        .border(
+                                                            1.5.dp,
+                                                            if (selected) Color.White.copy(alpha = 0.5f)
+                                                            else optionColor.copy(alpha = 0.6f),
+                                                            RoundedCornerShape(50)
+                                                        )
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null,
+                                                        ) {
+                                                            sound?.playButtonClick()
+                                                            onSetScore(topic, answer.player, option)
+                                                        }
+                                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -725,32 +864,43 @@ fun EfRoundResultScreen(
 
         GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
             Column(modifier = Modifier.padding(18.dp)) {
-                snapshot.players
-                    .sortedByDescending { it.totalScore }
-                    .forEach { p ->
-                        val color = kiExtras.teamColors.teamColorFor(p.colorIndex)
-                        val roundScore = snapshot.roundScores[p.name] ?: 0
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 7.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                // راند آخر: مجموع‌ها مخفی و ترتیب هم لو نمی‌دهد — هیجان تا لحظه‌ی «کی برد؟»
+                val rows = if (isLast) snapshot.players
+                else snapshot.players.sortedByDescending { it.totalScore }
+                rows.forEach { p ->
+                    val color = kiExtras.teamColors.teamColorFor(p.colorIndex)
+                    val roundScore = snapshot.roundScores[p.name] ?: 0
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = p.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = color,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = p.name,
+                                text = "+${roundScore.toPersianDigits()}",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = color,
+                                fontWeight = FontWeight.Black,
+                                color = extras.success,
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "+${roundScore.toPersianDigits()}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Black,
-                                    color = extras.success,
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            if (isLast) {
+                                Box(modifier = Modifier.breathing(intensity = 0.06f, periodMs = 1400, phase = p.colorIndex * 1.1f)) {
+                                    Text(
+                                        text = "؟",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Black,
+                                        color = extras.gold,
+                                    )
+                                }
+                            } else {
                                 Text(
                                     text = p.totalScore.toPersianDigits(),
                                     style = MaterialTheme.typography.headlineMedium,
@@ -759,7 +909,19 @@ fun EfRoundResultScreen(
                             }
                         }
                     }
+                }
             }
+        }
+
+        if (isLast) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "مجموع امتیازها مخفیه… 🤫 بزن ببین کی برد!",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = extras.gold,
+                textAlign = TextAlign.Center,
+            )
         }
 
         Spacer(modifier = Modifier.height(26.dp))

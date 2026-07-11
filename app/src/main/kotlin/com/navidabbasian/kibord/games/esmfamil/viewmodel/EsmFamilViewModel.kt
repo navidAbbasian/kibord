@@ -9,7 +9,9 @@ import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
 import com.navidabbasian.kibord.games.esmfamil.model.EfPhase
 import com.navidabbasian.kibord.games.esmfamil.model.EfPlayer
 import com.navidabbasian.kibord.games.esmfamil.model.EfSettings
+import com.navidabbasian.kibord.games.esmfamil.model.COUNTDOWN_SECONDS
 import com.navidabbasian.kibord.games.esmfamil.model.EfSnapshot
+import com.navidabbasian.kibord.games.esmfamil.model.JUDGE_SCORES
 import com.navidabbasian.kibord.games.esmfamil.model.MAX_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.REVIEW_SECONDS
@@ -57,9 +59,10 @@ data class EsmFamilUiState(
     val myTurnToPick: Boolean get() = sameName(snapshot.pickerName, myName)
     /** من در فاز اعتراض «اعتراضی ندارم» زده‌ام */
     val iAmDoneReviewing: Boolean get() = snapshot.reviewDone.any { sameName(it, myName) }
+    /** همه‌ی خانه‌ها با کلمه‌ی حداقل دوحرفی پر شده‌اند — شرط فعال‌شدن استپ */
     val allMyFieldsFilled: Boolean
         get() = snapshot.settings.topics.isNotEmpty() &&
-            snapshot.settings.topics.all { !myAnswers[it].isNullOrBlank() }
+            snapshot.settings.topics.all { (myAnswers[it]?.trim()?.length ?: 0) >= 2 }
 }
 
 /**
@@ -276,6 +279,9 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun updateAnswer(topic: String, text: String) {
+        // کلمه‌ای که با حرفِ راند شروع نشود از همان اول قابل تایپ نیست
+        val letter = _uiState.value.snapshot.currentLetter
+        if (text.isNotBlank() && !EfScoring.startsWithLetter(text, letter)) return
         _uiState.update { it.copy(myAnswers = it.myAnswers + (topic to text)) }
     }
 
@@ -299,13 +305,16 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         if (st.isHost) hostMarkReviewDone(st.myName) else client?.send(EfMessage.ReviewDone)
     }
 
-    /** میزبان در فاز داوری: رد یا برگرداندن یک جواب */
-    fun judgeSetRejected(topic: String, owner: String, rejected: Boolean) = hostOnly {
+    /** میزبان در فاز داوری: حکم امتیازی یک جواب (۰/۵/۱۰/۲۰) — دوباره زدن همان حکم، آن را برمی‌دارد */
+    fun judgeSetScore(topic: String, owner: String, score: Int) = hostOnly {
         val s = _uiState.value.snapshot
-        if (s.phase != EfPhase.JUDGE) return@hostOnly
+        if (s.phase != EfPhase.JUDGE || score !in JUDGE_SCORES) return@hostOnly
         mutateSnapshot { snap ->
             val updated = snap.answers.map { a ->
-                if (a.topic == topic && sameName(a.player, owner)) a.copy(rejected = rejected) else a
+                if (a.topic == topic && sameName(a.player, owner)) {
+                    val newJudged = if (a.judgedScore == score) null else score
+                    a.copy(judgedScore = newJudged, rejected = newJudged == 0)
+                } else a
             }
             snap.copy(answers = EfScoring.computeScores(updated, snap.currentLetter))
         }
@@ -390,16 +399,37 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         roundApplied = false
         mutateSnapshot { snap ->
             snap.copy(
-                phase = EfPhase.PLAYING,
+                phase = EfPhase.COUNTDOWN,
                 currentLetter = letter,
                 usedLetters = snap.usedLetters + letter,
-                secondsLeft = snap.settings.roundSeconds,
+                secondsLeft = COUNTDOWN_SECONDS,
                 stopperName = "",
                 answers = emptyList(),
                 roundScores = emptyMap(),
             )
         }
-        startTicker()
+        startCountdownTicker()
+    }
+
+    /** شمارش معکوس اعلام حرف — در صفر، راند واقعی شروع می‌شود */
+    private fun startCountdownTicker() {
+        tickerJob?.cancel()
+        tickerJob = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                val s = _uiState.value.snapshot
+                if (s.phase != EfPhase.COUNTDOWN) break
+                val left = s.secondsLeft - 1
+                if (left <= 0) {
+                    mutateSnapshot {
+                        it.copy(phase = EfPhase.PLAYING, secondsLeft = it.settings.roundSeconds)
+                    }
+                    startTicker()
+                    break
+                }
+                mutateSnapshot { it.copy(secondsLeft = left) }
+            }
+        }
     }
 
     private fun startTicker() {

@@ -36,6 +36,7 @@ import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.games.esmfamil.model.EfPhase
+import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfCountdownScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfEntryScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfJoinScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfJudgeScreen
@@ -119,6 +120,8 @@ fun EsmFamilGame(
                             onPickLetter = viewModel::pickLetter,
                         )
 
+                        EfPhase.COUNTDOWN -> EfCountdownScreen(state = state)
+
                         EfPhase.PLAYING -> EfPlayScreen(
                             state = state,
                             onAnswerChanged = viewModel::updateAnswer,
@@ -136,7 +139,7 @@ fun EsmFamilGame(
 
                         EfPhase.JUDGE -> EfJudgeScreen(
                             state = state,
-                            onSetRejected = viewModel::judgeSetRejected,
+                            onSetScore = viewModel::judgeSetScore,
                             onProceed = viewModel::proceedFromJudge,
                         )
 

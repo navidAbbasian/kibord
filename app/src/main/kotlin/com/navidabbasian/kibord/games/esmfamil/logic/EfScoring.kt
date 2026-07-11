@@ -7,7 +7,7 @@ import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
  * - کلمه‌ی یکتا در موضوع: ۱۰
  * - کلمه‌ی مشترک بین چند نفر: ۵
  * - تنها جواب‌دهنده‌ی یک موضوع: ۲۰
- * - خالی، ردشده با رای جمع، یا ناسازگار با حرف راند: ۰
+ * - خالی، تک‌حرفی، ردشده با حکم میزبان، یا ناسازگار با حرف راند: ۰
  */
 object EfScoring {
 
@@ -34,23 +34,25 @@ object EfScoring {
     fun isRejected(rejectVotes: Int, playerCount: Int): Boolean =
         rejectVotes * 2 > (playerCount - 1)
 
-    /** محاسبه‌ی امتیاز همه‌ی جواب‌ها با درنظرگرفتن رای‌های رد */
+    /** جواب قابل امتیاز: غیرخالی، حداقل دوحرفی، ردنشده و هماهنگ با حرف راند */
+    private fun isValid(a: EfAnswer, letter: String): Boolean =
+        a.text.isNotBlank() && !a.rejected &&
+            startsWithLetter(a.text, letter) && normalize(a.text).length >= 2
+
+    /** محاسبه‌ی امتیاز همه‌ی جواب‌ها؛ حکم امتیازی میزبان همیشه حرف آخر را می‌زند */
     fun computeScores(answers: List<EfAnswer>, letter: String): List<EfAnswer> =
         answers.groupBy { it.topic }.flatMap { (_, topicAnswers) ->
-            val valid = topicAnswers.filter {
-                it.text.isNotBlank() && !it.rejected && startsWithLetter(it.text, letter)
-            }
+            val valid = topicAnswers.filter { isValid(it, letter) }
             val byNorm = valid.groupBy { normalize(it.text) }
             topicAnswers.map { a ->
-                val invalid = a.text.isBlank() || a.rejected || !startsWithLetter(a.text, letter)
-                a.copy(
-                    score = when {
-                        invalid -> 0
-                        valid.size == 1 -> 20
-                        byNorm.getValue(normalize(a.text)).size == 1 -> 10
-                        else -> 5
-                    }
-                )
+                val invalid = !isValid(a, letter)
+                val computed = when {
+                    invalid -> 0
+                    valid.size == 1 -> 20
+                    byNorm.getValue(normalize(a.text)).size == 1 -> 10
+                    else -> 5
+                }
+                a.copy(score = a.judgedScore ?: computed)
             }
         }
 

@@ -20,7 +20,13 @@ const val MIN_PLAYERS = 2
 const val MAX_PLAYERS = 8
 
 /** مهلت فاز اعتراض بعد از امتیازشماری هر راند */
-const val REVIEW_SECONDS = 30
+const val REVIEW_SECONDS = 60
+
+/** شمارش معکوس اعلام حرف پیش از شروع راند */
+const val COUNTDOWN_SECONDS = 5
+
+/** حالت‌های امتیازی که میزبان در داوری می‌تواند حکم بدهد */
+val JUDGE_SCORES = listOf(0, 5, 10, 20)
 
 private val EXTRA_WHITESPACE = Regex("\\s+")
 
@@ -65,10 +71,12 @@ data class EfAnswer(
     val rejectVotes: List<String> = emptyList(),
     /** ردشده با حکم میزبان در فاز داوری */
     val rejected: Boolean = false,
+    /** حکم امتیازی میزبان (۰/۵/۱۰/۲۰) — تهی یعنی امتیاز خودکار */
+    val judgedScore: Int? = null,
 )
 
 @Serializable
-enum class EfPhase { LOBBY, LETTER_PICK, PLAYING, REVIEW, JUDGE, ROUND_RESULT, GAME_OVER }
+enum class EfPhase { LOBBY, LETTER_PICK, COUNTDOWN, PLAYING, REVIEW, JUDGE, ROUND_RESULT, GAME_OVER }
 
 /**
  * عکس لحظه‌ای کامل وضعیت بازی. میزبان تنها مرجع حقیقت است؛

@@ -22,6 +22,22 @@ const val MAX_PLAYERS = 8
 /** مهلت فاز اعتراض بعد از امتیازشماری هر راند */
 const val REVIEW_SECONDS = 30
 
+private val EXTRA_WHITESPACE = Regex("\\s+")
+
+/**
+ * کلید مقایسه‌ی آسان‌گیر اسم‌ها — بی‌تفاوت به بزرگی حروف انگلیسی،
+ * فاصله‌های اضافه‌ی کیبورد و ی/ک عربی؛ تا هیچ بازیکنی سر جزئیات تایپ گم نشود.
+ */
+fun nameKey(name: String): String = name
+    .trim()
+    .replace(EXTRA_WHITESPACE, " ")
+    .replace('ي', 'ی')
+    .replace('ك', 'ک')
+    .lowercase()
+
+/** آیا این دو اسم همان یک نفرند؟ */
+fun sameName(a: String, b: String): Boolean = nameKey(a) == nameKey(b)
+
 @Serializable
 data class EfPlayer(
     val name: String,
@@ -80,7 +96,7 @@ data class EfSnapshot(
     /** جمع امتیاز هر بازیکن در همین راند */
     val roundScores: Map<String, Int> = emptyMap(),
 ) {
-    fun player(name: String): EfPlayer? = players.firstOrNull { it.name == name }
+    fun player(name: String): EfPlayer? = players.firstOrNull { sameName(it.name, name) }
 
     val remainingLetters: List<String>
         get() = PERSIAN_LETTERS.filter { it !in usedLetters }

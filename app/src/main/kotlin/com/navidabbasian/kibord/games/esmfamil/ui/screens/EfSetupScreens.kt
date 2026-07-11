@@ -57,6 +57,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.model.DEFAULT_TOPICS
 import com.navidabbasian.kibord.games.esmfamil.model.EfPlayer
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
+import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.net.EfDiscoveredGame
 import com.navidabbasian.kibord.games.esmfamil.viewmodel.EsmFamilUiState
 
@@ -342,7 +343,7 @@ fun EfLobbyScreen(
                         horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
                     ) {
                         row.forEach { p ->
-                            EfPlayerChip(player = p, isHost = p.name == snapshot.hostName)
+                            EfPlayerChip(player = p, isHost = sameName(p.name, snapshot.hostName))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))

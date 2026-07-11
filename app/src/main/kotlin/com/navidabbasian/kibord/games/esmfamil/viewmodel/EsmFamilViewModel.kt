@@ -13,6 +13,8 @@ import com.navidabbasian.kibord.games.esmfamil.model.EfSnapshot
 import com.navidabbasian.kibord.games.esmfamil.model.MAX_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.REVIEW_SECONDS
+import com.navidabbasian.kibord.games.esmfamil.model.nameKey
+import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.net.EfClient
 import com.navidabbasian.kibord.games.esmfamil.net.EfDiscoveredGame
 import com.navidabbasian.kibord.games.esmfamil.net.EfMessage
@@ -52,9 +54,9 @@ data class EsmFamilUiState(
 ) {
     val isHost: Boolean get() = role == EfRole.HOST
     val me: EfPlayer? get() = snapshot.player(myName)
-    val myTurnToPick: Boolean get() = snapshot.pickerName == myName
+    val myTurnToPick: Boolean get() = sameName(snapshot.pickerName, myName)
     /** من در فاز اعتراض «اعتراضی ندارم» زده‌ام */
-    val iAmDoneReviewing: Boolean get() = myName in snapshot.reviewDone
+    val iAmDoneReviewing: Boolean get() = snapshot.reviewDone.any { sameName(it, myName) }
     val allMyFieldsFilled: Boolean
         get() = snapshot.settings.topics.isNotEmpty() &&
             snapshot.settings.topics.all { !myAnswers[it].isNullOrBlank() }
@@ -135,7 +137,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             existing != null && !existing.connected -> {
                 // برگشتِ بازیکن قطع‌شده با همان اسم
                 mutateSnapshot { s ->
-                    s.copy(players = s.players.map { if (it.name == name) it.copy(connected = true) else it })
+                    s.copy(players = s.players.map { if (sameName(it.name, name)) it.copy(connected = true) else it })
                 }
                 null
             }
@@ -155,11 +157,11 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private fun handleDisconnect(name: String) {
         if (_uiState.value.role != EfRole.HOST) return
         mutateSnapshot { s ->
-            s.copy(players = s.players.map { if (it.name == name) it.copy(connected = false) else it })
+            s.copy(players = s.players.map { if (sameName(it.name, name)) it.copy(connected = false) else it })
         }
         val s = _uiState.value.snapshot
         // اگر نوبت انتخاب حرفِ همین بازیکن بود، نوبت به نفر بعدی متصل می‌رسد
-        if (s.phase == EfPhase.LETTER_PICK && s.pickerName == name) {
+        if (s.phase == EfPhase.LETTER_PICK && sameName(s.pickerName, name)) {
             mutateSnapshot { snap -> snap.copy(pickerName = nextConnectedAfter(snap, name)) }
         }
     }
@@ -285,7 +287,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     fun voteReject(topic: String, owner: String, reject: Boolean) {
         val st = _uiState.value
-        if (st.snapshot.phase != EfPhase.REVIEW || owner == st.myName) return
+        if (st.snapshot.phase != EfPhase.REVIEW || sameName(owner, st.myName)) return
         if (st.isHost) hostApplyVote(st.myName, topic, owner, reject)
         else client?.send(EfMessage.Vote(topic, owner, reject))
     }
@@ -303,7 +305,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         if (s.phase != EfPhase.JUDGE) return@hostOnly
         mutateSnapshot { snap ->
             val updated = snap.answers.map { a ->
-                if (a.topic == topic && a.player == owner) a.copy(rejected = rejected) else a
+                if (a.topic == topic && sameName(a.player, owner)) a.copy(rejected = rejected) else a
             }
             snap.copy(answers = EfScoring.computeScores(updated, snap.currentLetter))
         }
@@ -382,7 +384,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     private fun hostPickLetter(playerName: String, letter: String) {
         val s = _uiState.value.snapshot
-        if (s.phase != EfPhase.LETTER_PICK || s.pickerName != playerName) return
+        if (s.phase != EfPhase.LETTER_PICK || !sameName(s.pickerName, playerName)) return
         if (letter in s.usedLetters || letter.isBlank()) return
         collected.clear()
         roundApplied = false
@@ -438,7 +440,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private fun hostReceiveAnswers(playerName: String, answers: Map<String, String>) {
         val s = _uiState.value.snapshot
         if (s.phase != EfPhase.REVIEW || roundApplied) return
-        collected[playerName] = answers
+        collected[nameKey(playerName)] = answers
         val connectedCount = s.players.count { it.connected }
         if (collected.size >= connectedCount) {
             collectJob?.cancel()
@@ -451,12 +453,12 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         val s = _uiState.value.snapshot
         if (s.phase != EfPhase.REVIEW) return
         roundApplied = true
-        val answers = s.players.filter { it.connected || collected.containsKey(it.name) }.flatMap { p ->
+        val answers = s.players.filter { it.connected || collected.containsKey(nameKey(it.name)) }.flatMap { p ->
             s.settings.topics.map { topic ->
                 EfAnswer(
                     player = p.name,
                     topic = topic,
-                    text = collected[p.name]?.get(topic)?.trim().orEmpty(),
+                    text = collected[nameKey(p.name)]?.get(topic)?.trim().orEmpty(),
                 )
             }
         }
@@ -491,10 +493,12 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private fun hostMarkReviewDone(playerName: String) {
         val s = _uiState.value.snapshot
         if (s.phase != EfPhase.REVIEW || s.answers.isEmpty()) return
-        mutateSnapshot { snap -> snap.copy(reviewDone = (snap.reviewDone + playerName).distinct()) }
+        mutateSnapshot { snap ->
+            snap.copy(reviewDone = snap.reviewDone.filterNot { sameName(it, playerName) } + playerName)
+        }
         val snap = _uiState.value.snapshot
         val connectedNames = snap.players.filter { it.connected }.map { it.name }
-        if (connectedNames.all { it in snap.reviewDone }) {
+        if (connectedNames.all { c -> snap.reviewDone.any { sameName(it, c) } }) {
             tickerJob?.cancel()
             finishReviewPhase()
         }
@@ -513,14 +517,15 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     private fun hostApplyVote(voter: String, topic: String, owner: String, reject: Boolean) {
         val s = _uiState.value.snapshot
-        if (s.phase != EfPhase.REVIEW || voter == owner) return
+        if (s.phase != EfPhase.REVIEW || sameName(voter, owner)) return
         // در فاز اعتراض فقط اعتراض ثبت می‌شود؛ حکم نهایی با میزبان در فاز داوری است
         mutateSnapshot { snap ->
             snap.copy(
                 answers = snap.answers.map { a ->
-                    if (a.topic != topic || a.player != owner) a
+                    if (a.topic != topic || !sameName(a.player, owner)) a
                     else a.copy(
-                        rejectVotes = if (reject) (a.rejectVotes + voter).distinct() else a.rejectVotes - voter
+                        rejectVotes = if (reject) a.rejectVotes.filterNot { sameName(it, voter) } + voter
+                        else a.rejectVotes.filterNot { sameName(it, voter) }
                     )
                 }
             )
@@ -529,7 +534,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     private fun nextConnectedAfter(s: EfSnapshot, name: String): String {
         if (s.players.isEmpty()) return ""
-        val start = s.players.indexOfFirst { it.name == name }
+        val start = s.players.indexOfFirst { sameName(it.name, name) }
         for (i in 1..s.players.size) {
             val candidate = s.players[(start + i) % s.players.size]
             if (candidate.connected) return candidate.name

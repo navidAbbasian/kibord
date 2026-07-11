@@ -63,6 +63,7 @@ import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
 import com.navidabbasian.kibord.games.esmfamil.model.PERSIAN_LETTERS
+import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.viewmodel.EsmFamilUiState
 
 /** ردیف امتیاز کل بازیکن‌ها — بالای صفحه‌های میان‌بازی */
@@ -618,8 +619,8 @@ private fun EfAnswerRow(
     val snapshot = state.snapshot
     val owner = snapshot.player(answer.player)
     val color = kiExtras.teamColors.teamColorFor(owner?.colorIndex ?: 0)
-    val iVotedReject = state.myName in answer.rejectVotes
-    val mine = answer.player == state.myName
+    val iVotedReject = answer.rejectVotes.any { sameName(it, state.myName) }
+    val mine = sameName(answer.player, state.myName)
 
     Row(
         modifier = Modifier

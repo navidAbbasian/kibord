@@ -69,6 +69,12 @@ fun EfEntryScreen(
     onHost: () -> Unit,
     onJoin: () -> Unit,
 ) {
+    // هشدار تم‌دار وقتی بدون نوشتن اسم روی دکمه‌ها بزند
+    var showNameError by remember { mutableStateOf(false) }
+    val guardName: (() -> Unit) -> Unit = { action ->
+        if (state.myName.isBlank()) showNameError = true else action()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -92,7 +98,10 @@ fun EfEntryScreen(
 
         BlobTextField(
             value = state.myName,
-            onValueChange = onNameChanged,
+            onValueChange = {
+                onNameChanged(it)
+                if (it.isNotBlank()) showNameError = false
+            },
             placeholder = "اسمت چیه؟ (شناسه‌ی تو در بازی)",
             badge = "👤",
             tilt = -1f,
@@ -110,7 +119,7 @@ fun EfEntryScreen(
                 size = 148.dp,
                 mainFontSize = 22.sp,
                 tilt = -3f,
-                onClick = onHost,
+                onClick = { guardName(onHost) },
             )
             ChoiceBubble(
                 main = "بپیوند",
@@ -121,11 +130,21 @@ fun EfEntryScreen(
                 tilt = 3f,
                 phase = 1.5f,
                 modifier = Modifier.offset(y = 26.dp),
-                onClick = onJoin,
+                onClick = { guardName(onJoin) },
             )
         }
 
-        if (state.myName.isBlank()) {
+        if (showNameError && state.myName.isBlank()) {
+            Spacer(modifier = Modifier.height(40.dp))
+            Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1100)) {
+                StickerTitle(
+                    text = "✋ اول اسمت رو بنویس!",
+                    accent = kiExtras.danger,
+                    rotation = -2f,
+                    fontSize = 22.sp,
+                )
+            }
+        } else if (state.myName.isBlank()) {
             Spacer(modifier = Modifier.height(22.dp))
             Text(
                 text = "اول اسمت رو بنویس",

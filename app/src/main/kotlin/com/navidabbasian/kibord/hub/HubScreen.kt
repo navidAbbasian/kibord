@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -53,97 +55,113 @@ import com.navidabbasian.kibord.core.ui.components.shineSweep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 
 /**
- * تب خانه‌ی هاب — چیدمان کلاژی فانتزی:
- * یک کارت قهرمانِ تمام‌عرض + شبکه‌ی پلکانی دوستونه با ارتفاع‌های ناهمسان.
+ * تب خانه‌ی هاب — همان کلاژ آشنا (قهرمان + شبکه‌ی پلکانی + بنر پهن)
+ * اما با ارتفاع‌های کشسان تا هر شش بازی بدون اسکرول در یک صفحه جا شوند.
  */
 @Composable
 fun HubScreen(onOpenGame: (String) -> Unit) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 120.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            Column(
+        // ---- هدر فشرده ----
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 2.1f)
+            Spacer(modifier = Modifier.width(8.dp))
+            BobbingEmoji(emoji = "🏆", fontSize = 32.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 4.4f)
+        }
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = "امشب کدومو بازی کنیم؟",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ---- کلاژ کشسان ----
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            // کارت قهرمان: کلمز تمام‌عرض
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(top = 18.dp, bottom = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .weight(0.23f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    BobbingEmoji(emoji = "✨", fontSize = 22.sp, phase = 2.1f)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    BobbingEmoji(emoji = "🏆", fontSize = 54.sp)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    BobbingEmoji(emoji = "✨", fontSize = 22.sp, phase = 4.4f)
+                AppearWrap(index = 0) {
+                    GameTile(game = gameCatalog[0], index = 0, emojiSize = 30.sp, onOpenGame = onOpenGame)
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 34.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = "امشب کدومو بازی کنیم؟",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
             }
-        }
 
-        // ---- کارت قهرمان: بازی اول ----
-        item {
-            AppearWrap(index = 0) {
-                GameTile(
-                    game = gameCatalog[0],
-                    index = 0,
-                    height = 218.dp,
-                    emojiSize = 54.sp,
-                    onOpenGame = onOpenGame,
-                )
-            }
-        }
+            Spacer(modifier = Modifier.height(10.dp))
 
-        // ---- شبکه‌ی پلکانی: چهار بازی بعدی، دوتا دوتا با ارتفاع ناهمسان ----
-        item {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    AppearWrap(index = 1) {
-                        GameTile(gameCatalog[1], index = 1, height = 240.dp, onOpenGame = onOpenGame)
+            // شبکه‌ی پلکانی دوستونه با ارتفاع‌های ناهمسان
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.54f)
+            ) {
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.fillMaxWidth().weight(0.54f)) {
+                        AppearWrap(index = 1) {
+                            GameTile(game = gameCatalog[1], index = 1, onOpenGame = onOpenGame)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    AppearWrap(index = 3) {
-                        GameTile(gameCatalog[3], index = 3, height = 208.dp, onOpenGame = onOpenGame)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(modifier = Modifier.fillMaxWidth().weight(0.46f)) {
+                        AppearWrap(index = 3) {
+                            GameTile(game = gameCatalog[3], index = 3, onOpenGame = onOpenGame)
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Spacer(modifier = Modifier.height(26.dp))
-                    AppearWrap(index = 2) {
-                        GameTile(gameCatalog[2], index = 2, height = 208.dp, onOpenGame = onOpenGame)
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.fillMaxWidth().weight(0.46f)) {
+                        AppearWrap(index = 2) {
+                            GameTile(game = gameCatalog[2], index = 2, onOpenGame = onOpenGame)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    AppearWrap(index = 4) {
-                        GameTile(gameCatalog[4], index = 4, height = 240.dp, onOpenGame = onOpenGame)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(modifier = Modifier.fillMaxWidth().weight(0.54f)) {
+                        AppearWrap(index = 4) {
+                            GameTile(game = gameCatalog[4], index = 4, onOpenGame = onOpenGame)
+                        }
                     }
                 }
             }
-        }
 
-        // ---- بنر پهن بازی چندگوشی: اسم فامیل ----
-        if (gameCatalog.size > 5) {
-            item {
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // بنر پهن اسم فامیل
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.23f)
+            ) {
                 AppearWrap(index = 5) {
-                    GameTile(
-                        game = gameCatalog[5],
-                        index = 5,
-                        height = 168.dp,
-                        emojiSize = 44.sp,
-                        onOpenGame = onOpenGame,
-                    )
+                    GameTile(game = gameCatalog[5], index = 5, emojiSize = 30.sp, taglineMaxLines = 1, onOpenGame = onOpenGame)
                 }
             }
         }
+
+        // ---- جای نوار ناوبری شناور پایین ----
+        Spacer(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .height(92.dp)
+        )
     }
 }
 
@@ -172,16 +190,16 @@ private fun AppearWrap(index: Int, content: @Composable () -> Unit) {
 }
 
 /**
- * کاشی بازی: گرادیان اکسنت، درخشش لغزان، تنفس آرام، ایموجی معلق بزرگ
- * و حباب‌های تزئینی — هر کاشی با کجی و فاز مخصوص خودش.
+ * کاشی بازی: گرادیان اکسنت، درخشش لغزان، تنفس آرام و ایموجی معلق —
+ * ارتفاعش را از والد می‌گیرد تا شش کاشی همیشه در یک صفحه جا شوند.
  */
 @Composable
 private fun GameTile(
     game: GameInfo,
     index: Int,
-    height: Dp,
     onOpenGame: (String) -> Unit,
-    emojiSize: androidx.compose.ui.unit.TextUnit = 40.sp,
+    emojiSize: androidx.compose.ui.unit.TextUnit = 26.sp,
+    taglineMaxLines: Int = 2,
 ) {
     val sound = LocalSoundManager.current
     val interaction = remember { MutableInteractionSource() }
@@ -191,13 +209,12 @@ private fun GameTile(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "press"
     )
-    val tilt = if (index % 2 == 0) -1.6f else 1.6f
-    val shape = RoundedCornerShape(30.dp)
+    val tilt = if (index % 2 == 0) -1.4f else 1.4f
+    val shape = RoundedCornerShape(26.dp)
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(height)
+            .fillMaxSize()
             .breathing(intensity = 0.012f, periodMs = 3000 + index * 350, phase = index * 1.7f)
             .graphicsLayer {
                 rotationZ = tilt
@@ -224,53 +241,56 @@ private fun GameTile(
         // حباب‌های تزئینی گوشه‌ها
         Box(
             modifier = Modifier
-                .size(height * 0.55f)
-                .offset(x = (-20).dp, y = height * 0.62f)
+                .size(96.dp)
+                .offset(x = (-18).dp, y = 120.dp)
                 .background(Color.White.copy(alpha = 0.10f), CircleShape)
         )
         Box(
             modifier = Modifier
-                .size(height * 0.3f)
+                .size(56.dp)
                 .align(Alignment.TopEnd)
-                .offset(x = 14.dp, y = (-14).dp)
+                .offset(x = 12.dp, y = (-12).dp)
                 .background(Color.White.copy(alpha = 0.12f), CircleShape)
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             BobbingEmoji(emoji = game.emoji, fontSize = emojiSize, phase = index * 1.1f)
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = game.title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 color = Color.White,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = game.tagline,
                 style = MaterialTheme.typography.labelMedium,
+                fontSize = 10.sp,
                 color = Color.White.copy(alpha = 0.92f),
                 textAlign = TextAlign.Center,
-                lineHeight = 16.sp,
-                maxLines = 2
+                lineHeight = 13.sp,
+                maxLines = taglineMaxLines
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "👥 ${game.players}",
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
+                maxLines = 1,
                 modifier = Modifier
                     .graphicsLayer { rotationZ = -tilt * 1.5f }
                     .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             )
         }
     }

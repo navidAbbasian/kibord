@@ -22,7 +22,10 @@ object ContentBank {
     private const val TAG = "ContentBank"
     private const val BASE_URL =
         "https://raw.githubusercontent.com/navidAbbasian/kibord/main/app/src/main/assets/"
-    private val FILES = listOf("words.json", "pantomime.json", "gandegoo.json")
+    private val FILES = listOf(
+        "words.json", "pantomime.json", "gandegoo.json",
+        "taboo.json", "spy.json", "proverbs.json", "nofoozi.json",
+    )
 
     private const val PREFS = "kibord_content_bank"
     private const val KEY_LAST_CHECK = "last_check_millis"

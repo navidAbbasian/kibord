@@ -53,6 +53,7 @@ import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.components.shineSweep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
+import com.navidabbasian.kibord.core.util.toPersianDigits
 
 /**
  * تب خانه‌ی هاب — همان کلاژ آشنا (قهرمان + شبکه‌ی پلکانی + بنر پهن)
@@ -87,7 +88,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ---- کلاژ کشسان ----
+        // ---- کلاژ کشسان: قهرمان + شبکه‌ی ۲×۲ با کارت «بازی‌های بیشتر» ----
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -97,61 +98,50 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.23f)
+                    .weight(0.28f)
             ) {
                 AppearWrap(index = 0) {
-                    GameTile(game = gameCatalog[0], index = 0, emojiSize = 30.sp, onOpenGame = onOpenGame)
+                    GameTile(game = gameCatalog[0], index = 0, emojiSize = 34.sp, onOpenGame = onOpenGame)
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // شبکه‌ی پلکانی دوستونه با ارتفاع‌های ناهمسان
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.54f)
+                    .weight(0.36f)
             ) {
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    Box(modifier = Modifier.fillMaxWidth().weight(0.54f)) {
-                        AppearWrap(index = 1) {
-                            GameTile(game = gameCatalog[1], index = 1, onOpenGame = onOpenGame)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Box(modifier = Modifier.fillMaxWidth().weight(0.46f)) {
-                        AppearWrap(index = 3) {
-                            GameTile(game = gameCatalog[3], index = 3, onOpenGame = onOpenGame)
-                        }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AppearWrap(index = 1) {
+                        GameTile(game = gameCatalog[1], index = 1, onOpenGame = onOpenGame)
                     }
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(modifier = Modifier.fillMaxWidth().weight(0.46f)) {
-                        AppearWrap(index = 2) {
-                            GameTile(game = gameCatalog[2], index = 2, onOpenGame = onOpenGame)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Box(modifier = Modifier.fillMaxWidth().weight(0.54f)) {
-                        AppearWrap(index = 4) {
-                            GameTile(game = gameCatalog[4], index = 4, onOpenGame = onOpenGame)
-                        }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AppearWrap(index = 2) {
+                        GameTile(game = gameCatalog[2], index = 2, onOpenGame = onOpenGame)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // بنر پهن اسم فامیل
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.23f)
+                    .weight(0.36f)
             ) {
-                AppearWrap(index = 5) {
-                    GameTile(game = gameCatalog[5], index = 5, emojiSize = 30.sp, taglineMaxLines = 1, onOpenGame = onOpenGame)
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AppearWrap(index = 3) {
+                        GameTile(game = gameCatalog[3], index = 3, onOpenGame = onOpenGame)
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AppearWrap(index = 4) {
+                        MoreGamesTile(index = 4, onOpenGame = onOpenGame)
+                    }
                 }
             }
         }
@@ -283,6 +273,106 @@ private fun GameTile(
             Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "👥 ${game.players}",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                modifier = Modifier
+                    .graphicsLayer { rotationZ = -tilt * 1.5f }
+                    .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+/** کاشی «بازی‌های بیشتر»: درِ گنجه‌ی بقیه‌ی بازی‌ها — به رنگ برند */
+@Composable
+private fun MoreGamesTile(
+    index: Int,
+    onOpenGame: (String) -> Unit,
+) {
+    val sound = LocalSoundManager.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "more_press"
+    )
+    val tilt = if (index % 2 == 0) -1.4f else 1.4f
+    val shape = RoundedCornerShape(26.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .breathing(intensity = 0.012f, periodMs = 3000 + index * 350, phase = index * 1.7f)
+            .graphicsLayer {
+                rotationZ = tilt
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        lerp(VioletPrimary, Color.White, 0.12f),
+                        VioletPrimary,
+                        lerp(VioletPrimary, Color.Black, 0.18f),
+                    )
+                )
+            )
+            .border(2.5.dp, Color.White.copy(alpha = 0.4f), shape)
+            .shineSweep(periodMs = 3600 + index * 500, phase = index * 0.45f)
+            .clickable(interactionSource = interaction, indication = null) {
+                sound?.playButtonClick()
+                onOpenGame(Routes.MORE_GAMES)
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .offset(x = (-18).dp, y = 120.dp)
+                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 12.dp, y = (-12).dp)
+                .background(Color.White.copy(alpha = 0.12f), CircleShape)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            BobbingEmoji(emoji = "🎲", fontSize = 26.sp, phase = index * 1.1f)
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = "بازی‌های بیشتر",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = "پانتومیم و بازی‌های تازه اینجان!",
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 10.sp,
+                color = Color.White.copy(alpha = 0.92f),
+                textAlign = TextAlign.Center,
+                lineHeight = 13.sp,
+                maxLines = 2
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = "🎁 ${moreGamesCatalog.size.toPersianDigits()} بازی",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

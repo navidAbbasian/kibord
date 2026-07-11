@@ -13,6 +13,20 @@ import com.navidabbasian.kibord.core.ui.theme.KalamzAccentDark
 import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccent
 import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccentDark
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccent
+import com.navidabbasian.kibord.core.ui.theme.ForeheadAccent
+import com.navidabbasian.kibord.core.ui.theme.ForeheadAccentDark
+import com.navidabbasian.kibord.core.ui.theme.MafiaAccent
+import com.navidabbasian.kibord.core.ui.theme.MafiaAccentDark
+import com.navidabbasian.kibord.core.ui.theme.NofooziAccent
+import com.navidabbasian.kibord.core.ui.theme.NofooziAccentDark
+import com.navidabbasian.kibord.core.ui.theme.ProverbAccent
+import com.navidabbasian.kibord.core.ui.theme.ProverbAccentDark
+import com.navidabbasian.kibord.core.ui.theme.ShahDozdAccent
+import com.navidabbasian.kibord.core.ui.theme.ShahDozdAccentDark
+import com.navidabbasian.kibord.core.ui.theme.SpyAccent
+import com.navidabbasian.kibord.core.ui.theme.SpyAccentDark
+import com.navidabbasian.kibord.core.ui.theme.TabooAccent
+import com.navidabbasian.kibord.core.ui.theme.TabooAccentDark
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccentDark
 
 @Immutable
@@ -36,9 +50,17 @@ object Routes {
     const val PANTOMIME_CLASSIC = "game/pantomime_classic"
     const val PANTOMIME_RIVAL = "game/pantomime_rival"
     const val ESM_FAMIL = "game/esm_famil"
+    const val MORE_GAMES = "more_games"
+    const val TABOO = "game/taboo"
+    const val SPY = "game/spy"
+    const val FOREHEAD = "game/forehead"
+    const val SHAH_DOZD = "game/shah_dozd"
+    const val PROVERB = "game/proverb"
+    const val NOFOOZI = "game/nofoozi"
+    const val MAFIA = "game/mafia"
 }
 
-/** فهرست بازی‌های هاب — افزودن بازی جدید فقط یک آیتم اینجا و یک مقصد در NavHost است */
+/** چهار بازی اصلی صفحه‌ی خانه — بقیه در «بازی‌های بیشتر» زندگی می‌کنند */
 val gameCatalog = listOf(
     GameInfo(
         id = "kalamz",
@@ -71,6 +93,20 @@ val gameCatalog = listOf(
         route = Routes.GANDEGOO,
     ),
     GameInfo(
+        id = "esm_famil",
+        title = "اسم فامیل",
+        tagline = "چندنفره با گوشی‌های خودتون! حرف بیار، بنویس، استپ!",
+        emoji = "✍️",
+        accent = EsmFamilAccent,
+        accentDark = EsmFamilAccentDark,
+        players = "۲ تا ۸ نفر — هر کی با گوشی خودش",
+        route = Routes.ESM_FAMIL,
+    ),
+)
+
+/** بازی‌های بخش «بازی‌های بیشتر» — با هر بازی تازه، این فهرست بلندتر می‌شود */
+val moreGamesCatalog = listOf(
+    GameInfo(
         id = "pantomime_classic",
         title = "پانتومیم کلاسیک",
         tagline = "بدون کلام! با موضوع طلایی ۳۰ امتیازی پرریسک",
@@ -91,13 +127,73 @@ val gameCatalog = listOf(
         route = Routes.PANTOMIME_RIVAL,
     ),
     GameInfo(
-        id = "esm_famil",
-        title = "اسم فامیل",
-        tagline = "چندنفره با گوشی‌های خودتون! حرف بیار، بنویس، استپ!",
-        emoji = "✍️",
-        accent = EsmFamilAccent,
-        accentDark = EsmFamilAccentDark,
-        players = "۲ تا ۸ نفر — هر کی با گوشی خودش",
-        route = Routes.ESM_FAMIL,
+        id = "taboo",
+        title = "کلمه ممنوعه",
+        tagline = "کلمه رو برسون بدون گفتنِ پنج کلمه‌ی قدغن!",
+        emoji = "🤐",
+        accent = TabooAccent,
+        accentDark = TabooAccentDark,
+        players = "۴+ نفر — ۲ تیم",
+        route = Routes.TABOO,
+    ),
+    GameInfo(
+        id = "spy",
+        title = "جاسوس",
+        tagline = "همه می‌دونن کجایید جز یه نفر… پیداش کنید!",
+        emoji = "🕵️",
+        accent = SpyAccent,
+        accentDark = SpyAccentDark,
+        players = "۳ تا ۸ نفر",
+        route = Routes.SPY,
+    ),
+    GameInfo(
+        id = "forehead",
+        title = "حدس روی پیشونی",
+        tagline = "گوشی رو پیشونیت! توضیح می‌دن، تو حدس بزن",
+        emoji = "🤳",
+        accent = ForeheadAccent,
+        accentDark = ForeheadAccentDark,
+        players = "۲+ نفر",
+        route = Routes.FOREHEAD,
+    ),
+    GameInfo(
+        id = "shah_dozd",
+        title = "شاه دزد وزیر",
+        tagline = "نوستالژی! وزیر باید مچ دزد رو بگیره",
+        emoji = "👑",
+        accent = ShahDozdAccent,
+        accentDark = ShahDozdAccentDark,
+        players = "۴ تا ۸ نفر",
+        route = Routes.SHAH_DOZD,
+    ),
+    GameInfo(
+        id = "proverb",
+        title = "ضرب‌المثل نصفه",
+        tagline = "نصفش رو بگو، تیمت کاملش کنه!",
+        emoji = "📜",
+        accent = ProverbAccent,
+        accentDark = ProverbAccentDark,
+        players = "۴+ نفر (دو تیم)",
+        route = Routes.PROVERB,
+    ),
+    GameInfo(
+        id = "nofoozi",
+        title = "کلمه‌ی نفوذی",
+        tagline = "شبکه‌ای! نفوذی رو از توصیف‌هاش پیدا کن",
+        emoji = "🥸",
+        accent = NofooziAccent,
+        accentDark = NofooziAccentDark,
+        players = "۳ تا ۸ نفر",
+        route = Routes.NOFOOZI,
+    ),
+    GameInfo(
+        id = "mafia",
+        title = "شب مافیا",
+        tagline = "شبکه‌ای و بدون گرداننده — شهر خوابه!",
+        emoji = "🌙",
+        accent = MafiaAccent,
+        accentDark = MafiaAccentDark,
+        players = "۵ تا ۸ نفر",
+        route = Routes.MAFIA,
     ),
 )

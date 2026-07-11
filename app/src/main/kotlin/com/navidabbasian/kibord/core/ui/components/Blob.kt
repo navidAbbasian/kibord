@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -96,6 +100,9 @@ fun BlobTextField(
     tilt: Float = 0f,
     phase: Float = 0f,
     textStyle: TextStyle? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    focusRequester: FocusRequester? = null,
 ) {
     val extras = kiExtras
     val shape = rememberMorphingBlobShape(phase = phase)
@@ -143,7 +150,11 @@ fun BlobTextField(
                 singleLine = true,
                 textStyle = style,
                 cursorBrush = SolidColor(color),
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             )
             if (value.isEmpty()) {
                 Text(

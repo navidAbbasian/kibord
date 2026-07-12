@@ -492,31 +492,13 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
                 )
             }
         }
+        // فاز اعتراض تایمر ندارد — تا وقتی همه «نظرم را دادم» نزنند، بسته نمی‌شود
         mutateSnapshot {
             it.copy(
                 answers = EfScoring.computeScores(answers, it.currentLetter),
-                secondsLeft = REVIEW_SECONDS,
+                secondsLeft = 0,
                 reviewDone = emptyList(),
             )
-        }
-        startReviewTicker()
-    }
-
-    /** شمارش معکوس ۳۰ ثانیه‌ی فاز اعتراض؛ پایانش فاز داوری میزبان است */
-    private fun startReviewTicker() {
-        tickerJob?.cancel()
-        tickerJob = viewModelScope.launch {
-            while (isActive) {
-                delay(1000)
-                val s = _uiState.value.snapshot
-                if (s.phase != EfPhase.REVIEW) break
-                val left = s.secondsLeft - 1
-                if (left <= 0) {
-                    finishReviewPhase()
-                    break
-                }
-                mutateSnapshot { it.copy(secondsLeft = left) }
-            }
         }
     }
 

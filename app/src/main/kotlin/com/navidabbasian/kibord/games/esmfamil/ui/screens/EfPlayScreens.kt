@@ -459,46 +459,11 @@ fun EfReviewScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            // ---- شمارش معکوس اعتراض ----
-            val urgent = snapshot.secondsLeft <= 5
-            Text(
-                text = "⏳ ${snapshot.secondsLeft.toPersianDigits()} ثانیه برای اعتراض",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (urgent) Color.White else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .then(if (urgent) Modifier.breathing(intensity = 0.05f, periodMs = 600) else Modifier)
-                    .background(
-                        if (urgent) extras.danger else extras.glassStrong,
-                        RoundedCornerShape(50)
-                    )
-                    .padding(horizontal = 16.dp, vertical = 7.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ---- جمع امتیاز همین راند برای هر بازیکن ----
+            // بی‌عجله اعتراض کنید — راند وقتی بسته می‌شود که همه نظرشان را ثبت کنند
             val roundTotals = snapshot.answers
                 .groupBy { it.player }
                 .mapValues { entry -> entry.value.sumOf { it.score } }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                snapshot.players.forEach { p ->
-                    val color = kiExtras.teamColors.teamColorFor(p.colorIndex)
-                    Text(
-                        text = "${p.name}: ${(roundTotals[p.name] ?: 0).toPersianDigits()}",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .background(
-                                Brush.verticalGradient(listOf(lerp(color, Color.White, 0.15f), color)),
-                                RoundedCornerShape(50)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 5.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             LazyColumn(
                 modifier = Modifier
@@ -532,6 +497,49 @@ fun EfReviewScreen(
                         }
                     }
                 }
+
+                // ---- کارت امتیاز: جمع همین راند برای هر بازیکن ----
+                item(key = "round_score_card") {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 20.dp,
+                        strong = true,
+                        tilt = if (snapshot.settings.topics.size % 2 == 0) -0.8f else 0.8f
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                            Text(
+                                text = "💯 امتیاز",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = extras.gold,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            snapshot.players.forEach { p ->
+                                val color = kiExtras.teamColors.teamColorFor(p.colorIndex)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = p.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = color,
+                                    )
+                                    Text(
+                                        text = "+${(roundTotals[p.name] ?: 0).toPersianDigits()}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black,
+                                        color = extras.success,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -542,16 +550,33 @@ fun EfReviewScreen(
                 .padding(vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            KButton(
-                text = if (state.iAmDoneReviewing)
-                    "منتظر بقیه… (${doneCount.toPersianDigits()} از ${connectedCount.toPersianDigits()})"
-                else "اعتراضی ندارم ✋",
-                enabled = snapshot.answers.isNotEmpty() && !state.iAmDoneReviewing,
-                onClick = onDone,
-            )
+            if (state.iAmDoneReviewing) {
+                KButton(
+                    text = "منتظر بقیه… (${doneCount.toPersianDigits()} از ${connectedCount.toPersianDigits()})",
+                    enabled = false,
+                    onClick = {},
+                )
+            } else {
+                val myRejects = snapshot.answers.count { a ->
+                    a.rejectVotes.any { sameName(it, state.myName) }
+                }
+                KButton(
+                    text = "اعتراضی ندارم ✋",
+                    enabled = snapshot.answers.isNotEmpty(),
+                    onClick = onDone,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                KButton(
+                    text = if (myRejects > 0) "ثبت اعتراض 🚫 (${myRejects.toPersianDigits()} مورد)"
+                    else "ثبت اعتراض 🚫",
+                    style = KButtonStyle.Danger,
+                    enabled = snapshot.answers.isNotEmpty() && myRejects > 0,
+                    onClick = onDone,
+                )
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "به کلمه‌ی مشکوک 🚫 بزن؛ حکم نهایی با میزبانه",
+                text = "به کلمه‌ی مشکوک 🚫 بزن و «ثبت اعتراض» رو بزن؛ همه که نظر دادن راند بسته می‌شه",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

@@ -79,16 +79,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 // ================= مدل =================
 
-/** یک ضرب‌المثل: نیمه‌ی اول و ادامه‌اش */
+/** یک ضرب‌المثل کامل — سر بازی با نسبت ۳۵ تا ۴۵ درصد بریده می‌شود */
 @Serializable
 data class ProverbCard(
+    val text: String = "",
+)
+
+/** کارت آماده‌ی نمایش: بخش خواندنیِ گوینده و ادامه‌ای که تیم باید کامل کند */
+data class PvShown(
     val start: String,
     val end: String,
+    val full: String,
 )
 
 sealed class PvPhase {
@@ -109,7 +116,7 @@ data class PvUiState(
     val roundIndex: Int = 1,
     val currentTeam: Int = 0,
     val secondsLeft: Int = 0,
-    val currentCard: ProverbCard? = null,
+    val currentCard: PvShown? = null,
     val turnCorrect: Int = 0,
     val turnMissed: Int = 0,
 ) {
@@ -141,26 +148,49 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
     private var tickerJob: Job? = null
 
     init {
-        allCards = try {
-            json.decodeFromString<List<ProverbCard>>(
-                ContentBank.open(application, "proverbs.json")
+        // اگر کشِ دانلودی فرمت قدیمی داشته باشد نتیجه خالی می‌شود؛
+        // آن‌وقت بانکِ داخل خود اپ ملاک است تا بازی هرگز بی‌کارت نماند
+        allCards = decodeCards(ContentBank.open(application, "proverbs.json"))
+        if (allCards.isEmpty()) {
+            allCards = decodeCards(
+                try {
+                    application.assets.open("proverbs.json").bufferedReader().use { it.readText() }
+                } catch (_: Exception) {
+                    ""
+                }
             )
-        } catch (_: Exception) {
-            emptyList()
-        }.filter { it.start.isNotBlank() && it.end.isNotBlank() }
+        }
     }
+
+    private fun decodeCards(text: String): List<ProverbCard> = try {
+        json.decodeFromString<List<ProverbCard>>(text)
+    } catch (_: Exception) {
+        emptyList()
+    }.filter { it.text.trim().split(WHITESPACE).size >= 3 }
 
     private fun emit(e: PvSoundEvent) = _soundEvents.tryEmit(e)
 
     /** دسته‌ی بُرخورده‌ی مثل‌های بازی‌نشده؛ با اتمام بانک، سابقه ریست می‌شود */
     private fun prepareDeck(): List<ProverbCard> {
         val played = playedStore.played(PLAYED_KEY)
-        var fresh = allCards.filter { it.start !in played }
+        var fresh = allCards.filter { it.text !in played }
         if (fresh.isEmpty()) {
             playedStore.clear(PLAYED_KEY)
             fresh = allCards
         }
         return fresh.shuffled()
+    }
+
+    /** گوینده فقط ۳۵ تا ۴۵ درصد اول مثل را می‌خواند؛ باقی‌اش با تیم است */
+    private fun splitCard(card: ProverbCard): PvShown {
+        val words = card.text.trim().split(WHITESPACE)
+        val fraction = listOf(0.35, 0.40, 0.45).random()
+        val show = (words.size * fraction).roundToInt().coerceIn(1, words.size - 1)
+        return PvShown(
+            start = words.take(show).joinToString(" "),
+            end = words.drop(show).joinToString(" "),
+            full = card.text,
+        )
     }
 
     // ---- راه‌اندازی ----
@@ -208,9 +238,9 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         startTicker()
     }
 
-    private fun drawCard(): ProverbCard? {
+    private fun drawCard(): PvShown? {
         if (deck.isEmpty()) deck = ArrayDeque(prepareDeck())
-        return deck.removeFirstOrNull()
+        return deck.removeFirstOrNull()?.let(::splitCard)
     }
 
     private fun startTicker() {
@@ -237,7 +267,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         val s = _uiState.value
         if (s.phase != PvPhase.Turn) return
         emit(PvSoundEvent.CORRECT)
-        s.currentCard?.let { playedStore.markPlayed(PLAYED_KEY, it.start) }
+        s.currentCard?.let { playedStore.markPlayed(PLAYED_KEY, it.full) }
         _uiState.update {
             it.copy(
                 scores = it.scores.mapIndexed { i, v -> if (i == it.currentTeam) v + 1 else v },
@@ -252,7 +282,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         val s = _uiState.value
         if (s.phase != PvPhase.Turn) return
         emit(PvSoundEvent.MISS)
-        s.currentCard?.let { playedStore.markPlayed(PLAYED_KEY, it.start) }
+        s.currentCard?.let { playedStore.markPlayed(PLAYED_KEY, it.full) }
         _uiState.update {
             it.copy(turnMissed = it.turnMissed + 1, currentCard = drawCard())
         }
@@ -313,6 +343,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
 
     companion object {
         const val PLAYED_KEY = "proverbs"
+        private val WHITESPACE = Regex("\\s+")
     }
 }
 

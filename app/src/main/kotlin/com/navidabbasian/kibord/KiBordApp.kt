@@ -19,8 +19,9 @@ import com.navidabbasian.kibord.core.ui.theme.ForeheadAccent
 import com.navidabbasian.kibord.core.ui.theme.MafiaAccent
 import com.navidabbasian.kibord.core.ui.theme.NofooziAccent
 import com.navidabbasian.kibord.core.ui.theme.ProverbAccent
-import com.navidabbasian.kibord.core.ui.theme.ShahDozdAccent
+import com.navidabbasian.kibord.core.ui.theme.EsmRamzAccent
 import com.navidabbasian.kibord.core.ui.theme.SpyAccent
+import com.navidabbasian.kibord.core.ui.theme.WhoAmIAccent
 import com.navidabbasian.kibord.core.ui.theme.TabooAccent
 import com.navidabbasian.kibord.games.dor.DorGame
 import com.navidabbasian.kibord.games.esmfamil.EsmFamilGame
@@ -32,8 +33,9 @@ import com.navidabbasian.kibord.games.forehead.ForeheadGame
 import com.navidabbasian.kibord.games.mafia.MafiaGame
 import com.navidabbasian.kibord.games.nofoozi.NofooziGame
 import com.navidabbasian.kibord.games.proverb.ProverbGame
-import com.navidabbasian.kibord.games.shahdozd.ShahDozdGame
+import com.navidabbasian.kibord.games.esmramz.EsmRamzGame
 import com.navidabbasian.kibord.games.spy.SpyGame
+import com.navidabbasian.kibord.games.whoami.WhoAmIGame
 import com.navidabbasian.kibord.games.taboo.TabooGame
 import com.navidabbasian.kibord.hub.HubShell
 import com.navidabbasian.kibord.hub.MoreGamesScreen
@@ -97,9 +99,9 @@ fun KiBordApp() {
                 ForeheadGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
-        composable(Routes.SHAH_DOZD) {
-            CompositionLocalProvider(LocalGameAccent provides ShahDozdAccent) {
-                ShahDozdGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+        composable(Routes.ESM_RAMZ) {
+            CompositionLocalProvider(LocalGameAccent provides EsmRamzAccent) {
+                EsmRamzGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
         composable(Routes.PROVERB) {
@@ -115,6 +117,11 @@ fun KiBordApp() {
         composable(Routes.MAFIA) {
             CompositionLocalProvider(LocalGameAccent provides MafiaAccent) {
                 MafiaGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.WHO_AM_I) {
+            CompositionLocalProvider(LocalGameAccent provides WhoAmIAccent) {
+                WhoAmIGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
         composable(Routes.ESM_FAMIL) {

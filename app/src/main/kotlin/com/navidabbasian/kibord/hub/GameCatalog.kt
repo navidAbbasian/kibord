@@ -21,9 +21,11 @@ import com.navidabbasian.kibord.core.ui.theme.NofooziAccent
 import com.navidabbasian.kibord.core.ui.theme.NofooziAccentDark
 import com.navidabbasian.kibord.core.ui.theme.ProverbAccent
 import com.navidabbasian.kibord.core.ui.theme.ProverbAccentDark
-import com.navidabbasian.kibord.core.ui.theme.ShahDozdAccent
-import com.navidabbasian.kibord.core.ui.theme.ShahDozdAccentDark
+import com.navidabbasian.kibord.core.ui.theme.EsmRamzAccent
+import com.navidabbasian.kibord.core.ui.theme.EsmRamzAccentDark
 import com.navidabbasian.kibord.core.ui.theme.SpyAccent
+import com.navidabbasian.kibord.core.ui.theme.WhoAmIAccent
+import com.navidabbasian.kibord.core.ui.theme.WhoAmIAccentDark
 import com.navidabbasian.kibord.core.ui.theme.SpyAccentDark
 import com.navidabbasian.kibord.core.ui.theme.TabooAccent
 import com.navidabbasian.kibord.core.ui.theme.TabooAccentDark
@@ -54,10 +56,11 @@ object Routes {
     const val TABOO = "game/taboo"
     const val SPY = "game/spy"
     const val FOREHEAD = "game/forehead"
-    const val SHAH_DOZD = "game/shah_dozd"
+    const val ESM_RAMZ = "game/esm_ramz"
     const val PROVERB = "game/proverb"
     const val NOFOOZI = "game/nofoozi"
     const val MAFIA = "game/mafia"
+    const val WHO_AM_I = "game/who_am_i"
 }
 
 /** چهار بازی اصلی صفحه‌ی خانه — بقیه در «بازی‌های بیشتر» زندگی می‌کنند */
@@ -149,22 +152,22 @@ val moreGamesCatalog = listOf(
     GameInfo(
         id = "forehead",
         title = "حدس روی پیشونی",
-        tagline = "گوشی رو پیشونیت! توضیح می‌دن، تو حدس بزن",
+        tagline = "تیمی! گوشی رو پیشونیت، هم‌تیمی‌ها توضیح می‌دن",
         emoji = "🤳",
         accent = ForeheadAccent,
         accentDark = ForeheadAccentDark,
-        players = "۲+ نفر",
+        players = "۴+ نفر — تیمی",
         route = Routes.FOREHEAD,
     ),
     GameInfo(
-        id = "shah_dozd",
-        title = "شاه دزد وزیر",
-        tagline = "نوستالژی! وزیر باید مچ دزد رو بگیره",
-        emoji = "👑",
-        accent = ShahDozdAccent,
-        accentDark = ShahDozdAccentDark,
-        players = "۴ تا ۸ نفر",
-        route = Routes.SHAH_DOZD,
+        id = "esm_ramz",
+        title = "اسم‌رمز",
+        tagline = "سرگروه رمز می‌ده، تیمت کلمه‌ها رو پیدا کنه!",
+        emoji = "🗝️",
+        accent = EsmRamzAccent,
+        accentDark = EsmRamzAccentDark,
+        players = "۴+ نفر — ۲ تیم",
+        route = Routes.ESM_RAMZ,
     ),
     GameInfo(
         id = "proverb",
@@ -195,5 +198,15 @@ val moreGamesCatalog = listOf(
         accentDark = MafiaAccentDark,
         players = "۵ تا ۸ نفر",
         route = Routes.MAFIA,
+    ),
+    GameInfo(
+        id = "who_am_i",
+        title = "من کی‌ام؟",
+        tagline = "اسم رو پیشونیت! با سوال بله/نه بفهم کی هستی",
+        emoji = "🏷️",
+        accent = WhoAmIAccent,
+        accentDark = WhoAmIAccentDark,
+        players = "۲+ نفر",
+        route = Routes.WHO_AM_I,
     ),
 )

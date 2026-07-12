@@ -50,6 +50,18 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** دو یا سه تیم — اسم‌های واردشده حفظ می‌شوند */
+    fun setTeamCount(count: Int) {
+        val c = count.coerceIn(2, 3)
+        _uiState.update { s ->
+            s.copy(
+                teamCount = c,
+                teamNames = List(c) { i -> s.teamNames.getOrElse(i) { "" } },
+                scores = List(c) { 0 },
+            )
+        }
+    }
+
     fun confirmTeamNames() = _uiState.update { it.copy(phase = TabooPhase.Settings) }
 
     fun setTurnSeconds(seconds: Int) = _uiState.update { it.copy(turnSeconds = seconds) }
@@ -62,7 +74,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 phase = TabooPhase.TurnReady(0),
-                scores = List(2) { 0 },
+                scores = List(it.teamCount) { 0 },
                 roundIndex = 1,
                 currentTeam = 0,
             )
@@ -81,6 +93,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
                 secondsLeft = it.turnSeconds,
                 turnCorrect = 0,
                 turnFoul = 0,
+                turnBonus = 0,
                 currentCard = drawCard(),
             )
         }
@@ -158,11 +171,23 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** بررسی امتیاز نوبت: داور جمع می‌تواند امتیاز تیم را کم و زیاد کند */
+    fun adjustTurnScore(delta: Int) {
+        val s = _uiState.value
+        val team = (s.phase as? TabooPhase.TurnEnd)?.team ?: return
+        _uiState.update {
+            it.copy(
+                scores = it.scores.mapIndexed { i, v -> if (i == team) v + delta else v },
+                turnBonus = it.turnBonus + delta,
+            )
+        }
+    }
+
     /** بعد از جمع‌بندی نوبت: تیم بعد یا راند بعد یا برنده */
     fun proceedAfterTurn() {
         val s = _uiState.value
-        if (s.currentTeam == 0) {
-            _uiState.update { it.copy(phase = TabooPhase.TurnReady(1)) }
+        if (s.currentTeam < s.teamCount - 1) {
+            _uiState.update { it.copy(phase = TabooPhase.TurnReady(s.currentTeam + 1)) }
         } else if (s.roundIndex >= s.totalRounds) {
             emit(TabooSoundEvent.GAME_OVER)
             _uiState.update { it.copy(phase = TabooPhase.Winner) }
@@ -184,7 +209,9 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         tickerJob?.cancel()
         val old = _uiState.value
         _uiState.value = TabooUiState(
+            teamCount = old.teamCount,
             teamNames = old.teamNames,
+            scores = List(old.teamCount) { 0 },
             turnSeconds = old.turnSeconds,
             totalRounds = old.totalRounds,
             phase = TabooPhase.Settings,

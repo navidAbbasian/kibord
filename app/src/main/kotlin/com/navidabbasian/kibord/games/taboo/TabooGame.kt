@@ -76,6 +76,7 @@ fun TabooGame(
                     BackHandler { pendingExit = { onExitToHub() } }
                     TabooTeamNamesScreen(
                         state = state,
+                        onTeamCount = viewModel::setTeamCount,
                         onNameChanged = viewModel::updateTeamName,
                         onConfirm = viewModel::confirmTeamNames,
                     )
@@ -117,6 +118,7 @@ fun TabooGame(
                         team = phase.team,
                         correct = phase.correct,
                         foul = phase.foul,
+                        onAdjust = viewModel::adjustTurnScore,
                         onProceed = viewModel::proceedAfterTurn,
                     )
                 }

@@ -55,10 +55,11 @@ import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.taboo.model.TabooUiState
 
-/** ورود نام دو تیم */
+/** ورود نام تیم‌ها + انتخاب دو یا سه تیم */
 @Composable
 fun TabooTeamNamesScreen(
     state: TabooUiState,
+    onTeamCount: (Int) -> Unit,
     onNameChanged: (Int, String) -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -78,14 +79,25 @@ fun TabooTeamNamesScreen(
         StickerTitle(text = "کلمه ممنوعه!", rotation = -2f)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "کلمه رو برسون بدون گفتنِ پنج کلمه‌ی ممنوعه — دو تیم، مچ‌گیری آزاد!",
+            text = "کلمه رو برسون بدون گفتنِ پنج کلمه‌ی ممنوعه — مچ‌گیری آزاد!",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        repeat(2) { i ->
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(2, 3).forEach { c ->
+                TabooPill(
+                    text = "${c.toPersianDigits()} تیم",
+                    selected = state.teamCount == c,
+                    onClick = { onTeamCount(c) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+
+        repeat(state.teamCount) { i ->
             BlobTextField(
                 value = state.teamNames.getOrElse(i) { "" },
                 onValueChange = { onNameChanged(i, it.take(20)) },
@@ -224,7 +236,7 @@ fun TabooTurnReadyScreen(
         verticalArrangement = Arrangement.Center
     ) {
         TeamMedallions(
-            count = 2,
+            count = state.teamCount,
             nameOf = state::teamDisplayName,
             scoreOf = { state.scores[it] },
             highlight = team,
@@ -380,17 +392,19 @@ fun TabooTurnScreen(
     }
 }
 
-/** جمع‌بندی نوبت */
+/** جمع‌بندی نوبت + بررسی داورانه‌ی امتیاز */
 @Composable
 fun TabooTurnEndScreen(
     state: TabooUiState,
     team: Int,
     correct: Int,
     foul: Int,
+    onAdjust: (Int) -> Unit,
     onProceed: () -> Unit,
 ) {
     val color = kiExtras.teamColors.teamColorFor(team)
     val extras = kiExtras
+    val turnScore = correct - foul + state.turnBonus
 
     Column(
         modifier = Modifier
@@ -424,19 +438,43 @@ fun TabooTurnEndScreen(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ---- بررسی امتیاز: جمع می‌تواند حکم نهایی را کم و زیاد کند ----
                 Text(
-                    text = "امتیاز این نوبت: ${(correct - foul).toPersianDigits()}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = if (correct - foul >= 0) extras.success else extras.danger,
+                    text = "بررسی امتیاز این نوبت",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    TabooPill(text = "−۱", selected = false, onClick = { onAdjust(-1) })
+                    Text(
+                        text = turnScore.toPersianDigits(),
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Black,
+                        color = if (turnScore >= 0) extras.success else extras.danger,
+                    )
+                    TabooPill(text = "+۱", selected = false, onClick = { onAdjust(1) })
+                }
+                if (state.turnBonus != 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "حکم داورها: ${if (state.turnBonus > 0) "+" else "−"}${kotlin.math.abs(state.turnBonus).toPersianDigits()}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = extras.gold,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         TeamMedallions(
-            count = 2,
+            count = state.teamCount,
             nameOf = state::teamDisplayName,
             scoreOf = { state.scores[it] },
         )
@@ -481,7 +519,7 @@ fun TabooWinnerScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
             TeamMedallions(
-                count = 2,
+                count = state.teamCount,
                 nameOf = state::teamDisplayName,
                 scoreOf = { state.scores[it] },
             )

@@ -23,6 +23,8 @@ sealed class TabooPhase {
 
 data class TabooUiState(
     val phase: TabooPhase = TabooPhase.TeamNames,
+    /** دو یا سه تیم */
+    val teamCount: Int = 2,
     val teamNames: List<String> = List(2) { "" },
     val scores: List<Int> = List(2) { 0 },
     val turnSeconds: Int = 60,
@@ -35,6 +37,8 @@ data class TabooUiState(
     val currentCard: TabooCard? = null,
     val turnCorrect: Int = 0,
     val turnFoul: Int = 0,
+    /** جمع دستکاری داورانه‌ی امتیازِ همین نوبت در بخش بررسی */
+    val turnBonus: Int = 0,
 ) {
     fun teamDisplayName(index: Int): String =
         teamNames.getOrNull(index)?.ifBlank { "تیم ${(index + 1).toPersianDigits()}" }

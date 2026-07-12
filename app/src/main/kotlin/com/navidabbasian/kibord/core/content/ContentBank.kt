@@ -24,7 +24,7 @@ object ContentBank {
         "https://raw.githubusercontent.com/navidAbbasian/kibord/main/app/src/main/assets/"
     private val FILES = listOf(
         "words.json", "pantomime.json", "gandegoo.json",
-        "taboo.json", "spy.json", "proverbs.json", "nofoozi.json",
+        "taboo.json", "forehead.json", "spy.json", "proverbs.json", "nofoozi.json", "esmramz.json",
     )
 
     private const val PREFS = "kibord_content_bank"

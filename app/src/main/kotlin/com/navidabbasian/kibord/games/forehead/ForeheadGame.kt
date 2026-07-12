@@ -1,7 +1,9 @@
 package com.navidabbasian.kibord.games.forehead
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,12 +22,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,7 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +59,9 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
 import com.navidabbasian.kibord.core.content.PlayedContentStore
+import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
@@ -66,6 +74,7 @@ import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -95,14 +104,22 @@ private data class FhCategory(
 )
 
 sealed class FhPhase {
+    data object TeamNames : FhPhase()
     data object Category : FhPhase()
     data object Ready : FhPhase()
     data object Play : FhPhase()
     data object Result : FhPhase()
+    data object Winner : FhPhase()
 }
 
 data class FhUiState(
-    val phase: FhPhase = FhPhase.Category,
+    val phase: FhPhase = FhPhase.TeamNames,
+    /** دو یا سه تیم */
+    val teamCount: Int = 2,
+    val teamNames: List<String> = List(2) { "" },
+    /** نوبت کدام تیم است */
+    val currentTeam: Int = 0,
+    val totalScores: List<Int> = List(2) { 0 },
     val categories: List<Pair<String, String>> = emptyList(), // (نام، ایموجی)
     val selectedCategory: String = "",
     val turnSeconds: Int = 60,
@@ -110,15 +127,24 @@ data class FhUiState(
     val currentWord: String = "",
     val correctWords: List<String> = emptyList(),
     val passedWords: List<String> = emptyList(),
-)
+    /** جمع دستکاری داورانه‌ی امتیازِ همین نوبت در بخش بررسی */
+    val turnBonus: Int = 0,
+) {
+    fun teamDisplayName(index: Int): String =
+        teamNames.getOrNull(index)?.ifBlank { "تیم ${(index + 1).toPersianDigits()}" }
+            ?: "تیم ${(index + 1).toPersianDigits()}"
+
+    /** امتیاز نهایی این نوبت پس از بررسی جمع */
+    val turnScore: Int get() = correctWords.size + turnBonus
+}
 
 enum class FhSoundEvent { TICK, TICK_WARNING, TIME_UP, CORRECT, PASS }
 
 // ================= موتور =================
 
 /**
- * حدس روی پیشونی: گوشی روی پیشونی، بقیه توضیح می‌دهند.
- * سر را به جلو خم کن = درست، به عقب = رد؛ دکمه‌ها هم هستند.
+ * حدس روی پیشونی: گوشی افقی روی پیشونی، بقیه توضیح می‌دهند.
+ * خم به جلو = درست، خم به عقب = رد؛ لمس نیمه‌های صفحه هم کار می‌کند.
  */
 class ForeheadViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -134,7 +160,9 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
     private var deck: ArrayDeque<String> = ArrayDeque()
     private var tickerJob: Job? = null
 
-    // ---- حسگر حرکت: خم به جلو = درست، خم به عقب = رد ----
+    // ---- حسگر حرکت: گوشی افقی روی پیشونی، صفحه رو به جمع ----
+    // خم به جلو → صفحه رو به زمین → محور z منفی = درست
+    // خم به عقب → صفحه رو به آسمان → محور z مثبت = رد
     private val sensorManager =
         application.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private var lastGestureAt = 0L
@@ -145,11 +173,11 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
             val z = event.values.getOrNull(2) ?: return
             val now = SystemClock.elapsedRealtime()
             when {
-                neutral && z > 7f && now - lastGestureAt > 800 -> {
+                neutral && z < -7f && now - lastGestureAt > 800 -> {
                     lastGestureAt = now; neutral = false
                     markCorrect()
                 }
-                neutral && z < -7f && now - lastGestureAt > 800 -> {
+                neutral && z > 7f && now - lastGestureAt > 800 -> {
                     lastGestureAt = now; neutral = false
                     markPass()
                 }
@@ -162,7 +190,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
 
     init {
         bank = try {
-            json.decodeFromString<List<FhCategory>>(ContentBank.open(application, "words.json"))
+            json.decodeFromString<List<FhCategory>>(ContentBank.open(application, "forehead.json"))
         } catch (_: Exception) {
             emptyList()
         }.filter { it.words.isNotEmpty() }
@@ -171,11 +199,35 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
 
     private fun emit(e: FhSoundEvent) = _soundEvents.tryEmit(e)
 
+    // ---- راه‌اندازی بازیکن‌ها ----
+
+    /** دو یا سه تیم — اسم‌های واردشده حفظ می‌شوند */
+    fun setTeamCount(count: Int) {
+        val c = count.coerceIn(2, 3)
+        _uiState.update { s ->
+            s.copy(
+                teamCount = c,
+                teamNames = List(c) { i -> s.teamNames.getOrElse(i) { "" } },
+                totalScores = List(c) { 0 },
+            )
+        }
+    }
+
+    fun updateTeamName(index: Int, name: String) {
+        _uiState.update { s ->
+            s.copy(teamNames = s.teamNames.mapIndexed { i, n -> if (i == index) name else n })
+        }
+    }
+
+    fun confirmTeams() = _uiState.update { it.copy(phase = FhPhase.Category, currentTeam = 0) }
+
     fun selectCategory(name: String) {
         _uiState.update { it.copy(selectedCategory = name, phase = FhPhase.Ready) }
     }
 
     fun setTurnSeconds(seconds: Int) = _uiState.update { it.copy(turnSeconds = seconds) }
+
+    // ---- نوبت ----
 
     fun startTurn() {
         val cat = bank.firstOrNull { it.name == _uiState.value.selectedCategory } ?: return
@@ -195,6 +247,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
                 secondsLeft = it.turnSeconds,
                 correctWords = emptyList(),
                 passedWords = emptyList(),
+                turnBonus = 0,
                 currentWord = deck.removeFirstOrNull() ?: "",
             )
         }
@@ -258,12 +311,57 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(phase = FhPhase.Result) }
     }
 
-    fun nextPlayerSameCategory() = startTurn()
+    // ---- بررسی و ثبت امتیاز ----
 
-    fun backToCategories() {
-        tickerJob?.cancel()
-        sensorManager?.unregisterListener(sensorListener)
-        _uiState.update { it.copy(phase = FhPhase.Category) }
+    /** بررسی امتیاز نوبت: جمع می‌تواند حکم نهایی را کم و زیاد کند */
+    fun adjustTurnScore(delta: Int) {
+        if (_uiState.value.phase != FhPhase.Result) return
+        _uiState.update { it.copy(turnBonus = it.turnBonus + delta) }
+    }
+
+    /** ثبت امتیاز نوبت برای بازیکن فعلی + رفتن سراغ نفر بعد */
+    fun confirmTurn(changeCategory: Boolean) {
+        val s = _uiState.value
+        if (s.phase != FhPhase.Result) return
+        _uiState.update {
+            it.copy(
+                totalScores = it.totalScores.mapIndexed { i, v ->
+                    if (i == it.currentTeam) v + it.turnScore else v
+                },
+                currentTeam = (it.currentTeam + 1) % it.teamCount,
+                phase = if (changeCategory) FhPhase.Category else FhPhase.Ready,
+            )
+        }
+    }
+
+    /** ثبت امتیاز آخرین نوبت و اعلام برنده */
+    fun finishGame() {
+        val s = _uiState.value
+        if (s.phase != FhPhase.Result) return
+        _uiState.update {
+            it.copy(
+                totalScores = it.totalScores.mapIndexed { i, v ->
+                    if (i == it.currentTeam) v + it.turnScore else v
+                },
+                phase = FhPhase.Winner,
+            )
+        }
+    }
+
+    fun winners(): List<Int> {
+        val scores = _uiState.value.totalScores
+        val max = scores.maxOrNull() ?: return emptyList()
+        return scores.withIndex().filter { it.value == max }.map { it.index }
+    }
+
+    fun playAgain() {
+        _uiState.update {
+            it.copy(
+                totalScores = List(it.teamCount) { 0 },
+                currentTeam = 0,
+                phase = FhPhase.Category,
+            )
+        }
     }
 
     fun navigateBack() {
@@ -299,6 +397,19 @@ fun ForeheadGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
+    val context = LocalContext.current
+
+    // هنگام بازی گوشی افقی می‌شود تا صاف روی پیشونی بنشیند
+    LaunchedEffect(state.phase) {
+        (context as? Activity)?.requestedOrientation =
+            if (state.phase == FhPhase.Play) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -320,8 +431,8 @@ fun ForeheadGame(
 
     LaunchedEffect(state.phase) {
         val track = when (state.phase) {
-            FhPhase.Category, FhPhase.Ready -> MusicTrack.HUB
-            else -> MusicTrack.KALAMZ_ROUND_3
+            FhPhase.Play -> MusicTrack.KALAMZ_ROUND_3
+            else -> MusicTrack.HUB
         }
         sound?.switchMusic(track)
     }
@@ -334,6 +445,16 @@ fun ForeheadGame(
         )
         PhaseTransition(key = state.phase::class) {
             when (state.phase) {
+                FhPhase.TeamNames -> {
+                    BackHandler { pendingExit = { onExitToHub() } }
+                    FhTeamNamesScreen(
+                        state = state,
+                        onTeamCount = viewModel::setTeamCount,
+                        onNameChanged = viewModel::updateTeamName,
+                        onConfirm = viewModel::confirmTeams,
+                    )
+                }
+
                 FhPhase.Category -> {
                     BackHandler { pendingExit = { onExitToHub() } }
                     FhCategoryScreen(state = state, onSelect = viewModel::selectCategory)
@@ -361,8 +482,19 @@ fun ForeheadGame(
                     BackHandler { pendingExit = { onExitToHub() } }
                     FhResultScreen(
                         state = state,
-                        onNextPlayer = viewModel::nextPlayerSameCategory,
-                        onCategories = viewModel::backToCategories,
+                        onAdjust = viewModel::adjustTurnScore,
+                        onNextPlayer = { viewModel.confirmTurn(changeCategory = false) },
+                        onCategories = { viewModel.confirmTurn(changeCategory = true) },
+                        onFinish = viewModel::finishGame,
+                    )
+                }
+
+                FhPhase.Winner -> {
+                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
+                    FhWinnerScreen(
+                        state = state,
+                        winners = viewModel.winners(),
+                        onPlayAgain = viewModel::playAgain,
                         onExitToHub = onExitToHub,
                     )
                 }
@@ -372,8 +504,86 @@ fun ForeheadGame(
 }
 
 @Composable
-private fun FhCategoryScreen(state: FhUiState, onSelect: (String) -> Unit) {
+private fun FhTeamNamesScreen(
+    state: FhUiState,
+    onTeamCount: (Int) -> Unit,
+    onNameChanged: (Int, String) -> Unit,
+    onConfirm: () -> Unit,
+) {
     val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val teamColors = kiExtras.teamColors
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .imePadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        BobbingEmoji(emoji = "🤳", fontSize = 50.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        StickerTitle(text = "حدس روی پیشونی", rotation = -2f, fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "تیمی بازی کنید! هر نوبت یکی از تیم گوشی رو می‌ذاره رو پیشونیش و هم‌تیمی‌ها توضیح می‌دن",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(2, 3).forEach { c ->
+                val selected = state.teamCount == c
+                val interaction = remember { MutableInteractionSource() }
+                Text(
+                    text = "${c.toPersianDigits()} تیم",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
+                        .clickable(interactionSource = interaction, indication = null) {
+                            sound?.playButtonClick()
+                            onTeamCount(c)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 9.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+
+        repeat(state.teamCount) { i ->
+            BlobTextField(
+                value = state.teamNames.getOrElse(i) { "" },
+                onValueChange = { onNameChanged(i, it.take(20)) },
+                placeholder = "تیم ${(i + 1).toPersianDigits()}",
+                color = teamColors.teamColorFor(i),
+                badge = (i + 1).toPersianDigits(),
+                tilt = if (i % 2 == 0) -1.2f else 1.2f,
+                phase = i * 1.6f,
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(vertical = 12.dp)
+        ) {
+            KButton(text = "بریم بازی!", onClick = onConfirm)
+        }
+    }
+}
+
+@Composable
+private fun FhCategoryScreen(state: FhUiState, onSelect: (String) -> Unit) {
     val extras = kiExtras
     val sound = LocalSoundManager.current
 
@@ -390,9 +600,10 @@ private fun FhCategoryScreen(state: FhUiState, onSelect: (String) -> Unit) {
         StickerTitle(text = "حدس روی پیشونی", rotation = -2f, fontSize = 26.sp)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "گوشی روی پیشونی! بقیه توضیح می‌دن، تو حدس می‌زنی.\nیه دسته انتخاب کن:",
+            text = "نوبت ${state.teamDisplayName(state.currentTeam)} — یه دسته انتخاب کنید:",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = kiExtras.teamColors.teamColorFor(state.currentTeam),
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(14.dp))
@@ -441,6 +652,7 @@ private fun FhReadyScreen(
     val accent = LocalGameAccent.current
     val extras = kiExtras
     val sound = LocalSoundManager.current
+    val playerColor = kiExtras.teamColors.teamColorFor(state.currentTeam)
 
     Column(
         modifier = Modifier
@@ -450,24 +662,32 @@ private fun FhReadyScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        BobbingEmoji(emoji = "🤳", fontSize = 56.sp)
-        Spacer(modifier = Modifier.height(12.dp))
+        BobbingEmoji(emoji = "🤳", fontSize = 52.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "نوبت ${state.teamDisplayName(state.currentTeam)}",
+            style = MaterialTheme.typography.displayMedium,
+            fontSize = 30.sp,
+            color = playerColor,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "دسته: ${state.selectedCategory}",
             style = MaterialTheme.typography.titleLarge,
             color = accent,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "گوشی رو بذار روی پیشونیت طوری که بقیه صفحه رو ببینن.\n" +
-                "سر به جلو = درست ✅   سر به عقب = رد ⏭\n(دکمه‌های روی صفحه هم کار می‌کنن)",
+            text = "یکی از تیم گوشی رو می‌ذاره رو پیشونیش — گوشی خودش افقی می‌شه.\n" +
+                "خم به جلو = درست ✅   خم به عقب = رد ⏭\n(لمس نیمه‌های صفحه هم کار می‌کنه)",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp,
         )
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             listOf(60, 90).forEach { sec ->
@@ -489,8 +709,8 @@ private fun FhReadyScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(26.dp))
-        KButton(text = "بذار رو پیشونی و شروع کن!", onClick = onStart)
+        Spacer(modifier = Modifier.height(24.dp))
+        KButton(text = "بذار رو پیشونی و شروع کن!", onClick = onStart, accent = playerColor)
     }
 }
 
@@ -511,7 +731,7 @@ private fun FhPlayScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ---- نیمه‌ی بالا: رد ----
+        // ---- نیمه‌ی بالا: رد (خم به عقب) ----
         val passInteraction = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
@@ -521,22 +741,22 @@ private fun FhPlayScreen(
                 .clickable(interactionSource = passInteraction, indication = null, onClick = onPass),
             contentAlignment = Alignment.TopCenter
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .statusBarsPadding()
-                    .padding(top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "⏭ رد — سر به عقب",
+                    text = "⏭ رد — خم به عقب",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = state.secondsLeft.toPersianDigits(),
-                    fontSize = if (urgent) 52.sp else 40.sp,
+                    fontSize = if (urgent) 44.sp else 34.sp,
                     fontWeight = FontWeight.Black,
                     color = if (urgent) extras.danger else MaterialTheme.colorScheme.onBackground,
                 )
@@ -553,16 +773,16 @@ private fun FhPlayScreen(
             Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 1800)) {
                 Text(
                     text = state.currentWord,
-                    fontSize = 52.sp,
+                    fontSize = 56.sp,
                     fontWeight = FontWeight.Black,
                     color = accent,
                     textAlign = TextAlign.Center,
-                    lineHeight = 64.sp,
+                    lineHeight = 68.sp,
                 )
             }
         }
 
-        // ---- نیمه‌ی پایین: درست ----
+        // ---- نیمه‌ی پایین: درست (خم به جلو) ----
         val okInteraction = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
@@ -572,11 +792,11 @@ private fun FhPlayScreen(
                 .clickable(interactionSource = okInteraction, indication = null, onClick = onCorrect),
             contentAlignment = Alignment.BottomCenter
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .navigationBarsPadding()
-                    .padding(bottom = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "✅ ${state.correctWords.size.toPersianDigits()}",
@@ -584,8 +804,9 @@ private fun FhPlayScreen(
                     fontWeight = FontWeight.Black,
                     color = extras.success,
                 )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "درست — سر به جلو",
+                    text = "درست — خم به جلو",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -598,11 +819,14 @@ private fun FhPlayScreen(
 @Composable
 private fun FhResultScreen(
     state: FhUiState,
+    onAdjust: (Int) -> Unit,
     onNextPlayer: () -> Unit,
     onCategories: () -> Unit,
-    onExitToHub: () -> Unit,
+    onFinish: () -> Unit,
 ) {
     val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val playerColor = kiExtras.teamColors.teamColorFor(state.currentTeam)
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (state.correctWords.size >= 5) ConfettiOverlay()
@@ -613,18 +837,78 @@ private fun FhResultScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(14.dp))
-            BobbingEmoji(emoji = "🎯", fontSize = 48.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            StickerTitle(text = "نتیجه‌ی نوبت", rotation = -2f, fontSize = 26.sp)
             Spacer(modifier = Modifier.height(10.dp))
+            BobbingEmoji(emoji = "🎯", fontSize = 44.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            StickerTitle(text = "نوبت ${state.teamDisplayName(state.currentTeam)}", rotation = -2f, fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "✅ ${state.correctWords.size.toPersianDigits()} درست    ⏭ ${state.passedWords.size.toPersianDigits()} رد",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ---- بررسی امتیاز: جمع می‌تواند حکم نهایی را کم و زیاد کند ----
+            GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "بررسی امتیاز این نوبت",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        val minus = remember { MutableInteractionSource() }
+                        Text(
+                            text = "−۱",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .background(extras.glassStrong, RoundedCornerShape(50))
+                                .clickable(interactionSource = minus, indication = null) {
+                                    sound?.playButtonClick(); onAdjust(-1)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 9.dp),
+                        )
+                        Text(
+                            text = state.turnScore.toPersianDigits(),
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Black,
+                            color = if (state.turnScore >= 0) extras.success else extras.danger,
+                        )
+                        val plus = remember { MutableInteractionSource() }
+                        Text(
+                            text = "+۱",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .background(extras.glassStrong, RoundedCornerShape(50))
+                                .clickable(interactionSource = plus, indication = null) {
+                                    sound?.playButtonClick(); onAdjust(1)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 9.dp),
+                        )
+                    }
+                    if (state.turnBonus != 0) {
+                        Text(
+                            text = "حکم داورها: ${if (state.turnBonus > 0) "+" else "−"}${kotlin.math.abs(state.turnBonus).toPersianDigits()}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = extras.gold,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
                 LazyColumn(modifier = Modifier.padding(14.dp)) {
@@ -647,8 +931,8 @@ private fun FhResultScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            KButton(text = "نفر بعد — همین دسته", onClick = onNextPlayer)
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(text = "ثبت — تیم بعد", onClick = onNextPlayer, accent = playerColor)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
                 Box(modifier = Modifier.weight(1f)) {
@@ -656,9 +940,84 @@ private fun FhResultScreen(
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(modifier = Modifier.weight(1f)) {
-                    KButton(text = "خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
+                    KButton(text = "کی برد؟ 🏆", onClick = onFinish, style = KButtonStyle.Glass)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FhWinnerScreen(
+    state: FhUiState,
+    winners: List<Int>,
+    onPlayAgain: () -> Unit,
+    onExitToHub: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = "🏆", fontSize = 76.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "کی برد؟",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = winners.joinToString(" و ") { state.teamDisplayName(it) },
+                style = MaterialTheme.typography.displayMedium,
+                color = kiExtras.teamColors.teamColorFor(winners.firstOrNull() ?: 0),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    (0 until state.teamCount)
+                        .sortedByDescending { state.totalScores[it] }
+                        .forEachIndexed { rank, i ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 5.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (i in winners) "🥇" else (rank + 1).toPersianDigits(),
+                                        fontSize = 17.sp,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = state.teamDisplayName(i),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = kiExtras.teamColors.teamColorFor(i),
+                                    )
+                                }
+                                Text(
+                                    text = state.totalScores[i].toPersianDigits(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(22.dp))
+            KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(10.dp))
+            KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
         }
     }
 }

@@ -89,15 +89,19 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         // ---- کلاژ کشسان: قهرمان + شبکه‌ی ۲×۲ با کارت «بازی‌های بیشتر» ----
+        // حالا که کارت‌ها کمترند، کلاژ حدود ۷٪ جمع‌وجورتر وسط قاب می‌نشیند
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.weight(0.04f))
+
             // کارت قهرمان: کلمز تمام‌عرض
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.93f)
                     .weight(0.28f)
             ) {
                 AppearWrap(index = 0) {
@@ -109,7 +113,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
 
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.93f)
                     .weight(0.36f)
             ) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -129,7 +133,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
 
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.93f)
                     .weight(0.36f)
             ) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -144,6 +148,8 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.weight(0.04f))
         }
 
         // ---- جای نوار ناوبری شناور پایین ----

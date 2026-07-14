@@ -1,5 +1,10 @@
 package com.navidabbasian.kibord.hub
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -21,30 +26,39 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.settings.LocalSettingsRepository
+import com.navidabbasian.kibord.core.stats.GameStats
 import com.navidabbasian.kibord.core.settings.ThemeMode
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.core.ui.components.blobShape
@@ -53,6 +67,7 @@ import com.navidabbasian.kibord.core.ui.components.rememberMorphingBlobShape
 import com.navidabbasian.kibord.core.ui.theme.VioletDeep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.util.toPersianDigits
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -145,6 +160,20 @@ fun SettingsScreen() {
             )
         }
 
+        // ---- آمار و نشان‌ها ----
+        item {
+            Text(
+                text = "آمار و نشان‌ها",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+            )
+        }
+        item {
+            StatsSection()
+        }
+
         // ---- بانک محتوا: به‌روزرسانی و افزودن کتگوری ----
         item {
             Text(
@@ -159,6 +188,20 @@ fun SettingsScreen() {
             ContentStudioSection()
         }
 
+        // ---- صدای شما: گزارش خطا و پیشنهاد ----
+        item {
+            Text(
+                text = "صدای شما",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+            )
+        }
+        item {
+            FeedbackSection()
+        }
+
         // ---- درباره: بلیت ----
         item {
             TicketCard(
@@ -170,8 +213,8 @@ fun SettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                     AboutRow(emoji = "🏆", label = "نام اپ", value = "کی برد؟")
-                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۲.۱")
-                    AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۵ بازی دورهمی")
+                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۳.۰")
+                    AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۱۲ بازی دورهمی")
                 }
             }
         }
@@ -371,6 +414,167 @@ private fun ThemePebbles(
     }
 }
 
+/** مقصد پیام‌های بازیکن‌ها */
+private const val FEEDBACK_EMAIL = "abbasian.navid@gmail.com"
+
+/**
+ * بخش «صدای شما»: بازیکن نوع پیام را انتخاب می‌کند، متنش را می‌نویسد و
+ * با اپ ایمیل گوشی برای سازنده می‌فرستد؛ مشخصات دستگاه هم ضمیمه می‌شود.
+ */
+@Composable
+private fun FeedbackSection() {
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val context = LocalContext.current
+    var isBug by remember { mutableStateOf(true) }
+    var message by remember { mutableStateOf("") }
+    var sent by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.glassStrong, RoundedCornerShape(24.dp))
+            .border(1.5.dp, extras.glassBorder, RoundedCornerShape(24.dp))
+            .padding(14.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FeedbackPill(
+                text = "🐞 گزارش خطا",
+                selected = isBug,
+                onClick = { sound?.playButtonClick(); isBug = true },
+            )
+            FeedbackPill(
+                text = "💡 پیشنهاد و نظر",
+                selected = !isBug,
+                onClick = { sound?.playButtonClick(); isBug = false },
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        BasicTextField(
+            value = message,
+            onValueChange = {
+                message = it.take(2000)
+                sent = false
+            },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+            ),
+            cursorBrush = SolidColor(VioletPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 110.dp)
+                .background(extras.glass, RoundedCornerShape(18.dp))
+                .border(1.5.dp, extras.glassBorder, RoundedCornerShape(18.dp))
+                .padding(14.dp),
+            decorationBox = { inner ->
+                if (message.isEmpty()) {
+                    Text(
+                        text = if (isBug) "چی خراب بود؟ کجای بازی؟ چطور پیش اومد؟"
+                        else "چه بازی یا امکانی دوست داری اضافه بشه؟",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                inner()
+            },
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        KButton(
+            text = if (isBug) "ارسال گزارش ✉️" else "ارسال پیشنهاد ✉️",
+            enabled = message.isNotBlank(),
+            onClick = {
+                sound?.playButtonClick()
+                if (sendFeedback(context, isBug, message)) {
+                    sent = true
+                    message = ""
+                }
+            },
+        )
+        if (sent) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "مرسی! پیامت توی اپ ایمیل آماده‌ست — فقط دکمه‌ی ارسالش رو بزن 💌",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = extras.success,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/** تراشه‌ی قرصی انتخاب نوع پیام */
+@Composable
+private fun FeedbackPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    val extras = kiExtras
+    Text(
+        text = text,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .background(
+                if (selected) Brush.verticalGradient(listOf(lerp(VioletPrimary, Color.White, 0.12f), VioletPrimary))
+                else Brush.verticalGradient(listOf(extras.glass, extras.glass)),
+                RoundedCornerShape(50)
+            )
+            .border(
+                1.5.dp,
+                if (selected) Color.White.copy(alpha = 0.5f) else extras.glassBorder,
+                RoundedCornerShape(50)
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+    )
+}
+
+/**
+ * باز کردن اپ ایمیل با پیام آماده؛ اگر اپ ایمیلی نبود،
+ * از پنجره‌ی اشتراک‌گذاری (پیام‌رسان‌ها) استفاده می‌شود.
+ */
+private fun sendFeedback(context: Context, isBug: Boolean, message: String): Boolean {
+    val version = try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+    } catch (_: Exception) {
+        "?"
+    }
+    val subject = (if (isBug) "گزارش خطا" else "پیشنهاد") + " — کی برد؟ نسخه $version"
+    val body = message +
+        "\n\n—\nدستگاه: ${Build.MANUFACTURER} ${Build.MODEL}" +
+        "\nاندروید: ${Build.VERSION.RELEASE}" +
+        "\nنسخه اپ: $version"
+
+    val email = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("mailto:")
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_EMAIL))
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, body)
+    }
+    return try {
+        context.startActivity(email)
+        true
+    } catch (_: ActivityNotFoundException) {
+        val share = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, "$subject\n\n$body\n\nگیرنده: $FEEDBACK_EMAIL")
+        }
+        try {
+            context.startActivity(Intent.createChooser(share, "ارسال با…"))
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+}
+
 @Composable
 private fun AboutRow(emoji: String, label: String, value: String) {
     Row(
@@ -394,6 +598,184 @@ private fun AboutRow(emoji: String, label: String, value: String) {
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+
+/** یک نشان: باز یا قفل */
+private data class KiBadge(
+    val emoji: String,
+    val title: String,
+    val hint: String,
+    val unlocked: Boolean,
+)
+
+/**
+ * بخش آمار و نشان‌ها: خلاصه‌ی بازی‌های انجام‌شده، پرافتخارترین اسم‌ها و
+ * نشان‌هایی که با بازی کردن باز می‌شوند — همه محلی و بدون سرور.
+ */
+@Composable
+private fun StatsSection() {
+    val extras = kiExtras
+    val context = LocalContext.current
+
+    val total = GameStats.totalPlays(context)
+    val distinct = GameStats.distinctGamesPlayed(context)
+    val bestWin = GameStats.bestWinCount(context)
+    val topGames = GameStats.playsByGame(context).entries.sortedByDescending { it.value }.take(3)
+    val topWinners = GameStats.topWinners(context, 3)
+    val allGames = gameCatalog + moreGamesCatalog
+
+    val badges = listOf(
+        KiBadge("🎈", "قدم اول", "اولین بازی", total >= 1),
+        KiBadge("🌙", "شب‌نشین", "۱۰ بازی", total >= 10),
+        KiBadge("🏠", "پاتوق‌دار", "۵۰ بازی", total >= 50),
+        KiBadge("🎪", "جشنواره", "۱۰۰ بازی", total >= 100),
+        KiBadge("🧭", "کاشف", "۵ بازی متفاوت", distinct >= 5),
+        KiBadge("🃏", "همه‌فن‌حریف", "همه‌ی بازی‌ها", distinct >= 12),
+        KiBadge("⭐", "ستاره‌ی جمع", "۵ برد با یک اسم", bestWin >= 5),
+        KiBadge("👑", "اسطوره", "۲۰ برد با یک اسم", bestWin >= 20),
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(kiExtras.glassStrong, RoundedCornerShape(24.dp))
+            .border(1.5.dp, kiExtras.glassBorder, RoundedCornerShape(24.dp))
+            .padding(14.dp)
+    ) {
+        if (total == 0) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BobbingEmoji(emoji = "📊", fontSize = 34.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "هنوز بازی‌ای ثبت نشده — برید بترکونید تا اینجا پر شه! 🎉",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            // ---- سه شاخص اصلی ----
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatPebble(value = total.toPersianDigits(), label = "بازی")
+                StatPebble(value = distinct.toPersianDigits(), label = "بازی متفاوت")
+                StatPebble(value = bestWin.toPersianDigits(), label = "رکورد برد")
+            }
+
+            if (topGames.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "پُرطرفدارهای جمع:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                topGames.forEach { (id, count) ->
+                    val game = allGames.firstOrNull { it.id == id }
+                    Text(
+                        text = "${game?.emoji ?: "🎲"} ${game?.title ?: id} — ${count.toPersianDigits()} بار",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
+            if (topWinners.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "پرافتخارترین‌ها:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                topWinners.forEachIndexed { i, (name, wins) ->
+                    Text(
+                        text = "${listOf("🥇", "🥈", "🥉").getOrElse(i) { "🏅" }} $name — ${wins.toPersianDigits()} برد",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "نشان‌ها (${badges.count { it.unlocked }.toPersianDigits()} از ${badges.size.toPersianDigits()})",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        badges.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { badge ->
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer { alpha = if (badge.unlocked) 1f else 0.38f }
+                            .background(
+                                if (badge.unlocked) VioletPrimary.copy(alpha = 0.16f) else kiExtras.glass,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                1.5.dp,
+                                if (badge.unlocked) VioletPrimary.copy(alpha = 0.5f) else kiExtras.glassBorder,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = if (badge.unlocked) badge.emoji else "🔒", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = badge.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = badge.hint,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+/** سنگریزه‌ی یک شاخص آماری */
+@Composable
+private fun StatPebble(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Black,
+            color = VioletPrimary,
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

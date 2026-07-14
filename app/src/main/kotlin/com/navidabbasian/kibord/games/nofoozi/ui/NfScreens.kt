@@ -48,6 +48,7 @@ import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TicketCard
@@ -721,10 +722,11 @@ fun NfRoundResultScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // راند آخر: مجموع‌ها تا «کی برد؟» مخفی می‌مانند تا هیجان بماند
+        val suspense = snapshot.roundIndex >= snapshot.totalRounds
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                snapshot.players
-                    .sortedByDescending { it.totalScore }
+                (if (suspense) snapshot.players else snapshot.players.sortedByDescending { it.totalScore })
                     .forEach { p ->
                         Row(
                             modifier = Modifier
@@ -739,13 +741,35 @@ fun NfRoundResultScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = kiExtras.teamColors.teamColorFor(p.colorIndex),
                             )
-                            Text(
-                                text = p.totalScore.toPersianDigits(),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            if (suspense) {
+                                Box(modifier = Modifier.breathing(intensity = 0.06f, periodMs = 1400, phase = p.colorIndex * 1.1f)) {
+                                    Text(
+                                        text = "؟",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black,
+                                        color = kiExtras.gold,
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = p.totalScore.toPersianDigits(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
+                if (suspense) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "🤫 مجموع‌ها مخفیه… بزن ببین کی برد!",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = kiExtras.gold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
@@ -838,6 +862,16 @@ fun NfWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            ShareWinButton(
+                gameId = "nofoozi",
+                gameTitle = "کلمه‌ی نفوذی",
+                gameEmoji = "🥸",
+                winnerText = winners.joinToString(" و ") { it.name },
+                scoreLines = snapshot.players.sortedByDescending { it.totalScore }
+                    .map { it.name to it.totalScore.toPersianDigits() },
+                winnerNames = winners.map { it.name },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             if (state.isHost) {
                 KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
                 Spacer(modifier = Modifier.height(10.dp))

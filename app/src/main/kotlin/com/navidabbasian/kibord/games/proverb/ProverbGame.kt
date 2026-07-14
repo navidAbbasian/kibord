@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
@@ -58,6 +59,8 @@ import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
@@ -148,6 +151,14 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
     private var tickerJob: Job? = null
 
     init {
+        val names = GamePrefs.getNames(application, "proverb_names")
+        _uiState.update {
+            it.copy(
+                teamNames = List(2) { i -> names.getOrElse(i) { "" } },
+                turnSeconds = GamePrefs.getInt(application, "proverb_seconds", 60),
+                totalRounds = GamePrefs.getInt(application, "proverb_rounds", 3),
+            )
+        }
         // اگر کشِ دانلودی فرمت قدیمی داشته باشد نتیجه خالی می‌شود؛
         // آن‌وقت بانکِ داخل خود اپ ملاک است تا بازی هرگز بی‌کارت نماند
         allCards = decodeCards(ContentBank.open(application, "proverbs.json"))
@@ -209,6 +220,11 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(totalRounds = rounds.coerceIn(1, 10)) }
 
     fun startGame() {
+        val s = _uiState.value
+        val app = getApplication<Application>()
+        GamePrefs.setNames(app, "proverb_names", s.teamNames)
+        GamePrefs.setInt(app, "proverb_seconds", s.turnSeconds)
+        GamePrefs.setInt(app, "proverb_rounds", s.totalRounds)
         deck = ArrayDeque(prepareDeck())
         _uiState.update {
             it.copy(
@@ -391,10 +407,13 @@ fun ProverbGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == PvPhase.TeamNames || state.phase == PvPhase.Settings) {
+            GameHelpButton(gameId = "proverb", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 PvPhase.TeamNames -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     PvTeamNamesScreen(
                         state = state,
                         onNameChanged = viewModel::updateTeamName,
@@ -784,6 +803,8 @@ private fun PvTurnEndScreen(
 ) {
     val color = kiExtras.teamColors.teamColorFor(team)
     val extras = kiExtras
+    // نوبت آخرِ راند آخر: مجموع‌ها تا لحظه‌ی «کی برد؟» مخفی می‌مانند
+    val suspense = state.roundIndex >= state.totalRounds && team == 1
 
     Column(
         modifier = Modifier
@@ -828,13 +849,29 @@ private fun PvTurnEndScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        TeamMedallions(
-            count = 2,
-            nameOf = state::teamDisplayName,
-            scoreOf = { state.scores[it] },
-        )
+        if (suspense) {
+            Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1300)) {
+                Text(
+                    text = "🤫 مجموع امتیازها مخفیه… بزن ببین کی برد!",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.gold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            TeamMedallions(
+                count = 2,
+                nameOf = state::teamDisplayName,
+                scoreOf = { state.scores[it] },
+            )
+        }
         Spacer(modifier = Modifier.height(26.dp))
-        KButton(text = "ادامه", onClick = onProceed, modifier = Modifier.navigationBarsPadding())
+        KButton(
+            text = if (suspense) "کی برد؟ 🏆" else "ادامه",
+            onClick = onProceed,
+            modifier = Modifier.navigationBarsPadding(),
+        )
     }
 }
 
@@ -878,6 +915,15 @@ private fun PvWinnerScreen(
                 scoreOf = { state.scores[it] },
             )
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "proverb",
+                gameTitle = "ضرب‌المثل نصفه",
+                gameEmoji = "📜",
+                winnerText = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
+                scoreLines = (0 until 2).map { state.teamDisplayName(it) to state.scores[it].toPersianDigits() },
+                winnerNames = winners.map { state.teamDisplayName(it) },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

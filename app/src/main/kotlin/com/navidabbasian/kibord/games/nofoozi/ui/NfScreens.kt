@@ -147,6 +147,16 @@ fun NfEntryScreen(
                     fontSize = 22.sp,
                 )
             }
+        } else if (state.myName.isBlank()) {
+            Spacer(modifier = Modifier.height(34.dp))
+            Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 2000)) {
+                StickerTitle(
+                    text = "✍️ اول اسمت رو بنویس",
+                    accent = LocalGameAccent.current,
+                    rotation = -2f,
+                    fontSize = 18.sp,
+                )
+            }
         }
         state.connectError?.let {
             Spacer(modifier = Modifier.height(14.dp))

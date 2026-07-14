@@ -3,6 +3,24 @@ package com.navidabbasian.kibord
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -39,13 +57,77 @@ import com.navidabbasian.kibord.games.whoami.WhoAmIGame
 import com.navidabbasian.kibord.games.taboo.TabooGame
 import com.navidabbasian.kibord.hub.HubShell
 import com.navidabbasian.kibord.hub.MoreGamesScreen
+import com.navidabbasian.kibord.hub.TeamPickerScreen
 import com.navidabbasian.kibord.hub.Routes
+import com.navidabbasian.kibord.hub.OnboardingScreen
+import com.navidabbasian.kibord.core.settings.GamePrefs
+import com.navidabbasian.kibord.core.crash.CrashReporter
+import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.TicketCard
 
 /** ناوبری سطح بالا: هاب و مقصد هر بازی */
 @Composable
 fun KiBordApp() {
     val navController = rememberNavController()
     val sound = LocalSoundManager.current
+
+    // خوش‌آمدگوییِ بارِ اول — تا وقتی رد/تمام نشده، جای همه‌چیز را می‌گیرد
+    val context = LocalContext.current
+    var showOnboarding by remember { mutableStateOf(!GamePrefs.getBool(context, "onboarding_done", false)) }
+    if (showOnboarding) {
+        OnboardingScreen(onDone = {
+            GamePrefs.setBool(context, "onboarding_done", true)
+            showOnboarding = false
+        })
+        return
+    }
+
+    // اگر اجرای قبل با کرش تمام شده، یک بار مودبانه پیشنهاد ارسال گزارش می‌دهیم
+    var crashReport by remember { mutableStateOf(CrashReporter.pendingReport(context)) }
+    crashReport?.let { report ->
+        Dialog(onDismissRequest = {
+            CrashReporter.clear(context)
+            crashReport = null
+        }) {
+            TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1.5f) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BobbingEmoji(emoji = "🤕", fontSize = 44.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "دفعه‌ی قبل اپ غیرمنتظره بسته شد!",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "اگه گزارش فنی‌ش رو بفرستی، سریع‌تر درستش می‌کنیم — هیچ اطلاعات شخصی‌ای توش نیست",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    KButton(text = "بفرست 📧", onClick = {
+                        CrashReporter.sendByEmail(context, report)
+                        CrashReporter.clear(context)
+                        crashReport = null
+                    })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    KButton(text = "بی‌خیال", style = KButtonStyle.Glass, onClick = {
+                        CrashReporter.clear(context)
+                        crashReport = null
+                    })
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -54,6 +136,10 @@ fun KiBordApp() {
         composable(Routes.HUB) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
             HubShell(onOpenGame = { route -> navController.navigate(route) })
+        }
+        composable(Routes.TEAM_PICKER) {
+            LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
+            TeamPickerScreen()
         }
         composable(Routes.MORE_GAMES) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }

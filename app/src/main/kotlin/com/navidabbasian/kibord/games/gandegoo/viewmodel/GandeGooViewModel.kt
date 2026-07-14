@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.games.gandegoo.data.GandeGooRepository
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
 import com.navidabbasian.kibord.games.gandegoo.model.GgCell
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * موتور بازی گنده‌گو.
@@ -48,11 +50,70 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
     /** سوال‌های نمایش‌داده‌شده برای خانه‌ی فعلی — تعویض همان‌ها را دوباره نمی‌آورد */
     private val shownThisCell = mutableSetOf<String>()
     private var lastSwapCell: GgCell? = null
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         repository.load()
-        _uiState.update { it.copy(availableCategories = repository.allCategories) }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            _uiState.update { it.copy(availableCategories = repository.allCategories) }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun GandeGooUiState.isResumable(): Boolean = phase == GgPhase.Board ||
+        phase == GgPhase.Bid || phase == GgPhase.Play || phase == GgPhase.Review ||
+        phase == GgPhase.Result
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(GandeGooUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(GandeGooUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // فهرست دسته‌های بانک گذرا است و از مخزن تازه می‌آید؛ ردگیری تعویض هم بازسازی می‌شود
+        val restored = saved.copy(availableCategories = repository.allCategories)
+        lastSwapCell = restored.selectedCell
+        shownThisCell.clear()
+        restored.selectedQuestion?.text?.let(shownThisCell::add)
+        _uiState.value = restored
+        // اگر فاز شمارنده‌دار بود، تیک‌زن از همان زمان باقی‌مانده دوباره راه می‌افتد
+        if (restored.phase == GgPhase.Play) {
+            lastWholeSecond = (restored.timeLeftMillis / 1000).toInt()
+            startTicker()
+        } else if (restored.phase == GgPhase.Review) {
+            lastWholeSecond = (restored.reviewTimeLeftMillis / 1000).toInt()
+            startTicker()
+        }
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun emitSound(event: GgSoundEvent) {
         _soundEvents.tryEmit(event)
@@ -351,6 +412,7 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         val state = _uiState.value
         if (state.allCellsPlayed) {
             emitSound(GgSoundEvent.GAME_OVER)
+            clearSession()
             _uiState.update { it.copy(phase = GgPhase.Winner, selectedCell = null) }
         } else {
             _uiState.update {
@@ -373,6 +435,7 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         lastSwapCell = null
         shownThisCell.clear()
         val old = _uiState.value
@@ -400,8 +463,19 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
+    }
+
+    companion object {
+        private const val KEY = "session_gandegoo"
     }
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.data.PantomimeRepository
 import com.navidabbasian.kibord.games.pantomime.model.PCategory
@@ -22,23 +23,28 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** آدرس خانه‌ی جدول رقابتی: شماره‌ی کتگوری + رده‌ی امتیازی (۲/۴/۶) */
+@Serializable
 data class RivalCell(
     val categoryIndex: Int,
     val points: Int,
 )
 
+@Serializable
 sealed class RivalPhase {
-    data object TeamCount : RivalPhase()
-    data object TeamNames : RivalPhase()
-    data object Board : RivalPhase()
-    data object Reveal : RivalPhase()
-    data object Perform : RivalPhase()
-    data object Result : RivalPhase()
-    data object Winner : RivalPhase()
+    @Serializable data object TeamCount : RivalPhase()
+    @Serializable data object TeamNames : RivalPhase()
+    @Serializable data object Board : RivalPhase()
+    @Serializable data object Reveal : RivalPhase()
+    @Serializable data object Perform : RivalPhase()
+    @Serializable data object Result : RivalPhase()
+    @Serializable data object Winner : RivalPhase()
 }
 
+@Serializable
 data class RivalUiState(
     val phase: RivalPhase = RivalPhase.TeamCount,
     val teamCount: Int = 2,
@@ -75,10 +81,64 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
     private var tickerJob: Job? = null
     private var lastWholeSecond = -1
     private var currentCell: RivalCell? = null
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         repository.load()
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        restoreSession()
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun RivalUiState.isResumable(): Boolean = phase == RivalPhase.Board ||
+        phase == RivalPhase.Reveal || phase == RivalPhase.Perform || phase == RivalPhase.Result
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(RivalUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(RivalUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // خانه‌ی جاری گذرا است؛ از روی اجرای ذخیره‌شده بازسازی می‌شود تا در پایان نوبت «سوخته» شود
+        saved.attempt?.let { a ->
+            val ci = saved.categories.indexOfFirst { it.name == a.categoryName }
+            if (ci >= 0) currentCell = RivalCell(ci, a.points)
+        }
+        _uiState.value = saved
+        // اجرا اگر وسطِ زمان‌گیری بوده، تیکر از نو راه می‌افتد
+        if (saved.phase == RivalPhase.Perform) {
+            lastWholeSecond = (saved.timeLeftMillis / 1000).toInt()
+            startTicker()
+        }
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun emitSound(event: PantoSoundEvent) {
         _soundEvents.tryEmit(event)
@@ -209,6 +269,7 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         if (state.allCellsPlayed) {
             emitSound(PantoSoundEvent.GAME_OVER)
+            clearSession()
             _uiState.update { it.copy(attempt = null, phase = RivalPhase.Winner) }
         } else {
             _uiState.update {
@@ -230,6 +291,7 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         repository.resetUsed()
         val old = _uiState.value
         _uiState.update {
@@ -251,8 +313,19 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
+    }
+
+    companion object {
+        private const val KEY = "session_pantomime_rival"
     }
 }

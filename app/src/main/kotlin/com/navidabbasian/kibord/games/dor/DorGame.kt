@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
@@ -53,6 +55,9 @@ fun DorGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     // رساندن رویدادهای صوتی موتور بازی به مدیر صدا
     LaunchedEffect(Unit) {
@@ -143,7 +148,7 @@ fun DorGame(
                         PauseDialog(
                             onResume = viewModel::resumeGame,
                             onEndGame = {
-                                viewModel.playAgain()
+                                viewModel.leaveGame()
                                 onExitToHub()
                             }
                         )

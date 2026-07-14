@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,6 +43,9 @@ fun KalamzGame(
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
 
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
+
     // موسیقی بر اساس فاز/راند جاری
     LaunchedEffect(state.phase, state.currentRound) {
         val track = when (state.phase) {
@@ -70,8 +75,8 @@ fun KalamzGame(
         if (setupPhase) {
             GameHelpButton(gameId = "kalamz", modifier = Modifier.align(Alignment.TopStart))
         }
-        // بک وسط بازی نباید بی‌هوا از بازی خارج شود
-        val exitConfirm = { pendingExit = { viewModel.resetGame(); onExitToHub() } }
+        // بک وسط بازی نباید بی‌هوا از بازی خارج شود — خروج نشست را پاک می‌کند
+        val exitConfirm = { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 is GamePhase.Setup -> {

@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
@@ -36,6 +38,9 @@ fun RivalPantomimeGame(
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
     val teamColors = kiExtras.teamColors
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -91,7 +96,7 @@ fun RivalPantomimeGame(
                 }
     
                 RivalPhase.Board -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     RivalBoardScreen(
                         state = state,
                         onCellSelected = viewModel::selectCell

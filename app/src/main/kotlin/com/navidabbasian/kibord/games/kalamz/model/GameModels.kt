@@ -1,11 +1,15 @@
 package com.navidabbasian.kibord.games.kalamz.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Player(
     val id: Int,
     val name: String = "",
     val teamId: Int
 )
 
+@Serializable
 data class Team(
     val id: Int,
     val name: String = "",
@@ -17,31 +21,35 @@ data class Team(
     val totalScore: Int get() = scoresPerRound.sum()
 }
 
+@Serializable
 data class Word(
     val id: Int,
     val text: String,
     val submittedByPlayerId: Int
 )
 
+@Serializable
 enum class RoundType(val roundNumber: Int, val persianTitle: String, val persianDescription: String) {
     DESCRIBE(1, "راند اول: توضیح بده!", "کلمه رو با حرف زدن توضیح بده\nمی‌تونی هر چند تا کلمه که بخوای استفاده کنی"),
     ONE_WORD(2, "راند دوم: یک کلمه!", "فقط با یک کلمه باید کلمه رو به هم‌تیمیت بفهمونی!"),
     PANTOMIME(3, "راند سوم: پانتومیم!", "بدون هیچ حرفی، فقط با ادا و اشاره کلمه رو نشون بده!")
 }
 
+@Serializable
 sealed class GamePhase {
-    data object Setup : GamePhase()
-    data object TeamSetup : GamePhase()
-    data object CustomSettings : GamePhase()
-    data class WordEntry(val currentPlayerIndex: Int) : GamePhase()
-    data class RoundIntro(val round: RoundType) : GamePhase()
-    data class TurnReady(val playerName: String, val teamId: Int) : GamePhase()
-    data object TurnActive : GamePhase()
-    data class TurnEnd(val correctCount: Int, val correctWords: List<String>) : GamePhase()
-    data class RoundEnd(val round: RoundType) : GamePhase()
-    data object GameOver : GamePhase()
+    @Serializable data object Setup : GamePhase()
+    @Serializable data object TeamSetup : GamePhase()
+    @Serializable data object CustomSettings : GamePhase()
+    @Serializable data class WordEntry(val currentPlayerIndex: Int) : GamePhase()
+    @Serializable data class RoundIntro(val round: RoundType) : GamePhase()
+    @Serializable data class TurnReady(val playerName: String, val teamId: Int) : GamePhase()
+    @Serializable data object TurnActive : GamePhase()
+    @Serializable data class TurnEnd(val correctCount: Int, val correctWords: List<String>) : GamePhase()
+    @Serializable data class RoundEnd(val round: RoundType) : GamePhase()
+    @Serializable data object GameOver : GamePhase()
 }
 
+@Serializable
 data class GameUiState(
     val phase: GamePhase = GamePhase.Setup,
     val playerCount: Int = 4,

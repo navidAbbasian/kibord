@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
@@ -52,6 +54,7 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
@@ -95,21 +98,24 @@ data class ProverbCard(
 )
 
 /** کارت آماده‌ی نمایش: بخش خواندنیِ گوینده و ادامه‌ای که تیم باید کامل کند */
+@Serializable
 data class PvShown(
     val start: String,
     val end: String,
     val full: String,
 )
 
+@Serializable
 sealed class PvPhase {
-    data object TeamNames : PvPhase()
-    data object Settings : PvPhase()
-    data class TurnReady(val team: Int) : PvPhase()
-    data object Turn : PvPhase()
-    data class TurnEnd(val team: Int, val correct: Int, val missed: Int) : PvPhase()
-    data object Winner : PvPhase()
+    @Serializable data object TeamNames : PvPhase()
+    @Serializable data object Settings : PvPhase()
+    @Serializable data class TurnReady(val team: Int) : PvPhase()
+    @Serializable data object Turn : PvPhase()
+    @Serializable data class TurnEnd(val team: Int, val correct: Int, val missed: Int) : PvPhase()
+    @Serializable data object Winner : PvPhase()
 }
 
+@Serializable
 data class PvUiState(
     val phase: PvPhase = PvPhase.TeamNames,
     val teamNames: List<String> = List(2) { "" },
@@ -151,14 +157,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
     private var tickerJob: Job? = null
 
     init {
-        val names = GamePrefs.getNames(application, "proverb_names")
-        _uiState.update {
-            it.copy(
-                teamNames = List(2) { i -> names.getOrElse(i) { "" } },
-                turnSeconds = GamePrefs.getInt(application, "proverb_seconds", 60),
-                totalRounds = GamePrefs.getInt(application, "proverb_rounds", 3),
-            )
-        }
+        // بانک مثل‌ها یک‌بار بار می‌شود (پیش از بازیابی نشست تا دسته قابل بازسازی باشد)
         // اگر کشِ دانلودی فرمت قدیمی داشته باشد نتیجه خالی می‌شود؛
         // آن‌وقت بانکِ داخل خود اپ ملاک است تا بازی هرگز بی‌کارت نماند
         allCards = decodeCards(ContentBank.open(application, "proverbs.json"))
@@ -171,7 +170,62 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
                 }
             )
         }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            val names = GamePrefs.getNames(application, "proverb_names")
+            _uiState.update {
+                it.copy(
+                    teamNames = List(2) { i -> names.getOrElse(i) { "" } },
+                    turnSeconds = GamePrefs.getInt(application, "proverb_seconds", 60),
+                    totalRounds = GamePrefs.getInt(application, "proverb_rounds", 3),
+                )
+            }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun PvUiState.isResumable(): Boolean = phase is PvPhase.TurnReady ||
+        phase == PvPhase.Turn || phase is PvPhase.TurnEnd
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(PvUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(PvUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // دسته‌ی کارت‌ها گذرا است؛ کارتِ جاری در وضعیت هست و بقیه از بانک تازه می‌آیند
+        deck = ArrayDeque(prepareDeck())
+        _uiState.value = saved
+        if (saved.phase == PvPhase.Turn) startTicker()
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun decodeCards(text: String): List<ProverbCard> = try {
         json.decodeFromString<List<ProverbCard>>(text)
@@ -318,6 +372,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
             _uiState.update { it.copy(phase = PvPhase.TurnReady(1)) }
         } else if (s.roundIndex >= s.totalRounds) {
             emit(PvSoundEvent.GAME_OVER)
+            clearSession()
             _uiState.update { it.copy(phase = PvPhase.Winner) }
         } else {
             _uiState.update {
@@ -334,6 +389,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         val old = _uiState.value
         _uiState.value = PvUiState(
             teamNames = old.teamNames,
@@ -352,6 +408,13 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
@@ -359,6 +422,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
 
     companion object {
         const val PLAYED_KEY = "proverbs"
+        private const val KEY = "session_proverb"
         private val WHITESPACE = Regex("\\s+")
     }
 }
@@ -376,6 +440,9 @@ fun ProverbGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -432,7 +499,7 @@ fun ProverbGame(
                 }
 
                 is PvPhase.TurnReady -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     PvTurnReadyScreen(state = state, team = phase.team, onStart = viewModel::startTurn)
                 }
 

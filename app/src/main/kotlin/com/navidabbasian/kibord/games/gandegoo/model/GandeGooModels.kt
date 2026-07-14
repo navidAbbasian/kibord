@@ -18,12 +18,14 @@ data class GgCategory(
 )
 
 /** آدرس یک خانه‌ی جدول: شماره‌ی کتگوری + شماره‌ی سوال (۰ تا ۲) */
+@Serializable
 data class GgCell(
     val categoryIndex: Int,
     val questionIndex: Int,
 )
 
 /** نتیجه‌ی یک دست بازی */
+@Serializable
 data class GgOutcome(
     val cell: GgCell,
     val claimingTeam: Int,
@@ -34,6 +36,7 @@ data class GgOutcome(
     val deltas: List<Int>,
     val kind: Kind,
 ) {
+    @Serializable
     enum class Kind {
         /** به ادعا رسید — امتیاز کامل */
         FULL,
@@ -45,6 +48,7 @@ data class GgOutcome(
 }
 
 /** حالت بازی: کامل با هر سه سطح امتیازی، سریع فقط با سوال‌های ۲۰ امتیازی */
+@Serializable
 enum class GgMode {
     FULL,
     QUICK;
@@ -54,24 +58,26 @@ enum class GgMode {
         get() = if (this == QUICK) listOf(20) else listOf(20, 40, 60)
 }
 
+@Serializable
 sealed class GgPhase {
-    data object TeamCount : GgPhase()
-    data object TeamNames : GgPhase()
+    @Serializable data object TeamCount : GgPhase()
+    @Serializable data object TeamNames : GgPhase()
     /** انتخاب حالت بازی: کامل یا سریع */
-    data object Mode : GgPhase()
+    @Serializable data object Mode : GgPhase()
     /** انتخاب دستی دسته‌های بازی از کل بانک — حداقل دو دسته */
-    data object Setup : GgPhase()
-    data object Board : GgPhase()
+    @Serializable data object Setup : GgPhase()
+    @Serializable data object Board : GgPhase()
     /** ثبت نتیجه‌ی گنده‌گویی حضوری: کدام تیم با چه ادعایی */
-    data object Bid : GgPhase()
+    @Serializable data object Bid : GgPhase()
     /** ۳۰ ثانیه شمارش با دکمه */
-    data object Play : GgPhase()
+    @Serializable data object Play : GgPhase()
     /** ۱۵ ثانیه بازبینی نهایی شمارش با دکمه‌های کم/زیاد و امکان تایید فوری */
-    data object Review : GgPhase()
-    data object Result : GgPhase()
-    data object Winner : GgPhase()
+    @Serializable data object Review : GgPhase()
+    @Serializable data object Result : GgPhase()
+    @Serializable data object Winner : GgPhase()
 }
 
+@Serializable
 data class GandeGooUiState(
     val phase: GgPhase = GgPhase.TeamCount,
     val teamCount: Int = 2,

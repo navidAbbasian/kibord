@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.SettingsRepository
 import com.navidabbasian.kibord.games.dor.data.DorWordRepository
 import com.navidabbasian.kibord.games.dor.model.DorGameEvent
@@ -54,14 +55,67 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
     private var wordStartElapsed = 0L
     private var lastWholeBombSecond = -1
     private var tensionStarted = false
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         viewModelScope.launch {
+            // بارگذاری دسته‌ها پیش‌نیازِ هم شروع تازه و هم بازیابی نشست است
             val customJson = settings.dorCustomWordsJson.first()
             repository.loadCategories(customJson)
             _uiState.update { it.copy(categories = repository.categories) }
+            // اگر نشستی از پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+            restoreSession()
         }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun DorUiState.isResumable(): Boolean =
+        phase == DorPhase.Playing || phase is DorPhase.TeamEliminated
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(DorUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(DorUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // صف کلمات گذرا است؛ از دسته‌های انتخابیِ همان بازی دوباره ساخته می‌شود
+        repository.prepareWordsForGame(saved.selectedCategoryIds)
+        // متغیرهای گذرای تیکِر بازسازی می‌شوند
+        wordStartElapsed = SystemClock.elapsedRealtime()
+        lastWholeBombSecond = (saved.bombTimeLeftMillis / 1000).toInt()
+        tensionStarted = false
+        _uiState.value = saved
+        // اگر نوبت در حال اجرا بود، تیکِر دوباره روشن می‌شود
+        if (saved.phase == DorPhase.Playing && saved.isPlaying) startTicker()
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun emitSound(event: DorSoundEvent) {
         _soundEvents.tryEmit(event)
@@ -415,6 +469,7 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
     private fun finishGame(teams: List<DorTeam>) {
         tickerJob?.cancel()
         stopTension()
+        clearSession()
         emitSound(DorSoundEvent.GAME_OVER)
         val winner = teams.firstOrNull { !it.eliminated }
         _uiState.update { it.copy(isPlaying = false, teams = teams, phase = DorPhase.Winner(winner)) }
@@ -436,6 +491,7 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
     fun playAgain() {
         tickerJob?.cancel()
         stopTension()
+        clearSession()
         repository.reset()
         val old = _uiState.value
         _uiState.update {
@@ -493,6 +549,14 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
         return state.teams[t].players.getOrNull(slot) ?: ""
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        stopTension()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
@@ -500,4 +564,8 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun toPersian(n: Int): String =
         n.toString().map { if (it in '0'..'9') ('۰' + (it - '0')) else it }.joinToString("")
+
+    companion object {
+        private const val KEY = "session_dor"
+    }
 }

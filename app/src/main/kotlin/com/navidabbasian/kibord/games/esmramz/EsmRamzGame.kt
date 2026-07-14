@@ -43,10 +43,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
@@ -82,23 +85,27 @@ import kotlinx.serialization.json.Json
 private data class ErWord(val word: String)
 
 /** نقش هر خانه‌ی تخته */
+@Serializable
 enum class ErRole { TEAM_A, TEAM_B, NEUTRAL, ASSASSIN }
 
 /** یک خانه‌ی تخته‌ی ۵×۵ */
+@Serializable
 data class ErTile(
     val word: String,
     val role: ErRole,
     val revealed: Boolean = false,
 )
 
+@Serializable
 sealed class ErPhase {
-    data object TeamNames : ErPhase()
+    @Serializable data object TeamNames : ErPhase()
     /** نقشه‌ی رنگی فقط برای دو سرگروه */
-    data class KeyReveal(val shown: Boolean) : ErPhase()
-    data object Play : ErPhase()
-    data class GameOver(val winner: Int, val byAssassin: Boolean) : ErPhase()
+    @Serializable data class KeyReveal(val shown: Boolean) : ErPhase()
+    @Serializable data object Play : ErPhase()
+    @Serializable data class GameOver(val winner: Int, val byAssassin: Boolean) : ErPhase()
 }
 
+@Serializable
 data class ErUiState(
     val phase: ErPhase = ErPhase.TeamNames,
     val teamNames: List<String> = List(2) { "" },
@@ -142,10 +149,7 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
     private var allWords: List<String> = emptyList()
 
     init {
-        val names = GamePrefs.getNames(application, "esmramz_names")
-        if (names.isNotEmpty()) {
-            _uiState.update { it.copy(teamNames = List(2) { i -> names.getOrElse(i) { "" } }) }
-        }
+        // بارگذاری یک‌باره‌ی بانک کلمه‌ها — چه ادامه‌ی نشست، چه شروع نو
         allWords = decodeWords(ContentBank.open(application, "esmramz.json"))
         if (allWords.isEmpty()) {
             allWords = decodeWords(
@@ -156,7 +160,57 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
                 }
             )
         }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            val names = GamePrefs.getNames(application, "esmramz_names")
+            if (names.isNotEmpty()) {
+                _uiState.update { it.copy(teamNames = List(2) { i -> names.getOrElse(i) { "" } }) }
+            }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی (تخته چیده شده) */
+    private fun ErUiState.isResumable(): Boolean =
+        phase is ErPhase.KeyReveal || phase == ErPhase.Play
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(ErUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(ErUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // تخته و همه‌ی وضعیت بازی داخل UiState است؛ چیز گذرایی برای بازسازی نیست
+        // (بانک کلمه‌ها در init پیش از این بارگذاری شده و تایمری هم در کار نیست)
+        _uiState.value = saved
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun decodeWords(text: String): List<String> = try {
         json.decodeFromString<List<ErWord>>(text)
@@ -277,6 +331,7 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun finishGame(board: List<ErTile>, winner: Int, byAssassin: Boolean) {
+        clearSession()
         _uiState.update {
             it.copy(
                 board = board.map { t -> t.copy(revealed = true) },
@@ -289,8 +344,15 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
 
     /** دست بعدی با همان تیم‌ها و تخته‌ی تازه */
     fun playAgain() {
+        clearSession()
         dealBoard()
         _uiState.update { it.copy(phase = ErPhase.KeyReveal(shown = false)) }
+    }
+
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        clearSession()
     }
 
     fun navigateBack() {
@@ -305,6 +367,7 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
     companion object {
         const val PLAYED_KEY = "esmramz"
         const val BOARD_SIZE = 25
+        private const val KEY = "session_esmramz"
     }
 }
 
@@ -317,6 +380,9 @@ fun EsmRamzGame(
     viewModel: EsmRamzViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // با رفتن به پس‌زمینه، وضعیت بازی برای مقاوم‌سازی در برابر مرگ پروسه ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -375,7 +441,7 @@ fun EsmRamzGame(
                 }
 
                 ErPhase.Play -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     ErPlayScreen(
                         state = state,
                         onTapTile = viewModel::tapTile,
@@ -384,13 +450,13 @@ fun EsmRamzGame(
                 }
 
                 is ErPhase.GameOver -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     ErGameOverScreen(
                         state = state,
                         winner = phase.winner,
                         byAssassin = phase.byAssassin,
                         onPlayAgain = viewModel::playAgain,
-                        onExit = onExitToHub,
+                        onExit = { viewModel.leaveGame(); onExitToHub() },
                     )
                 }
             }

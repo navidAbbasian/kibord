@@ -28,6 +28,7 @@ data class PCategory(
 }
 
 /** یک اجرای پانتومیم: کلمه، امتیاز پایه و سقف زمان */
+@Serializable
 data class PantoAttempt(
     val word: String,
     val points: Int,
@@ -38,6 +39,7 @@ data class PantoAttempt(
 )
 
 /** نتیجه‌ی یک اجرا */
+@Serializable
 data class PantoResult(
     val attempt: PantoAttempt,
     val performingTeam: Int,

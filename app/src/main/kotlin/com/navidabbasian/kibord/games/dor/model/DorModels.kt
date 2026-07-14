@@ -18,6 +18,7 @@ data class DorCategory(
 )
 
 /** حالت‌های بازی دور — زمان‌ها به میلی‌ثانیه */
+@Serializable
 enum class DorGameMode(
     val teamTimeMillis: Long,
     val bombTimeMillis: Long,
@@ -28,15 +29,18 @@ enum class DorGameMode(
     PROFESSIONAL(165_000, 40_000, 15_000, 5_000);
 }
 
+@Serializable
 data class DorGameEvent(
     val type: EventType,
     val wordText: String,
     val timeSpentMillis: Long,
     val penaltyMillis: Long = 0,
 ) {
+    @Serializable
     enum class EventType { WORD_GUESSED, BOMB_EXPLODED }
 }
 
+@Serializable
 data class DorTeam(
     val id: Int,
     val players: List<String>,
@@ -46,21 +50,24 @@ data class DorTeam(
 )
 
 /** جایگاه هر بازیکن در حلقه: نام + شماره تیم */
+@Serializable
 data class DorSeat(
     val name: String,
     val teamIndex: Int,
 )
 
+@Serializable
 sealed class DorPhase {
-    data object PlayerCount : DorPhase()
-    data object PlayerNames : DorPhase()
-    data object Categories : DorPhase()
-    data object Mode : DorPhase()
-    data object Playing : DorPhase()
-    data class TeamEliminated(val team: DorTeam) : DorPhase()
-    data class Winner(val team: DorTeam?) : DorPhase()
+    @Serializable data object PlayerCount : DorPhase()
+    @Serializable data object PlayerNames : DorPhase()
+    @Serializable data object Categories : DorPhase()
+    @Serializable data object Mode : DorPhase()
+    @Serializable data object Playing : DorPhase()
+    @Serializable data class TeamEliminated(val team: DorTeam) : DorPhase()
+    @Serializable data class Winner(val team: DorTeam?) : DorPhase()
 }
 
+@Serializable
 data class DorUiState(
     val phase: DorPhase = DorPhase.PlayerCount,
     val playerCount: Int = 4,

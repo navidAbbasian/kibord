@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.data.PantomimeRepository
 import com.navidabbasian.kibord.games.pantomime.model.PCategory
@@ -22,19 +23,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
 sealed class ClassicPhase {
-    data object TeamNames : ClassicPhase()
-    data object Rounds : ClassicPhase()
-    data object Pick : ClassicPhase()
-    data object Reveal : ClassicPhase()
-    data object Perform : ClassicPhase()
-    data object Result : ClassicPhase()
+    @Serializable data object TeamNames : ClassicPhase()
+    @Serializable data object Rounds : ClassicPhase()
+    @Serializable data object Pick : ClassicPhase()
+    @Serializable data object Reveal : ClassicPhase()
+    @Serializable data object Perform : ClassicPhase()
+    @Serializable data object Result : ClassicPhase()
     /** شکست در موضوع طلایی: حذف فوری و پیروزی حریف */
-    data class GoldenLoss(val loserTeam: Int) : ClassicPhase()
-    data object Winner : ClassicPhase()
+    @Serializable data class GoldenLoss(val loserTeam: Int) : ClassicPhase()
+    @Serializable data object Winner : ClassicPhase()
 }
 
+@Serializable
 data class ClassicUiState(
     val phase: ClassicPhase = ClassicPhase.TeamNames,
     val teamNames: List<String> = List(2) { "" },
@@ -65,11 +70,61 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
     private val repository = PantomimeRepository(application)
     private var tickerJob: Job? = null
     private var lastWholeSecond = -1
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         repository.load()
-        _uiState.update { it.copy(categories = repository.categories) }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            _uiState.update { it.copy(categories = repository.categories) }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun ClassicUiState.isResumable(): Boolean = phase == ClassicPhase.Pick ||
+        phase == ClassicPhase.Reveal || phase == ClassicPhase.Perform || phase == ClassicPhase.Result
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(ClassicUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(ClassicUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        _uiState.value = saved
+        // اجرا اگر وسطِ زمان‌گیری بوده، تیکر از نو راه می‌افتد
+        if (saved.phase == ClassicPhase.Perform) {
+            lastWholeSecond = (saved.timeLeftMillis / 1000).toInt()
+            startTicker()
+        }
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun emitSound(event: PantoSoundEvent) {
         _soundEvents.tryEmit(event)
@@ -191,6 +246,7 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
         if (!success && attempt.isGolden) {
             // ریسک طلایی جواب نداد — حذف فوری
             emitSound(PantoSoundEvent.GOLDEN_FAIL)
+            clearSession()
             _uiState.update { it.copy(phase = ClassicPhase.GoldenLoss(state.performingTeam)) }
             return
         }
@@ -222,6 +278,7 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
             _uiState.update { it.copy(performingTeam = 1, attempt = null, phase = ClassicPhase.Pick) }
         } else if (state.currentRound >= state.totalRounds) {
             emitSound(PantoSoundEvent.GAME_OVER)
+            clearSession()
             _uiState.update { it.copy(attempt = null, phase = ClassicPhase.Winner) }
         } else {
             _uiState.update {
@@ -244,6 +301,7 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         repository.resetUsed()
         val old = _uiState.value
         _uiState.update {
@@ -266,8 +324,19 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
+    }
+
+    companion object {
+        private const val KEY = "session_pantomime_classic"
     }
 }

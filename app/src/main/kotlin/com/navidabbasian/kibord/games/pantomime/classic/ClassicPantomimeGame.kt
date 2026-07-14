@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
@@ -40,6 +42,9 @@ fun ClassicPantomimeGame(
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
     val teamColors = kiExtras.teamColors
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -97,7 +102,7 @@ fun ClassicPantomimeGame(
                 }
     
                 ClassicPhase.Pick -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     ClassicPickScreen(
                         state = state,
                         hasWords = viewModel::hasWords,

@@ -53,11 +53,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
@@ -107,17 +110,19 @@ private data class FhCategory(
     val words: List<FhWord> = emptyList(),
 )
 
+@Serializable
 sealed class FhPhase {
     /** انتخاب دو یا سه تیم با حباب */
-    data object TeamCount : FhPhase()
-    data object TeamNames : FhPhase()
-    data object Category : FhPhase()
-    data object Ready : FhPhase()
-    data object Play : FhPhase()
-    data object Result : FhPhase()
-    data object Winner : FhPhase()
+    @Serializable data object TeamCount : FhPhase()
+    @Serializable data object TeamNames : FhPhase()
+    @Serializable data object Category : FhPhase()
+    @Serializable data object Ready : FhPhase()
+    @Serializable data object Play : FhPhase()
+    @Serializable data object Result : FhPhase()
+    @Serializable data object Winner : FhPhase()
 }
 
+@Serializable
 data class FhUiState(
     val phase: FhPhase = FhPhase.TeamCount,
     /** دو یا سه تیم */
@@ -198,24 +203,84 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
-        val count = GamePrefs.getInt(application, "forehead_teams", 2).coerceIn(2, 3)
-        val names = GamePrefs.getNames(application, "forehead_names")
-        _uiState.update {
-            it.copy(
-                teamCount = count,
-                teamNames = List(count) { i -> names.getOrElse(i) { "" } },
-                totalScores = List(count) { 0 },
-                turnSeconds = GamePrefs.getInt(application, "forehead_seconds", 60),
-                totalRounds = GamePrefs.getInt(application, "forehead_rounds", 3),
-            )
-        }
+        // بانک کلمات پیش از بازیابی نشست لازم است تا دسته‌ی جاری بازسازی شود
         bank = try {
             json.decodeFromString<List<FhCategory>>(ContentBank.open(application, "forehead.json"))
         } catch (_: Exception) {
             emptyList()
         }.filter { it.words.isNotEmpty() }
-        _uiState.update { s -> s.copy(categories = bank.map { it.name to it.emoji }) }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            val count = GamePrefs.getInt(application, "forehead_teams", 2).coerceIn(2, 3)
+            val names = GamePrefs.getNames(application, "forehead_names")
+            _uiState.update {
+                it.copy(
+                    teamCount = count,
+                    teamNames = List(count) { i -> names.getOrElse(i) { "" } },
+                    totalScores = List(count) { 0 },
+                    turnSeconds = GamePrefs.getInt(application, "forehead_seconds", 60),
+                    totalRounds = GamePrefs.getInt(application, "forehead_rounds", 3),
+                )
+            }
+            _uiState.update { s -> s.copy(categories = bank.map { it.name to it.emoji }) }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun FhUiState.isResumable(): Boolean =
+        phase == FhPhase.Ready || phase == FhPhase.Play || phase == FhPhase.Result
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), SESSION_KEY, json.encodeToString(FhUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), SESSION_KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(FhUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+            return false
+        }
+        // دسته‌ی کلمات گذرا است؛ کلمه‌ی جاری در وضعیت هست و بقیه از بانک تازه می‌آیند
+        bank.firstOrNull { it.name == saved.selectedCategory }?.let { cat ->
+            val played = playedStore.played("$KEY:${cat.id}")
+            val used = (saved.correctWords + saved.passedWords + saved.currentWord).toSet()
+            val fresh = cat.words.map { it.text }.filter { it !in played && it !in used }
+            deck = ArrayDeque(fresh.shuffled())
+        }
+        _uiState.value = saved
+        // اگر در حال شمارش بودیم، تایمر و حسگر از نو راه می‌افتند تا نوبت کامل ادامه یابد
+        if (saved.phase == FhPhase.Play) {
+            neutral = true
+            sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensor ->
+                sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+            startTicker()
+        }
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), SESSION_KEY)
 
     private fun emit(e: FhSoundEvent) = _soundEvents.tryEmit(e)
 
@@ -357,6 +422,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
         if (s.phase != FhPhase.Result) return
         val lastTeamOfRound = s.currentTeam == s.teamCount - 1
         val gameOver = lastTeamOfRound && s.roundIndex >= s.totalRounds
+        if (gameOver) clearSession()
         _uiState.update {
             it.copy(
                 totalScores = it.totalScores.mapIndexed { i, v ->
@@ -380,6 +446,8 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun playAgain() {
+        tickerJob?.cancel()
+        clearSession()
         _uiState.update {
             it.copy(
                 totalScores = List(it.teamCount) { 0 },
@@ -388,6 +456,14 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
                 phase = FhPhase.Category,
             )
         }
+    }
+
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        sensorManager?.unregisterListener(sensorListener)
+        clearSession()
     }
 
     fun navigateBack() {
@@ -408,6 +484,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         const val KEY = "forehead"
+        private const val SESSION_KEY = "session_forehead"
     }
 }
 
@@ -425,6 +502,9 @@ fun ForeheadGame(
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
     val context = LocalContext.current
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     // هنگام بازی گوشی افقی می‌شود تا صاف روی پیشونی بنشیند
     LaunchedEffect(state.phase) {
@@ -491,7 +571,7 @@ fun ForeheadGame(
                 }
 
                 FhPhase.Category -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     FhCategoryScreen(state = state, onSelect = viewModel::selectCategory)
                 }
 
@@ -514,7 +594,7 @@ fun ForeheadGame(
                 }
 
                 FhPhase.Result -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     FhResultScreen(
                         state = state,
                         onAdjust = viewModel::adjustTurnScore,
@@ -524,12 +604,15 @@ fun ForeheadGame(
                 }
 
                 FhPhase.Winner -> {
-                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     FhWinnerScreen(
                         state = state,
                         winners = viewModel.winners(),
                         onPlayAgain = viewModel::playAgain,
-                        onExitToHub = onExitToHub,
+                        onExitToHub = {
+                            viewModel.leaveGame()
+                            onExitToHub()
+                        },
                     )
                 }
             }

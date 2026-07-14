@@ -33,11 +33,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
@@ -75,16 +78,18 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class SpyLocation(val name: String, val emoji: String = "📍")
 
+@Serializable
 sealed class SpyPhase {
-    data object PlayerCount : SpyPhase()
-    data object PlayerNames : SpyPhase()
-    data object Settings : SpyPhase()
+    @Serializable data object PlayerCount : SpyPhase()
+    @Serializable data object PlayerNames : SpyPhase()
+    @Serializable data object Settings : SpyPhase()
     /** پخش مخفیانه‌ی نقش‌ها: گوشی دست بازیکن index */
-    data class Reveal(val index: Int, val shown: Boolean) : SpyPhase()
-    data object Discussion : SpyPhase()
-    data object Uncover : SpyPhase()
+    @Serializable data class Reveal(val index: Int, val shown: Boolean) : SpyPhase()
+    @Serializable data object Discussion : SpyPhase()
+    @Serializable data object Uncover : SpyPhase()
 }
 
+@Serializable
 data class SpyUiState(
     val phase: SpyPhase = SpyPhase.PlayerCount,
     val playerCount: Int = 4,
@@ -113,23 +118,70 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
     private var tickerJob: Job? = null
 
     init {
-        val count = GamePrefs.getInt(application, "spy_players", 0)
-        if (count >= 3) {
-            val names = GamePrefs.getNames(application, "spy_names")
-            _uiState.update {
-                it.copy(
-                    playerCount = count,
-                    playerNames = List(count) { i -> names.getOrElse(i) { "" } },
-                    discussionMinutes = GamePrefs.getInt(application, "spy_minutes", 5),
-                )
-            }
-        }
+        // بارگذاری یک‌باره‌ی مکان‌ها از بانک (گذرا؛ همیشه لازم است، پیش از بازیابی نشست)
         locations = try {
             json.decodeFromString<List<SpyLocation>>(ContentBank.open(application, "spy.json"))
         } catch (_: Exception) {
             listOf(SpyLocation("رستوران", "🍽️"), SpyLocation("سینما", "🎬"))
         }
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            val count = GamePrefs.getInt(application, "spy_players", 0)
+            if (count >= 3) {
+                val names = GamePrefs.getNames(application, "spy_names")
+                _uiState.update {
+                    it.copy(
+                        playerCount = count,
+                        playerNames = List(count) { i -> names.getOrElse(i) { "" } },
+                        discussionMinutes = GamePrefs.getInt(application, "spy_minutes", 5),
+                    )
+                }
+            }
+        }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun SpyUiState.isResumable(): Boolean =
+        phase is SpyPhase.Reveal || phase == SpyPhase.Discussion
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), SESSION_KEY, json.encodeToString(SpyUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), SESSION_KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(SpyUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), SESSION_KEY)
+            return false
+        }
+        // نقش جاسوس و مکان درون خودِ وضعیت‌اند و با آن بازمی‌گردند؛ مکان‌ها پیش‌تر از بانک آمده‌اند
+        _uiState.value = saved
+        if (saved.phase == SpyPhase.Discussion) startTicker()
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), SESSION_KEY)
 
     fun setPlayerCount(count: Int) {
         _uiState.update {
@@ -209,6 +261,7 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
                 if (s.phase != SpyPhase.Discussion) break
                 val left = s.secondsLeft - 1
                 if (left <= 0) {
+                    clearSession()
                     _uiState.update { it.copy(phase = SpyPhase.Uncover, secondsLeft = 0) }
                     break
                 }
@@ -220,11 +273,13 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
     /** پایان زودهنگام بحث: جاسوس لو رفت یا جمع تصمیم گرفت */
     fun endDiscussion() {
         tickerJob?.cancel()
+        clearSession()
         _uiState.update { it.copy(phase = SpyPhase.Uncover) }
     }
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         val old = _uiState.value
         _uiState.value = SpyUiState(
             playerCount = old.playerCount,
@@ -244,6 +299,13 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
@@ -251,6 +313,7 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val KEY = "spy_locations"
+        private const val SESSION_KEY = "session_spy"
     }
 }
 
@@ -267,6 +330,9 @@ fun SpyGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
+
+    // مقاوم‌سازی در برابر مرگ پروسه: هنگام رفتن به پس‌زمینه وضعیت ذخیره می‌شود
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     LaunchedEffect(state.phase) {
         val track = when (state.phase) {
@@ -318,7 +384,7 @@ fun SpyGame(
                 }
 
                 is SpyPhase.Reveal -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     SpyRevealScreen(
                         state = state,
                         index = phase.index,
@@ -329,7 +395,7 @@ fun SpyGame(
                 }
 
                 SpyPhase.Discussion -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { pendingExit = { viewModel.leaveGame(); onExitToHub() } }
                     SpyDiscussionScreen(
                         state = state,
                         onEnd = viewModel::endDiscussion,

@@ -1,20 +1,23 @@
 package com.navidabbasian.kibord.games.kalamz.viewmodel
 
+import android.app.Application
 import android.os.CountDownTimer
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.games.kalamz.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.Json
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var timer: CountDownTimer? = null
-    
+
     // Timer pause functionality
     private var remainingTimeWhenPaused: Long = 0L
 
@@ -23,9 +26,68 @@ class GameViewModel : ViewModel() {
 
     // Track the play order: list of (teamIndex, playerSlot)
     private var playOrder: List<Pair<Int, Int>> = emptyList()
-    
+
     // Track previous words for navigation
     private var previousWords: List<Word> = emptyList()
+
+    // باید پیش از init ساخته شود وگرنه هنگام restore تهی می‌ماند
+    private val json = Json { ignoreUnknownKeys = true }
+
+    init {
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        restoreSession()
+    }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun GameUiState.isResumable(): Boolean = phase is GamePhase.RoundIntro ||
+        phase is GamePhase.TurnReady || phase is GamePhase.TurnActive ||
+        phase is GamePhase.TurnEnd || phase is GamePhase.RoundEnd
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(GameUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(GameUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // وضعیت جاری بازگردانده می‌شود، سپس وضعیت‌های گذرا بازسازی می‌شوند
+        _uiState.value = saved
+        allWords = saved.wordBank
+        buildPlayOrder()
+        previousWords = emptyList()
+        // اگر وسط نوبتِ فعال بودیم، تایمر از همان زمانِ باقی‌مانده دوباره راه می‌افتد
+        if (saved.phase is GamePhase.TurnActive) {
+            if (saved.isTimerPaused) remainingTimeWhenPaused = saved.timeLeftMillis
+            else startTimer(saved.timeLeftMillis)
+        }
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     // ---- SETUP ----
 
@@ -401,6 +463,7 @@ class GameViewModel : ViewModel() {
             }
         } else {
             // Game over!
+            clearSession()
             _uiState.update {
                 it.copy(phase = GamePhase.GameOver)
             }
@@ -409,9 +472,17 @@ class GameViewModel : ViewModel() {
 
     fun resetGame() {
         timer?.cancel()
+        clearSession()
         allWords = emptyList()
         playOrder = emptyList()
         _uiState.value = GameUiState(resetCount = _uiState.value.resetCount + 1)
+    }
+
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        timer?.cancel()
+        clearSession()
     }
 
     fun navigateBack() {
@@ -446,6 +517,10 @@ class GameViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         timer?.cancel()
+    }
+
+    companion object {
+        private const val KEY = "session_kalamz"
     }
 }
 

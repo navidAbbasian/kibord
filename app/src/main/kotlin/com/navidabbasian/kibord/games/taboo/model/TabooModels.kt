@@ -10,19 +10,21 @@ data class TabooCard(
     val forbidden: List<String> = emptyList(),
 )
 
+@Serializable
 sealed class TabooPhase {
     /** انتخاب دو یا سه تیم با حباب */
-    data object TeamCount : TabooPhase()
-    data object TeamNames : TabooPhase()
+    @Serializable data object TeamCount : TabooPhase()
+    @Serializable data object TeamNames : TabooPhase()
     /** تنظیمات: مدت نوبت و تعداد راند */
-    data object Settings : TabooPhase()
+    @Serializable data object Settings : TabooPhase()
     /** گوشی دست گوینده‌ی تیم بعدی */
-    data class TurnReady(val team: Int) : TabooPhase()
-    data object Turn : TabooPhase()
-    data class TurnEnd(val team: Int, val correct: Int, val foul: Int) : TabooPhase()
-    data object Winner : TabooPhase()
+    @Serializable data class TurnReady(val team: Int) : TabooPhase()
+    @Serializable data object Turn : TabooPhase()
+    @Serializable data class TurnEnd(val team: Int, val correct: Int, val foul: Int) : TabooPhase()
+    @Serializable data object Winner : TabooPhase()
 }
 
+@Serializable
 data class TabooUiState(
     val phase: TabooPhase = TabooPhase.TeamCount,
     /** دو یا سه تیم */

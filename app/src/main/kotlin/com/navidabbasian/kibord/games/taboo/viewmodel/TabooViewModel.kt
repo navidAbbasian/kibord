@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.taboo.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.games.taboo.data.TabooRepository
 import com.navidabbasian.kibord.games.taboo.model.TabooCard
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * موتور تابو: کلمه را بگو بدون پنج کلمه‌ی ممنوعه.
@@ -36,22 +38,70 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = TabooRepository(application)
     private var tickerJob: Job? = null
     private var deck: ArrayDeque<TabooCard> = ArrayDeque()
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         repository.load()
-        // آخرین تنظیمات همین بازی از حافظه برمی‌گردد تا شروع یک‌ضربه‌ای باشد
-        val count = GamePrefs.getInt(application, "taboo_teams", 2).coerceIn(2, 3)
-        val names = GamePrefs.getNames(application, "taboo_names")
-        _uiState.update {
-            it.copy(
-                teamCount = count,
-                teamNames = List(count) { i -> names.getOrElse(i) { "" } },
-                scores = List(count) { 0 },
-                turnSeconds = GamePrefs.getInt(application, "taboo_seconds", 60),
-                totalRounds = GamePrefs.getInt(application, "taboo_rounds", 3),
-            )
+        // اگر نشستی از اجرای پیش از مرگ پروسه مانده، بازی از همان‌جا ادامه می‌یابد
+        if (!restoreSession()) {
+            // آخرین تنظیمات همین بازی از حافظه برمی‌گردد تا شروع یک‌ضربه‌ای باشد
+            val count = GamePrefs.getInt(application, "taboo_teams", 2).coerceIn(2, 3)
+            val names = GamePrefs.getNames(application, "taboo_names")
+            _uiState.update {
+                it.copy(
+                    teamCount = count,
+                    teamNames = List(count) { i -> names.getOrElse(i) { "" } },
+                    scores = List(count) { 0 },
+                    turnSeconds = GamePrefs.getInt(application, "taboo_seconds", 60),
+                    totalRounds = GamePrefs.getInt(application, "taboo_rounds", 3),
+                )
+            }
         }
     }
+
+    // ---- مقاوم‌سازی در برابر مرگ پروسه ----
+
+    /** پس از خروج عمدی به خانه دیگر ذخیره نمی‌کنیم تا نشستِ پاک‌شده دوباره برنگردد */
+    private var leaving = false
+
+    /** آیا این فاز ارزش ذخیره‌شدن دارد؟ فقط وسطِ بازیِ واقعی */
+    private fun TabooUiState.isResumable(): Boolean = phase is TabooPhase.TurnReady ||
+        phase == TabooPhase.Turn || phase is TabooPhase.TurnEnd
+
+    /** ذخیره‌ی وضعیت هنگام رفتن به پس‌زمینه (از ریشه صدا زده می‌شود) */
+    fun persistSession() {
+        if (leaving) return
+        val s = _uiState.value
+        if (s.isResumable()) {
+            try {
+                SessionStore.save(getApplication(), KEY, json.encodeToString(TabooUiState.serializer(), s))
+            } catch (_: Exception) {
+            }
+        } else {
+            SessionStore.clear(getApplication(), KEY)
+        }
+    }
+
+    private fun restoreSession(): Boolean {
+        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val saved = try {
+            json.decodeFromString(TabooUiState.serializer(), raw)
+        } catch (_: Exception) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        if (!saved.isResumable()) {
+            SessionStore.clear(getApplication(), KEY)
+            return false
+        }
+        // دسته‌ی کارت‌ها گذرا است؛ کارتِ جاری در وضعیت هست و بقیه از بانک تازه می‌آیند
+        deck = ArrayDeque(repository.prepareDeck())
+        _uiState.value = saved
+        if (saved.phase == TabooPhase.Turn) startTicker()
+        return true
+    }
+
+    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
 
     private fun emit(e: TabooSoundEvent) = _soundEvents.tryEmit(e)
 
@@ -210,6 +260,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(phase = TabooPhase.TurnReady(s.currentTeam + 1)) }
         } else if (s.roundIndex >= s.totalRounds) {
             emit(TabooSoundEvent.GAME_OVER)
+            clearSession()
             _uiState.update { it.copy(phase = TabooPhase.Winner) }
         } else {
             _uiState.update {
@@ -227,6 +278,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playAgain() {
         tickerJob?.cancel()
+        clearSession()
         val old = _uiState.value
         _uiState.value = TabooUiState(
             teamCount = old.teamCount,
@@ -248,8 +300,19 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** خروج به خانه: نشست پاک می‌شود تا دفعه‌ی بعد از نو شروع شود */
+    fun leaveGame() {
+        leaving = true
+        tickerJob?.cancel()
+        clearSession()
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
+    }
+
+    companion object {
+        private const val KEY = "session_taboo"
     }
 }

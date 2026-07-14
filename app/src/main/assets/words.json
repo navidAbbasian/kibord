@@ -1,1062 +1,6513 @@
 [
-  {
-    "id": "film",
-    "name": "فیلم و سریال",
-    "emoji": "🎬",
-    "words": [
-      {"text": "تایتانیک", "category": "film", "difficulty": 1},
-      {"text": "شوالیه تاریکی", "category": "film", "difficulty": 2},
-      {"text": "پدرخوانده", "category": "film", "difficulty": 2},
-      {"text": "فرار از زندان", "category": "film", "difficulty": 1},
-      {"text": "بازی تاج و تخت", "category": "film", "difficulty": 1},
-      {"text": "جومونگ", "category": "film", "difficulty": 1},
-      {"text": "شهرزاد", "category": "film", "difficulty": 1},
-      {"text": "پایتخت", "category": "film", "difficulty": 1},
-      {"text": "جدایی نادر از سیمین", "category": "film", "difficulty": 2},
-      {"text": "مرد عنکبوتی", "category": "film", "difficulty": 1},
-      {"text": "ماتریکس", "category": "film", "difficulty": 2},
-      {"text": "آواتار", "category": "film", "difficulty": 1},
-      {"text": "جوکر", "category": "film", "difficulty": 1},
-      {"text": "اینترستلار", "category": "film", "difficulty": 2},
-      {"text": "فارست گامپ", "category": "film", "difficulty": 2},
-      {"text": "گلادیاتور", "category": "film", "difficulty": 2},
-      {"text": "لانتوری", "category": "film", "difficulty": 2},
-      {"text": "متری شیش و نیم", "category": "film", "difficulty": 1},
-      {"text": "ابد و یک روز", "category": "film", "difficulty": 2},
-      {"text": "سریال دوستان", "category": "film", "difficulty": 1},
-      {"text": "کلاه قرمزی", "category": "film", "difficulty": 1},
-      {"text": "قهوه تلخ", "category": "film", "difficulty": 1},
-      {"text": "شب‌های برره", "category": "film", "difficulty": 1},
-      {"text": "بچه‌های آسمان", "category": "film", "difficulty": 2},
-      {"text": "رنگ خدا", "category": "film", "difficulty": 2},
-      {"text": "درباره الی", "category": "film", "difficulty": 2},
-      {"text": "قصه‌های مجید", "category": "film", "difficulty": 1},
-      {"text": "سرزمین کهن", "category": "film", "difficulty": 1},
-      {"text": "یوسف پیامبر", "category": "film", "difficulty": 1},
-      {"text": "مختارنامه", "category": "film", "difficulty": 2},
-      {"text": "لاست", "category": "film", "difficulty": 1},
-      {"text": "چرنوبیل", "category": "film", "difficulty": 2},
-      {"text": "مانی هایست", "category": "film", "difficulty": 1},
-      {"text": "بریکینگ بد", "category": "film", "difficulty": 2},
-      {"text": "استرنجر ثینگز", "category": "film", "difficulty": 1},
-      {"text": "ویچر", "category": "film", "difficulty": 2},
-      {"text": "پیکی بلایندرز", "category": "film", "difficulty": 2},
-      {"text": "وایکینگز", "category": "film", "difficulty": 2},
-      {"text": "ناروتو", "category": "film", "difficulty": 1},
-      {"text": "دراگون بال", "category": "film", "difficulty": 1},
-      {"text": "باب اسفنجی", "category": "film", "difficulty": 1},
-      {"text": "تام و جری", "category": "film", "difficulty": 1},
-      {"text": "شرک", "category": "film", "difficulty": 1},
-      {"text": "یخ‌زده", "category": "film", "difficulty": 1},
-      {"text": "شیرشاه", "category": "film", "difficulty": 1},
-      {"text": "علاءالدین", "category": "film", "difficulty": 1},
-      {"text": "دزدان دریایی کارائیب", "category": "film", "difficulty": 1},
-      {"text": "هابیت", "category": "film", "difficulty": 2},
-      {"text": "ارباب حلقه‌ها", "category": "film", "difficulty": 1},
-      {"text": "هری پاتر", "category": "film", "difficulty": 1},
-      {"text": "جنگ ستارگان", "category": "film", "difficulty": 1},
-      {"text": "ترمیناتور", "category": "film", "difficulty": 1},
-      {"text": "مأموریت غیرممکن", "category": "film", "difficulty": 1},
-      {"text": "جیمز باند", "category": "film", "difficulty": 1},
-      {"text": "سریع و خشن", "category": "film", "difficulty": 1},
-      {"text": "راکی", "category": "film", "difficulty": 2},
-      {"text": "رمبو", "category": "film", "difficulty": 2},
-      {"text": "جان ویک", "category": "film", "difficulty": 1},
-      {"text": "انتقام‌جویان", "category": "film", "difficulty": 1},
-      {"text": "مرد آهنی", "category": "film", "difficulty": 1},
-      {"text": "کاپیتان آمریکا", "category": "film", "difficulty": 1},
-      {"text": "ثور", "category": "film", "difficulty": 1},
-      {"text": "هالک", "category": "film", "difficulty": 1},
-      {"text": "بتمن", "category": "film", "difficulty": 1},
-      {"text": "سوپرمن", "category": "film", "difficulty": 1},
-      {"text": "واندر وومن", "category": "film", "difficulty": 1},
-      {"text": "آکوامن", "category": "film", "difficulty": 1},
-      {"text": "فلش", "category": "film", "difficulty": 1},
-      {"text": "ددپول", "category": "film", "difficulty": 2},
-      {"text": "ایکس من", "category": "film", "difficulty": 1},
-      {"text": "اسپایدرورس", "category": "film", "difficulty": 2},
-      {"text": "دکتر استرنج", "category": "film", "difficulty": 2},
-      {"text": "بلک پنتر", "category": "film", "difficulty": 2},
-      {"text": "شانگ چی", "category": "film", "difficulty": 2},
-      {"text": "اترنالز", "category": "film", "difficulty": 2},
-      {"text": "گاردینز آو گلکسی", "category": "film", "difficulty": 2},
-      {"text": "جوراسیک پارک", "category": "film", "difficulty": 1},
-      {"text": "کینگ کونگ", "category": "film", "difficulty": 1},
-      {"text": "گودزیلا", "category": "film", "difficulty": 1},
-      {"text": "جاودانگی", "category": "film", "difficulty": 2},
-      {"text": "سیندرلا", "category": "film", "difficulty": 1},
-      {"text": "زیبای خفته", "category": "film", "difficulty": 1},
-      {"text": "سفید برفی", "category": "film", "difficulty": 1},
-      {"text": "موآنا", "category": "film", "difficulty": 1},
-      {"text": "راپونزل", "category": "film", "difficulty": 1},
-      {"text": "کوکو", "category": "film", "difficulty": 1},
-      {"text": "روح", "category": "film", "difficulty": 2},
-      {"text": "روبات‌ها", "category": "film", "difficulty": 1},
-      {"text": "مینیون‌ها", "category": "film", "difficulty": 1},
-      {"text": "من نفرت‌انگیز", "category": "film", "difficulty": 1},
-      {"text": "زوتوپیا", "category": "film", "difficulty": 1},
-      {"text": "ماداگاسکار", "category": "film", "difficulty": 1},
-      {"text": "عصر یخبندان", "category": "film", "difficulty": 1},
-      {"text": "کونگ فو پاندا", "category": "film", "difficulty": 1},
-      {"text": "ماشین‌ها", "category": "film", "difficulty": 1},
-      {"text": "داستان اسباب‌بازی", "category": "film", "difficulty": 1},
-      {"text": "در جستجوی نمو", "category": "film", "difficulty": 1},
-      {"text": "بالا", "category": "film", "difficulty": 2},
-      {"text": "درون و بیرون", "category": "film", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "sports",
-    "name": "ورزش",
-    "emoji": "⚽",
-    "words": [
-      {"text": "فوتبال", "category": "sports", "difficulty": 1},
-      {"text": "والیبال", "category": "sports", "difficulty": 1},
-      {"text": "بسکتبال", "category": "sports", "difficulty": 1},
-      {"text": "کشتی", "category": "sports", "difficulty": 1},
-      {"text": "شنا", "category": "sports", "difficulty": 1},
-      {"text": "تنیس", "category": "sports", "difficulty": 1},
-      {"text": "بوکس", "category": "sports", "difficulty": 1},
-      {"text": "دوچرخه‌سواری", "category": "sports", "difficulty": 1},
-      {"text": "اسکی", "category": "sports", "difficulty": 2},
-      {"text": "پرش با چتر", "category": "sports", "difficulty": 2},
-      {"text": "بدمینتون", "category": "sports", "difficulty": 1},
-      {"text": "گلف", "category": "sports", "difficulty": 2},
-      {"text": "بیلیارد", "category": "sports", "difficulty": 1},
-      {"text": "تیراندازی", "category": "sports", "difficulty": 2},
-      {"text": "وزنه‌برداری", "category": "sports", "difficulty": 1},
-      {"text": "ژیمناستیک", "category": "sports", "difficulty": 2},
-      {"text": "کاراته", "category": "sports", "difficulty": 1},
-      {"text": "تکواندو", "category": "sports", "difficulty": 1},
-      {"text": "پینگ پنگ", "category": "sports", "difficulty": 1},
-      {"text": "موج‌سواری", "category": "sports", "difficulty": 2},
-      {"text": "هندبال", "category": "sports", "difficulty": 1},
-      {"text": "واترپلو", "category": "sports", "difficulty": 2},
-      {"text": "هاکی", "category": "sports", "difficulty": 2},
-      {"text": "راگبی", "category": "sports", "difficulty": 2},
-      {"text": "کریکت", "category": "sports", "difficulty": 2},
-      {"text": "بیسبال", "category": "sports", "difficulty": 2},
-      {"text": "فوتسال", "category": "sports", "difficulty": 1},
-      {"text": "دو و میدانی", "category": "sports", "difficulty": 1},
-      {"text": "ماراتن", "category": "sports", "difficulty": 1},
-      {"text": "پرتاب نیزه", "category": "sports", "difficulty": 2},
-      {"text": "پرتاب دیسک", "category": "sports", "difficulty": 2},
-      {"text": "پرش طول", "category": "sports", "difficulty": 1},
-      {"text": "پرش ارتفاع", "category": "sports", "difficulty": 1},
-      {"text": "پرش با نیزه", "category": "sports", "difficulty": 2},
-      {"text": "دو با مانع", "category": "sports", "difficulty": 2},
-      {"text": "دو امدادی", "category": "sports", "difficulty": 2},
-      {"text": "شیرجه", "category": "sports", "difficulty": 1},
-      {"text": "قایقرانی", "category": "sports", "difficulty": 1},
-      {"text": "کایاک", "category": "sports", "difficulty": 2},
-      {"text": "اسکیت", "category": "sports", "difficulty": 1},
-      {"text": "اسکیت‌بورد", "category": "sports", "difficulty": 1},
-      {"text": "پاتیناژ", "category": "sports", "difficulty": 2},
-      {"text": "اسنوبورد", "category": "sports", "difficulty": 2},
-      {"text": "جودو", "category": "sports", "difficulty": 1},
-      {"text": "آیکیدو", "category": "sports", "difficulty": 2},
-      {"text": "جوجیتسو", "category": "sports", "difficulty": 2},
-      {"text": "کیک‌بوکسینگ", "category": "sports", "difficulty": 2},
-      {"text": "موی تای", "category": "sports", "difficulty": 2},
-      {"text": "شمشیربازی", "category": "sports", "difficulty": 2},
-      {"text": "تیراندازی با کمان", "category": "sports", "difficulty": 2},
-      {"text": "سوارکاری", "category": "sports", "difficulty": 2},
-      {"text": "چوگان", "category": "sports", "difficulty": 2},
-      {"text": "پولو", "category": "sports", "difficulty": 2},
-      {"text": "اتومبیل‌رانی", "category": "sports", "difficulty": 1},
-      {"text": "موتورسواری", "category": "sports", "difficulty": 1},
-      {"text": "رالی", "category": "sports", "difficulty": 2},
-      {"text": "فرمول یک", "category": "sports", "difficulty": 1},
-      {"text": "کوهنوردی", "category": "sports", "difficulty": 1},
-      {"text": "سنگ‌نوردی", "category": "sports", "difficulty": 2},
-      {"text": "غواصی", "category": "sports", "difficulty": 2},
-      {"text": "پاراگلایدر", "category": "sports", "difficulty": 2},
-      {"text": "بانجی جامپینگ", "category": "sports", "difficulty": 2},
-      {"text": "کایت سواری", "category": "sports", "difficulty": 2},
-      {"text": "جت اسکی", "category": "sports", "difficulty": 1},
-      {"text": "اسکی روی آب", "category": "sports", "difficulty": 2},
-      {"text": "پارکور", "category": "sports", "difficulty": 2},
-      {"text": "کراس‌فیت", "category": "sports", "difficulty": 2},
-      {"text": "یوگا", "category": "sports", "difficulty": 1},
-      {"text": "پیلاتس", "category": "sports", "difficulty": 2},
-      {"text": "ایروبیک", "category": "sports", "difficulty": 1},
-      {"text": "بدنسازی", "category": "sports", "difficulty": 1},
-      {"text": "پاورلیفتینگ", "category": "sports", "difficulty": 2},
-      {"text": "زورخانه", "category": "sports", "difficulty": 2},
-      {"text": "ورزش باستانی", "category": "sports", "difficulty": 2},
-      {"text": "اسکواش", "category": "sports", "difficulty": 2},
-      {"text": "دارت", "category": "sports", "difficulty": 1},
-      {"text": "بولینگ", "category": "sports", "difficulty": 1},
-      {"text": "شطرنج", "category": "sports", "difficulty": 1},
-      {"text": "تخته نرد", "category": "sports", "difficulty": 1},
-      {"text": "ای‌اسپورت", "category": "sports", "difficulty": 1},
-      {"text": "فوتبال آمریکایی", "category": "sports", "difficulty": 2},
-      {"text": "فریزبی", "category": "sports", "difficulty": 1},
-      {"text": "والیبال ساحلی", "category": "sports", "difficulty": 1},
-      {"text": "طناب‌کشی", "category": "sports", "difficulty": 1},
-      {"text": "دوی سرعت", "category": "sports", "difficulty": 1},
-      {"text": "دوی استقامت", "category": "sports", "difficulty": 1},
-      {"text": "پرتاب وزنه", "category": "sports", "difficulty": 2},
-      {"text": "ترامپولین", "category": "sports", "difficulty": 1},
-      {"text": "اسکی صحرانوردی", "category": "sports", "difficulty": 2},
-      {"text": "بیاتلون", "category": "sports", "difficulty": 2},
-      {"text": "تریاتلون", "category": "sports", "difficulty": 2},
-      {"text": "دکتلون", "category": "sports", "difficulty": 2},
-      {"text": "هفت‌گانه", "category": "sports", "difficulty": 2},
-      {"text": "المپیک", "category": "sports", "difficulty": 1},
-      {"text": "جام جهانی", "category": "sports", "difficulty": 1},
-      {"text": "لیگ قهرمانان", "category": "sports", "difficulty": 1},
-      {"text": "پنالتی", "category": "sports", "difficulty": 1},
-      {"text": "کارت قرمز", "category": "sports", "difficulty": 1},
-      {"text": "آفساید", "category": "sports", "difficulty": 1}
-    ]
-  },
-  {
-    "id": "food",
-    "name": "غذا و نوشیدنی",
-    "emoji": "🍕",
-    "words": [
-      {"text": "پیتزا", "category": "food", "difficulty": 1},
-      {"text": "چلوکباب", "category": "food", "difficulty": 1},
-      {"text": "قرمه‌سبزی", "category": "food", "difficulty": 1},
-      {"text": "سوشی", "category": "food", "difficulty": 2},
-      {"text": "همبرگر", "category": "food", "difficulty": 1},
-      {"text": "فسنجان", "category": "food", "difficulty": 1},
-      {"text": "آش رشته", "category": "food", "difficulty": 1},
-      {"text": "دوغ", "category": "food", "difficulty": 1},
-      {"text": "چای", "category": "food", "difficulty": 1},
-      {"text": "بستنی", "category": "food", "difficulty": 1},
-      {"text": "لازانیا", "category": "food", "difficulty": 2},
-      {"text": "ساندویچ", "category": "food", "difficulty": 1},
-      {"text": "سالاد", "category": "food", "difficulty": 1},
-      {"text": "پاستا", "category": "food", "difficulty": 1},
-      {"text": "کیک", "category": "food", "difficulty": 1},
-      {"text": "قهوه", "category": "food", "difficulty": 1},
-      {"text": "شیری��ی", "category": "food", "difficulty": 1},
-      {"text": "کباب کوبیده", "category": "food", "difficulty": 1},
-      {"text": "زرشک پلو", "category": "food", "difficulty": 1},
-      {"text": "میرزا قاسمی", "category": "food", "difficulty": 2},
-      {"text": "باقالی پلو", "category": "food", "difficulty": 1},
-      {"text": "تهچین", "category": "food", "difficulty": 1},
-      {"text": "کوفته تبریزی", "category": "food", "difficulty": 2},
-      {"text": "دلمه", "category": "food", "difficulty": 1},
-      {"text": "کوکو سبزی", "category": "food", "difficulty": 1},
-      {"text": "آبگوشت", "category": "food", "difficulty": 1},
-      {"text": "دیزی", "category": "food", "difficulty": 1},
-      {"text": "کله پاچه", "category": "food", "difficulty": 2},
-      {"text": "جوجه کباب", "category": "food", "difficulty": 1},
-      {"text": "شیشلیک", "category": "food", "difficulty": 2},
-      {"text": "برگ", "category": "food", "difficulty": 1},
-      {"text": "سولت", "category": "food", "difficulty": 2},
-      {"text": "جگر", "category": "food", "difficulty": 1},
-      {"text": "بریانی", "category": "food", "difficulty": 2},
-      {"text": "کباب ترکی", "category": "food", "difficulty": 1},
-      {"text": "شاورما", "category": "food", "difficulty": 1},
-      {"text": "فلافل", "category": "food", "difficulty": 1},
-      {"text": "حمص", "category": "food", "difficulty": 2},
-      {"text": "کشک بادمجان", "category": "food", "difficulty": 1},
-      {"text": "بورانی", "category": "food", "difficulty": 2},
-      {"text": "ماست موسیر", "category": "food", "difficulty": 1},
-      {"text": "سوپ جو", "category": "food", "difficulty": 1},
-      {"text": "سوپ مرغ", "category": "food", "difficulty": 1},
-      {"text": "آش جو", "category": "food", "difficulty": 1},
-      {"text": "حلیم", "category": "food", "difficulty": 1},
-      {"text": "ماکارونی", "category": "food", "difficulty": 1},
-      {"text": "استیک", "category": "food", "difficulty": 1},
-      {"text": "ماهی سوخاری", "category": "food", "difficulty": 1},
-      {"text": "میگو سوخاری", "category": "food", "difficulty": 2},
-      {"text": "خوراک مرغ", "category": "food", "difficulty": 1},
-      {"text": "املت", "category": "food", "difficulty": 1},
-      {"text": "نیمرو", "category": "food", "difficulty": 1},
-      {"text": "پنکیک", "category": "food", "difficulty": 1},
-      {"text": "وافل", "category": "food", "difficulty": 2},
-      {"text": "نان بربری", "category": "food", "difficulty": 1},
-      {"text": "سنگک", "category": "food", "difficulty": 1},
-      {"text": "لواش", "category": "food", "difficulty": 1},
-      {"text": "نان تافتون", "category": "food", "difficulty": 1},
-      {"text": "باگت", "category": "food", "difficulty": 2},
-      {"text": "کروسان", "category": "food", "difficulty": 2},
-      {"text": "دونات", "category": "food", "difficulty": 1},
-      {"text": "تیرامیسو", "category": "food", "difficulty": 2},
-      {"text": "شکلات", "category": "food", "difficulty": 1},
-      {"text": "کاپوچینو", "category": "food", "difficulty": 1},
-      {"text": "اسپرسو", "category": "food", "difficulty": 2},
-      {"text": "لاته", "category": "food", "difficulty": 2},
-      {"text": "آیس کافی", "category": "food", "difficulty": 1},
-      {"text": "چای سبز", "category": "food", "difficulty": 1},
-      {"text": "دمنوش", "category": "food", "difficulty": 1},
-      {"text": "آبمیوه", "category": "food", "difficulty": 1},
-      {"text": "اسموتی", "category": "food", "difficulty": 2},
-      {"text": "میلک‌شیک", "category": "food", "difficulty": 1},
-      {"text": "نوشابه", "category": "food", "difficulty": 1},
-      {"text": "ماءالشعیر", "category": "food", "difficulty": 1},
-      {"text": "شربت", "category": "food", "difficulty": 1},
-      {"text": "فالوده", "category": "food", "difficulty": 1},
-      {"text": "یخ در بهشت", "category": "food", "difficulty": 1},
-      {"text": "باقلوا", "category": "food", "difficulty": 1},
-      {"text": "زولبیا بامیه", "category": "food", "difficulty": 1},
-      {"text": "سوهان", "category": "food", "difficulty": 1},
-      {"text": "گز", "category": "food", "difficulty": 1},
-      {"text": "پشمک", "category": "food", "difficulty": 1},
-      {"text": "حلوا", "category": "food", "difficulty": 1},
-      {"text": "رانی", "category": "food", "difficulty": 1},
-      {"text": "شله زرد", "category": "food", "difficulty": 1},
-      {"text": "فرنی", "category": "food", "difficulty": 1},
-      {"text": "نان خامه‌ای", "category": "food", "difficulty": 1},
-      {"text": "رولت", "category": "food", "difficulty": 1},
-      {"text": "پای سیب", "category": "food", "difficulty": 1},
-      {"text": "کرم کاراملی", "category": "food", "difficulty": 2},
-      {"text": "پاناکوتا", "category": "food", "difficulty": 2},
-      {"text": "چیز کیک", "category": "food", "difficulty": 1},
-      {"text": "براونی", "category": "food", "difficulty": 1},
-      {"text": "مافین", "category": "food", "difficulty": 1},
-      {"text": "کاپ کیک", "category": "food", "difficulty": 1},
-      {"text": "ژله", "category": "food", "difficulty": 1},
-      {"text": "پودینگ", "category": "food", "difficulty": 2},
-      {"text": "تارت میوه", "category": "food", "difficulty": 2},
-      {"text": "پروفیترول", "category": "food", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "places",
-    "name": "مکان و کشور",
-    "emoji": "🌍",
-    "words": [
-      {"text": "برج ایفل", "category": "places", "difficulty": 1},
-      {"text": "دیوار چین", "category": "places", "difficulty": 1},
-      {"text": "برج میلاد", "category": "places", "difficulty": 1},
-      {"text": "تخت جمشید", "category": "places", "difficulty": 1},
-      {"text": "اهرام مصر", "category": "places", "difficulty": 1},
-      {"text": "تاج محل", "category": "places", "difficulty": 2},
-      {"text": "آبشار نیاگارا", "category": "places", "difficulty": 2},
-      {"text": "کلوسئوم", "category": "places", "difficulty": 2},
-      {"text": "برج پیزا", "category": "places", "difficulty": 2},
-      {"text": "سیدنی", "category": "places", "difficulty": 2},
-      {"text": "پاریس", "category": "places", "difficulty": 1},
-      {"text": "لندن", "category": "places", "difficulty": 1},
-      {"text": "دبی", "category": "places", "difficulty": 1},
-      {"text": "استانبول", "category": "places", "difficulty": 1},
-      {"text": "رم", "category": "places", "difficulty": 1},
-      {"text": "توکیو", "category": "places", "difficulty": 1},
-      {"text": "نیویورک", "category": "places", "difficulty": 1},
-      {"text": "مسکو", "category": "places", "difficulty": 1},
-      {"text": "آنتالیا", "category": "places", "difficulty": 1},
-      {"text": "کیش", "category": "places", "difficulty": 1},
-      {"text": "اصفهان", "category": "places", "difficulty": 1},
-      {"text": "شیراز", "category": "places", "difficulty": 1},
-      {"text": "مشهد", "category": "places", "difficulty": 1},
-      {"text": "تبریز", "category": "places", "difficulty": 1},
-      {"text": "یزد", "category": "places", "difficulty": 1},
-      {"text": "کرمان", "category": "places", "difficulty": 1},
-      {"text": "رشت", "category": "places", "difficulty": 1},
-      {"text": "اهواز", "category": "places", "difficulty": 1},
-      {"text": "قم", "category": "places", "difficulty": 1},
-      {"text": "کاشان", "category": "places", "difficulty": 1},
-      {"text": "همدان", "category": "places", "difficulty": 1},
-      {"text": "کرمانشاه", "category": "places", "difficulty": 1},
-      {"text": "ارومیه", "category": "places", "difficulty": 2},
-      {"text": "اردبیل", "category": "places", "difficulty": 2},
-      {"text": "ساری", "category": "places", "difficulty": 1},
-      {"text": "بندرعباس", "category": "places", "difficulty": 2},
-      {"text": "قشم", "category": "places", "difficulty": 1},
-      {"text": "چابهار", "category": "places", "difficulty": 2},
-      {"text": "آمریکا", "category": "places", "difficulty": 1},
-      {"text": "کانادا", "category": "places", "difficulty": 1},
-      {"text": "آلمان", "category": "places", "difficulty": 1},
-      {"text": "فرانسه", "category": "places", "difficulty": 1},
-      {"text": "انگلیس", "category": "places", "difficulty": 1},
-      {"text": "ایت��لیا", "category": "places", "difficulty": 1},
-      {"text": "اسپانیا", "category": "places", "difficulty": 1},
-      {"text": "ترکیه", "category": "places", "difficulty": 1},
-      {"text": "امارات", "category": "places", "difficulty": 1},
-      {"text": "عربستان", "category": "places", "difficulty": 1},
-      {"text": "مصر", "category": "places", "difficulty": 1},
-      {"text": "هند", "category": "places", "difficulty": 1},
-      {"text": "چین", "category": "places", "difficulty": 1},
-      {"text": "ژاپن", "category": "places", "difficulty": 1},
-      {"text": "کره جنوبی", "category": "places", "difficulty": 1},
-      {"text": "استرالیا", "category": "places", "difficulty": 1},
-      {"text": "برزیل", "category": "places", "difficulty": 1},
-      {"text": "آرژانتین", "category": "places", "difficulty": 1},
-      {"text": "مکزیک", "category": "places", "difficulty": 1},
-      {"text": "روسیه", "category": "places", "difficulty": 1},
-      {"text": "سوئیس", "category": "places", "difficulty": 1},
-      {"text": "هلند", "category": "places", "difficulty": 1},
-      {"text": "یونان", "category": "places", "difficulty": 1},
-      {"text": "نروژ", "category": "places", "difficulty": 2},
-      {"text": "سوئد", "category": "places", "difficulty": 2},
-      {"text": "مالزی", "category": "places", "difficulty": 1},
-      {"text": "تایلند", "category": "places", "difficulty": 1},
-      {"text": "سنگاپور", "category": "places", "difficulty": 2},
-      {"text": "پاکستان", "category": "places", "difficulty": 1},
-      {"text": "افغانستان", "category": "places", "difficulty": 1},
-      {"text": "عراق", "category": "places", "difficulty": 1},
-      {"text": "سوریه", "category": "places", "difficulty": 1},
-      {"text": "لبنان", "category": "places", "difficulty": 1},
-      {"text": "اردن", "category": "places", "difficulty": 2},
-      {"text": "قطر", "category": "places", "difficulty": 1},
-      {"text": "کویت", "category": "places", "difficulty": 2},
-      {"text": "بحرین", "category": "places", "difficulty": 2},
-      {"text": "عمان", "category": "places", "difficulty": 2},
-      {"text": "آفریقای جنوبی", "category": "places", "difficulty": 2},
-      {"text": "مراکش", "category": "places", "difficulty": 2},
-      {"text": "ماچوپیچو", "category": "places", "difficulty": 2},
-      {"text": "گرند کنیون", "category": "places", "difficulty": 2},
-      {"text": "پل طلایی", "category": "places", "difficulty": 2},
-      {"text": "مجسمه آزادی", "category": "places", "difficulty": 1},
-      {"text": "بیگ بن", "category": "places", "difficulty": 1},
-      {"text": "سی و سه پل", "category": "places", "difficulty": 1},
-      {"text": "میدان نقش جهان", "category": "places", "difficulty": 1},
-      {"text": "پل خواجو", "category": "places", "difficulty": 2},
-      {"text": "حافظیه", "category": "places", "difficulty": 1},
-      {"text": "پاسارگاد", "category": "places", "difficulty": 2},
-      {"text": "ارگ بم", "category": "places", "difficulty": 2},
-      {"text": "نارنجستان", "category": "places", "difficulty": 2},
-      {"text": "باغ ارم", "category": "places", "difficulty": 2},
-      {"text": "کاخ گلستان", "category": "places", "difficulty": 2},
-      {"text": "برج آزادی", "category": "places", "difficulty": 1},
-      {"text": "پل طبیعت", "category": "places", "difficulty": 1},
-      {"text": "دریاچه ارومیه", "category": "places", "difficulty": 1},
-      {"text": "جنگل ابر", "category": "places", "difficulty": 2},
-      {"text": "کویر لوت", "category": "places", "difficulty": 2},
-      {"text": "دماوند", "category": "places", "difficulty": 1},
-      {"text": "خلیج فارس", "category": "places", "difficulty": 1}
-    ]
-  },
-  {
-    "id": "people",
-    "name": "شخصیت‌های معروف",
-    "emoji": "👤",
-    "words": [
-      {"text": "مسی", "category": "people", "difficulty": 1},
-      {"text": "رونالدو", "category": "people", "difficulty": 1},
-      {"text": "محمدرضا گلزار", "category": "people", "difficulty": 1},
-      {"text": "فردوسی", "category": "people", "difficulty": 2},
-      {"text": "حافظ", "category": "people", "difficulty": 1},
-      {"text": "اینشتین", "category": "people", "difficulty": 1},
-      {"text": "لئوناردو داوینچی", "category": "people", "difficulty": 2},
-      {"text": "مایکل جکسون", "category": "people", "difficulty": 1},
-      {"text": "علی دایی", "category": "people", "difficulty": 1},
-      {"text": "شجریان", "category": "people", "difficulty": 2},
-      {"text": "امین حیایی", "category": "people", "difficulty": 1},
-      {"text": "بهرام رادان", "category": "people", "difficulty": 1},
-      {"text": "هدیه تهرانی", "category": "people", "difficulty": 1},
-      {"text": "ابی", "category": "people", "difficulty": 1},
-      {"text": "گوگوش", "category": "people", "difficulty": 1},
-      {"text": "استیو جابز", "category": "people", "difficulty": 2},
-      {"text": "بیل گیتس", "category": "people", "difficulty": 2},
-      {"text": "ایلان ماسک", "category": "people", "difficulty": 2},
-      {"text": "نلسون ماندلا", "category": "people", "difficulty": 2},
-      {"text": "مهران مدیری", "category": "people", "difficulty": 1},
-      {"text": "رضا عطاران", "category": "people", "difficulty": 1},
-      {"text": "پژمان جمشیدی", "category": "people", "difficulty": 1},
-      {"text": "نوید محمدزاده", "category": "people", "difficulty": 1},
-      {"text": "شهاب حسینی", "category": "people", "difficulty": 1},
-      {"text": "پرویز پرستویی", "category": "people", "difficulty": 1},
-      {"text": "لیلا حاتمی", "category": "people", "difficulty": 1},
-      {"text": "ترانه علیدوستی", "category": "people", "difficulty": 1},
-      {"text": "گلشیفته فراهانی", "category": "people", "difficulty": 1},
-      {"text": "ساره بیات", "category": "people", "difficulty": 1},
-      {"text": "نیکی کریمی", "category": "people", "difficulty": 1},
-      {"text": "اکبر عبدی", "category": "people", "difficulty": 1},
-      {"text": "جواد عزتی", "category": "people", "difficulty": 1},
-      {"text": "محسن تنابنده", "category": "people", "difficulty": 1},
-      {"text": "احمد مهران‌فر", "category": "people", "difficulty": 1},
-      {"text": "امیر جعفری", "category": "people", "difficulty": 1},
-      {"text": "حامد بهداد", "category": "people", "difficulty": 1},
-      {"text": "محسن چاووشی", "category": "people", "difficulty": 1},
-      {"text": "سیروان خسروی", "category": "people", "difficulty": 1},
-      {"text": "رضا صادقی", "category": "people", "difficulty": 1},
-      {"text": "محسن یگانه", "category": "people", "difficulty": 1},
-      {"text": "بنیامین بهادری", "category": "people", "difficulty": 1},
-      {"text": "شادمهر عقیلی", "category": "people", "difficulty": 1},
-      {"text": "داریوش", "category": "people", "difficulty": 1},
-      {"text": "علیرضا بیرانوند", "category": "people", "difficulty": 1},
-      {"text": "سردار آزمون", "category": "people", "difficulty": 1},
-      {"text": "مهدی طارمی", "category": "people", "difficulty": 1},
-      {"text": "علیرضا جهانبخش", "category": "people", "difficulty": 1},
-      {"text": "کریم باقری", "category": "people", "difficulty": 1},
-      {"text": "مهدوی‌کیا", "category": "people", "difficulty": 1},
-      {"text": "علی کریمی", "category": "people", "difficulty": 1},
-      {"text": "فردین", "category": "people", "difficulty": 2},
-      {"text": "بهروز وثوقی", "category": "people", "difficulty": 2},
-      {"text": "ناصر ملک‌مطیعی", "category": "people", "difficulty": 2},
-      {"text": "عزت‌الله انتظامی", "category": "people", "difficulty": 2},
-      {"text": "کوروش کبیر", "category": "people", "difficulty": 1},
-      {"text": "داریوش بزرگ", "category": "people", "difficulty": 2},
-      {"text": "نادر شاه", "category": "people", "difficulty": 2},
-      {"text": "سعدی", "category": "people", "difficulty": 1},
-      {"text": "مولانا", "category": "people", "difficulty": 1},
-      {"text": "خیام", "category": "people", "difficulty": 2},
-      {"text": "ابن سینا", "category": "people", "difficulty": 1},
-      {"text": "خوارزمی", "category": "people", "difficulty": 2},
-      {"text": "زکریای رازی", "category": "people", "difficulty": 2},
-      {"text": "مریم میرزاخانی", "category": "people", "difficulty": 2},
-      {"text": "محمدعلی کلی", "category": "people", "difficulty": 1},
-      {"text": "مایکل جردن", "category": "people", "difficulty": 1},
-      {"text": "راجر فدرر", "category": "people", "difficulty": 2},
-      {"text": "نادال", "category": "people", "difficulty": 2},
-      {"text": "اوساین بولت", "category": "people", "difficulty": 2},
-      {"text": "مارادونا", "category": "people", "difficulty": 1},
-      {"text": "پله", "category": "people", "difficulty": 2},
-      {"text": "زیدان", "category": "people", "difficulty": 1},
-      {"text": "بکام", "category": "people", "difficulty": 1},
-      {"text": "امباپه", "category": "people", "difficulty": 1},
-      {"text": "نیمار", "category": "people", "difficulty": 1},
-      {"text": "هالند", "category": "people", "difficulty": 1},
-      {"text": "دی‌کاپریو", "category": "people", "difficulty": 1},
-      {"text": "تام کروز", "category": "people", "difficulty": 1},
-      {"text": "براد پیت", "category": "people", "difficulty": 1},
-      {"text": "جانی دپ", "category": "people", "difficulty": 1},
-      {"text": "آنجلینا جولی", "category": "people", "difficulty": 1},
-      {"text": "کیانو ریوز", "category": "people", "difficulty": 2},
-      {"text": "دواین جانسون", "category": "people", "difficulty": 1},
-      {"text": "ویل اسمیت", "category": "people", "difficulty": 1},
-      {"text": "مورگان فریمن", "category": "people", "difficulty": 2},
-      {"text": "تیلور سوئیفت", "category": "people", "difficulty": 1},
-      {"text": "بیانسه", "category": "people", "difficulty": 1},
-      {"text": "ریحانا", "category": "people", "difficulty": 1},
-      {"text": "ادل", "category": "people", "difficulty": 1},
-      {"text": "جاستین بیبر", "category": "people", "difficulty": 1},
-      {"text": "امینم", "category": "people", "difficulty": 1},
-      {"text": "دریک", "category": "people", "difficulty": 1},
-      {"text": "اد شیرن", "category": "people", "difficulty": 1},
-      {"text": "لیدی گاگا", "category": "people", "difficulty": 1},
-      {"text": "مدونا", "category": "people", "difficulty": 1},
-      {"text": "بیلی آیلیش", "category": "people", "difficulty": 1},
-      {"text": "آریانا گرانده", "category": "people", "difficulty": 1},
-      {"text": "سلنا گومز", "category": "people", "difficulty": 1},
-      {"text": "مارک زاکربرگ", "category": "people", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "music",
-    "name": "موسیقی",
-    "emoji": "🎵",
-    "words": [
-      {"text": "گیتار", "category": "music", "difficulty": 1},
-      {"text": "پیانو", "category": "music", "difficulty": 1},
-      {"text": "ویولن", "category": "music", "difficulty": 1},
-      {"text": "درامز", "category": "music", "difficulty": 1},
-      {"text": "تار", "category": "music", "difficulty": 2},
-      {"text": "سنتور", "category": "music", "difficulty": 2},
-      {"text": "رپ", "category": "music", "difficulty": 1},
-      {"text": "پاپ", "category": "music", "difficulty": 1},
-      {"text": "راک", "category": "music", "difficulty": 1},
-      {"text": "کنسرت", "category": "music", "difficulty": 1},
-      {"text": "فلوت", "category": "music", "difficulty": 2},
-      {"text": "هارمونیکا", "category": "music", "difficulty": 2},
-      {"text": "ارکستر", "category": "music", "difficulty": 2},
-      {"text": "آهنگساز", "category": "music", "difficulty": 2},
-      {"text": "خواننده", "category": "music", "difficulty": 1},
-      {"text": "کلیپ", "category": "music", "difficulty": 1},
-      {"text": "آلبوم", "category": "music", "difficulty": 1},
-      {"text": "دف", "category": "music", "difficulty": 1},
-      {"text": "کمانچه", "category": "music", "difficulty": 2},
-      {"text": "نی", "category": "music", "difficulty": 1},
-      {"text": "سه‌تار", "category": "music", "difficulty": 2},
-      {"text": "عود", "category": "music", "difficulty": 2},
-      {"text": "تنبک", "category": "music", "difficulty": 2},
-      {"text": "دایره", "category": "music", "difficulty": 1},
-      {"text": "آکاردئون", "category": "music", "difficulty": 2},
-      {"text": "بانجو", "category": "music", "difficulty": 2},
-      {"text": "ساکسیفون", "category": "music", "difficulty": 2},
-      {"text": "ترومپت", "category": "music", "difficulty": 2},
-      {"text": "شیپور", "category": "music", "difficulty": 1},
-      {"text": "کلارینت", "category": "music", "difficulty": 2},
-      {"text": "هارپ", "category": "music", "difficulty": 2},
-      {"text": "ویولنسل", "category": "music", "difficulty": 2},
-      {"text": "گیتار بیس", "category": "music", "difficulty": 1},
-      {"text": "گیتار الکتریک", "category": "music", "difficulty": 1},
-      {"text": "کیبورد", "category": "music", "difficulty": 1},
-      {"text": "ارگ", "category": "music", "difficulty": 1},
-      {"text": "دی‌جی", "category": "music", "difficulty": 1},
-      {"text": "بیت", "category": "music", "difficulty": 1},
-      {"text": "ملودی", "category": "music", "difficulty": 1},
-      {"text": "ریتم", "category": "music", "difficulty": 1},
-      {"text": "نت", "category": "music", "difficulty": 1},
-      {"text": "آواز", "category": "music", "difficulty": 1},
-      {"text": "تصنیف", "category": "music", "difficulty": 2},
-      {"text": "ترانه", "category": "music", "difficulty": 1},
-      {"text": "سرود", "category": "music", "difficulty": 1},
-      {"text": "لالایی", "category": "music", "difficulty": 1},
-      {"text": "جاز", "category": "music", "difficulty": 2},
-      {"text": "بلوز", "category": "music", "difficulty": 2},
-      {"text": "دیسکو", "category": "music", "difficulty": 1},
-      {"text": "تکنو", "category": "music", "difficulty": 2},
-      {"text": "هیپ‌هاپ", "category": "music", "difficulty": 1},
-      {"text": "متال", "category": "music", "difficulty": 2},
-      {"text": "پانک", "category": "music", "difficulty": 2},
-      {"text": "فولک", "category": "music", "difficulty": 2},
-      {"text": "کانتری", "category": "music", "difficulty": 2},
-      {"text": "سالسا", "category": "music", "difficulty": 2},
-      {"text": "تانگو", "category": "music", "difficulty": 2},
-      {"text": "فلامنکو", "category": "music", "difficulty": 2},
-      {"text": "کلاسیک", "category": "music", "difficulty": 1},
-      {"text": "اپرا", "category": "music", "difficulty": 2},
-      {"text": "سمفونی", "category": "music", "difficulty": 2},
-      {"text": "کر", "category": "music", "difficulty": 2},
-      {"text": "گروه موسیقی", "category": "music", "difficulty": 1},
-      {"text": "موزیسین", "category": "music", "difficulty": 1},
-      {"text": "نوازنده", "category": "music", "difficulty": 1},
-      {"text": "استودیو", "category": "music", "difficulty": 1},
-      {"text": "میکسر", "category": "music", "difficulty": 2},
-      {"text": "پلی‌لیست", "category": "music", "difficulty": 1},
-      {"text": "پادکست", "category": "music", "difficulty": 1},
-      {"text": "هدفون", "category": "music", "difficulty": 1},
-      {"text": "بلندگو", "category": "music", "difficulty": 1},
-      {"text": "میکروفون", "category": "music", "difficulty": 1},
-      {"text": "کاست", "category": "music", "difficulty": 1},
-      {"text": "سی‌دی", "category": "music", "difficulty": 1},
-      {"text": "وینیل", "category": "music", "difficulty": 2},
-      {"text": "گرامافون", "category": "music", "difficulty": 2},
-      {"text": "رادیو", "category": "music", "difficulty": 1},
-      {"text": "اسپاتیفای", "category": "music", "difficulty": 1},
-      {"text": "کاور", "category": "music", "difficulty": 1},
-      {"text": "ریمیکس", "category": "music", "difficulty": 1},
-      {"text": "لایو", "category": "music", "difficulty": 1},
-      {"text": "تور کنسرت", "category": "music", "difficulty": 1},
-      {"text": "فستیوال", "category": "music", "difficulty": 1},
-      {"text": "جایزه گرمی", "category": "music", "difficulty": 2},
-      {"text": "چارت موسیقی", "category": "music", "difficulty": 2},
-      {"text": "سینگل", "category": "music", "difficulty": 1},
-      {"text": "ای‌پی", "category": "music", "difficulty": 2},
-      {"text": "موزیک ویدئو", "category": "music", "difficulty": 1},
-      {"text": "باند", "category": "music", "difficulty": 1},
-      {"text": "دوئت", "category": "music", "difficulty": 2},
-      {"text": "سولو", "category": "music", "difficulty": 2},
-      {"text": "آکاپلا", "category": "music", "difficulty": 2},
-      {"text": "کوک کردن", "category": "music", "difficulty": 2},
-      {"text": "تمرین", "category": "music", "difficulty": 1},
-      {"text": "نت‌خوانی", "category": "music", "difficulty": 2},
-      {"text": "سلفژ", "category": "music", "difficulty": 2},
-      {"text": "رهبر ارکستر", "category": "music", "difficulty": 2},
-      {"text": "باتون", "category": "music", "difficulty": 2},
-      {"text": "پارتیتور", "category": "music", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "books",
-    "name": "کتاب",
-    "emoji": "📚",
-    "words": [
-      {"text": "شاهنامه", "category": "books", "difficulty": 1},
-      {"text": "هری پاتر", "category": "books", "difficulty": 1},
-      {"text": "کیمیاگر", "category": "books", "difficulty": 2},
-      {"text": "شازده کوچولو", "category": "books", "difficulty": 1},
-      {"text": "بینوایان", "category": "books", "difficulty": 2},
-      {"text": "گلستان", "category": "books", "difficulty": 2},
-      {"text": "مثنوی", "category": "books", "difficulty": 2},
-      {"text": "ارباب حلقه‌ها", "category": "books", "difficulty": 1},
-      {"text": "جنگ و صلح", "category": "books", "difficulty": 2},
-      {"text": "صد سال تنهایی", "category": "books", "difficulty": 2},
-      {"text": "بوف کور", "category": "books", "difficulty": 2},
-      {"text": "سووشون", "category": "books", "difficulty": 2},
-      {"text": "دن کیشوت", "category": "books", "difficulty": 2},
-      {"text": "آنا کارنینا", "category": "books", "difficulty": 2},
-      {"text": "رومئو و ژولیت", "category": "books", "difficulty": 1},
-      {"text": "قرآن", "category": "books", "difficulty": 1},
-      {"text": "دیوان حافظ", "category": "books", "difficulty": 1},
-      {"text": "رباعیات خیام", "category": "books", "difficulty": 2},
-      {"text": "سمفونی مردگان", "category": "books", "difficulty": 2},
-      {"text": "چشم‌هایش", "category": "books", "difficulty": 2},
-      {"text": "کلیدر", "category": "books", "difficulty": 2},
-      {"text": "دا", "category": "books", "difficulty": 2},
-      {"text": "جای خالی سلوچ", "category": "books", "difficulty": 2},
-      {"text": "قلعه حیوانات", "category": "books", "difficulty": 2},
-      {"text": "جنایت و مکافات", "category": "books", "difficulty": 2},
-      {"text": "برادران کارامازوف", "category": "books", "difficulty": 2},
-      {"text": "مسخ", "category": "books", "difficulty": 2},
-      {"text": "بیگانه", "category": "books", "difficulty": 2},
-      {"text": "غرور و تعصب", "category": "books", "difficulty": 2},
-      {"text": "جین ایر", "category": "books", "difficulty": 2},
-      {"text": "بلندی‌های بادگیر", "category": "books", "difficulty": 2},
-      {"text": "الیور توییست", "category": "books", "difficulty": 2},
-      {"text": "داستان دو شهر", "category": "books", "difficulty": 2},
-      {"text": "موبی دیک", "category": "books", "difficulty": 2},
-      {"text": "تام سایر", "category": "books", "difficulty": 1},
-      {"text": "دور دنیا در 80 روز", "category": "books", "difficulty": 1},
-      {"text": "سفر به مرکز زمین", "category": "books", "difficulty": 2},
-      {"text": "گتسبی بزرگ", "category": "books", "difficulty": 2},
-      {"text": "پیرمرد و دریا", "category": "books", "difficulty": 2},
-      {"text": "شرلوک هولمز", "category": "books", "difficulty": 1},
-      {"text": "آرسن لوپن", "category": "books", "difficulty": 2},
-      {"text": "رمز داوینچی", "category": "books", "difficulty": 1},
-      {"text": "فرشتگان و شیاطین", "category": "books", "difficulty": 2},
-      {"text": "سرگذشت نارنیا", "category": "books", "difficulty": 1},
-      {"text": "بازی تاج و تخت", "category": "books", "difficulty": 1},
-      {"text": "دون", "category": "books", "difficulty": 2},
-      {"text": "بنیاد", "category": "books", "difficulty": 2},
-      {"text": "مریخی", "category": "books", "difficulty": 2},
-      {"text": "اندر گیم", "category": "books", "difficulty": 2},
-      {"text": "ایت", "category": "books", "difficulty": 2},
-      {"text": "درخشش", "category": "books", "difficulty": 2},
-      {"text": "دراکولا", "category": "books", "difficulty": 1},
-      {"text": "فرانکنشتاین", "category": "books", "difficulty": 2},
-      {"text": "عطر", "category": "books", "difficulty": 2},
-      {"text": "ملت عشق", "category": "books", "difficulty": 1},
-      {"text": "چهل قانون عشق", "category": "books", "difficulty": 2},
-      {"text": "نام گل سرخ", "category": "books", "difficulty": 2},
-      {"text": "کوری", "category": "books", "difficulty": 2},
-      {"text": "هزار خورشید تابان", "category": "books", "difficulty": 2},
-      {"text": "بادبادک‌باز", "category": "books", "difficulty": 1},
-      {"text": "عشق سال‌های وبا", "category": "books", "difficulty": 2},
-      {"text": "خانه ارواح", "category": "books", "difficulty": 2},
-      {"text": "انجیل", "category": "books", "difficulty": 1},
-      {"text": "تورات", "category": "books", "difficulty": 2},
-      {"text": "اوستا", "category": "books", "difficulty": 2},
-      {"text": "بوستان", "category": "books", "difficulty": 2},
-      {"text": "لیلی و مجنون", "category": "books", "difficulty": 1},
-      {"text": "خسرو و شیرین", "category": "books", "difficulty": 2},
-      {"text": "هفت پیکر", "category": "books", "difficulty": 2},
-      {"text": "ویس و رامین", "category": "books", "difficulty": 2},
-      {"text": "کلیله و دمنه", "category": "books", "difficulty": 2},
-      {"text": "مرزبان‌نامه", "category": "books", "difficulty": 2},
-      {"text": "سیاست‌نامه", "category": "books", "difficulty": 2},
-      {"text": "قابوس‌نامه", "category": "books", "difficulty": 2},
-      {"text": "تاریخ بیهقی", "category": "books", "difficulty": 2},
-      {"text": "سفرنامه ناصرخسرو", "category": "books", "difficulty": 2},
-      {"text": "گرگ بیابان", "category": "books", "difficulty": 2},
-      {"text": "سیذارتا", "category": "books", "difficulty": 2},
-      {"text": "دمیان", "category": "books", "difficulty": 2},
-      {"text": "نروژی جنگل", "category": "books", "difficulty": 2},
-      {"text": "کافکا در کرانه", "category": "books", "difficulty": 2},
-      {"text": "سالمرگی", "category": "books", "difficulty": 2},
-      {"text": "زیر گنبد کبود", "category": "books", "difficulty": 2},
-      {"text": "روزهای آبی", "category": "books", "difficulty": 2},
-      {"text": "سنگ صبور", "category": "books", "difficulty": 2},
-      {"text": "اول شخص مفرد", "category": "books", "difficulty": 2},
-      {"text": "نیمه تاریک ماه", "category": "books", "difficulty": 2},
-      {"text": "همنوایی شبانه", "category": "books", "difficulty": 2},
-      {"text": "عادت می‌کنیم", "category": "books", "difficulty": 2},
-      {"text": "روی ماه خدا را ببوس", "category": "books", "difficulty": 2},
-      {"text": "بامداد خمار", "category": "books", "difficulty": 2},
-      {"text": "چراغ‌ها را من خاموش می‌کنم", "category": "books", "difficulty": 2},
-      {"text": "طوبی و معنای شب", "category": "books", "difficulty": 2},
-      {"text": "زنان بدون مردان", "category": "books", "difficulty": 2},
-      {"text": "ساربان سرگردان", "category": "books", "difficulty": 2},
-      {"text": "تنگسیر", "category": "books", "difficulty": 2},
-      {"text": "مدیر مدرسه", "category": "books", "difficulty": 2},
-      {"text": "سنگ و ساغر", "category": "books", "difficulty": 2},
-      {"text": "آزاده خانم", "category": "books", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "animals",
-    "name": "حیوانات",
-    "emoji": "🐾",
-    "words": [
-      {"text": "شیر", "category": "animals", "difficulty": 1},
-      {"text": "فیل", "category": "animals", "difficulty": 1},
-      {"text": "زرافه", "category": "animals", "difficulty": 1},
-      {"text": "دلفین", "category": "animals", "difficulty": 1},
-      {"text": "پنگوئن", "category": "animals", "difficulty": 1},
-      {"text": "کانگورو", "category": "animals", "difficulty": 1},
-      {"text": "پلنگ", "category": "animals", "difficulty": 1},
-      {"text": "عقاب", "category": "animals", "difficulty": 1},
-      {"text": "کوسه", "category": "animals", "difficulty": 1},
-      {"text": "اختاپوس", "category": "animals", "difficulty": 2},
-      {"text": "گرگ", "category": "animals", "difficulty": 1},
-      {"text": "روباه", "category": "animals", "difficulty": 1},
-      {"text": "خرس", "category": "animals", "difficulty": 1},
-      {"text": "میمون", "category": "animals", "difficulty": 1},
-      {"text": "طوطی", "category": "animals", "difficulty": 1},
-      {"text": "مار", "category": "animals", "difficulty": 1},
-      {"text": "تمساح", "category": "animals", "difficulty": 1},
-      {"text": "شترمرغ", "category": "animals", "difficulty": 2},
-      {"text": "کرگدن", "category": "animals", "difficulty": 2},
-      {"text": "اسب آبی", "category": "animals", "difficulty": 2},
-      {"text": "ببر", "category": "animals", "difficulty": 1},
-      {"text": "یوزپلنگ", "category": "animals", "difficulty": 2},
-      {"text": "گوریل", "category": "animals", "difficulty": 1},
-      {"text": "شامپانزه", "category": "animals", "difficulty": 2},
-      {"text": "گوزن", "category": "animals", "difficulty": 1},
-      {"text": "آهو", "category": "animals", "difficulty": 1},
-      {"text": "گاومیش", "category": "animals", "difficulty": 1},
-      {"text": "گراز", "category": "animals", "difficulty": 2},
-      {"text": "خوک", "category": "animals", "difficulty": 1},
-      {"text": "گاو", "category": "animals", "difficulty": 1},
-      {"text": "گوسفند", "category": "animals", "difficulty": 1},
-      {"text": "بز", "category": "animals", "difficulty": 1},
-      {"text": "اسب", "category": "animals", "difficulty": 1},
-      {"text": "الاغ", "category": "animals", "difficulty": 1},
-      {"text": "شتر", "category": "animals", "difficulty": 1},
-      {"text": "لاما", "category": "animals", "difficulty": 2},
-      {"text": "سگ", "category": "animals", "difficulty": 1},
-      {"text": "گربه", "category": "animals", "difficulty": 1},
-      {"text": "خرگوش", "category": "animals", "difficulty": 1},
-      {"text": "همستر", "category": "animals", "difficulty": 1},
-      {"text": "موش", "category": "animals", "difficulty": 1},
-      {"text": "سنجاب", "category": "animals", "difficulty": 1},
-      {"text": "خارپشت", "category": "animals", "difficulty": 1},
-      {"text": "جوجه‌تیغی", "category": "animals", "difficulty": 2},
-      {"text": "پاندا", "category": "animals", "difficulty": 1},
-      {"text": "کوآلا", "category": "animals", "difficulty": 1},
-      {"text": "خفاش", "category": "animals", "difficulty": 1},
-      {"text": "نهنگ", "category": "animals", "difficulty": 1},
-      {"text": "فوک", "category": "animals", "difficulty": 2},
-      {"text": "شیر دریایی", "category": "animals", "difficulty": 2},
-      {"text": "لاک‌پشت", "category": "animals", "difficulty": 1},
-      {"text": "آفتاب‌پرست", "category": "animals", "difficulty": 2},
-      {"text": "مارمولک", "category": "animals", "difficulty": 1},
-      {"text": "سوسمار", "category": "animals", "difficulty": 2},
-      {"text": "قورباغه", "category": "animals", "difficulty": 1},
-      {"text": "ماهی", "category": "animals", "difficulty": 1},
-      {"text": "اسب دریایی", "category": "animals", "difficulty": 2},
-      {"text": "ستاره دریایی", "category": "animals", "difficulty": 1},
-      {"text": "عروس دریایی", "category": "animals", "difficulty": 1},
-      {"text": "خرچنگ", "category": "animals", "difficulty": 1},
-      {"text": "میگو", "category": "animals", "difficulty": 1},
-      {"text": "صدف", "category": "animals", "difficulty": 1},
-      {"text": "حلزون", "category": "animals", "difficulty": 1},
-      {"text": "پروانه", "category": "animals", "difficulty": 1},
-      {"text": "ز��بور", "category": "animals", "difficulty": 1},
-      {"text": "مورچه", "category": "animals", "difficulty": 1},
-      {"text": "سنجاقک", "category": "animals", "difficulty": 2},
-      {"text": "ملخ", "category": "animals", "difficulty": 1},
-      {"text": "سوسک", "category": "animals", "difficulty": 1},
-      {"text": "عنکبوت", "category": "animals", "difficulty": 1},
-      {"text": "عقرب", "category": "animals", "difficulty": 1},
-      {"text": "کفشدوزک", "category": "animals", "difficulty": 1},
-      {"text": "کرم ابریشم", "category": "animals", "difficulty": 2},
-      {"text": "کبوتر", "category": "animals", "difficulty": 1},
-      {"text": "کلاغ", "category": "animals", "difficulty": 1},
-      {"text": "گنجشک", "category": "animals", "difficulty": 1},
-      {"text": "قو", "category": "animals", "difficulty": 1},
-      {"text": "فلامینگو", "category": "animals", "difficulty": 2},
-      {"text": "طاووس", "category": "animals", "difficulty": 1},
-      {"text": "جغد", "category": "animals", "difficulty": 1},
-      {"text": "باز", "category": "animals", "difficulty": 2},
-      {"text": "شاهین", "category": "animals", "difficulty": 2},
-      {"text": "قرقاول", "category": "animals", "difficulty": 2},
-      {"text": "مرغ", "category": "animals", "difficulty": 1},
-      {"text": "خروس", "category": "animals", "difficulty": 1},
-      {"text": "اردک", "category": "animals", "difficulty": 1},
-      {"text": "غاز", "category": "animals", "difficulty": 1},
-      {"text": "بوقلمون", "category": "animals", "difficulty": 1},
-      {"text": "کبک", "category": "animals", "difficulty": 2},
-      {"text": "بلبل", "category": "animals", "difficulty": 1},
-      {"text": "قناری", "category": "animals", "difficulty": 1},
-      {"text": "مرغ عشق", "category": "animals", "difficulty": 1},
-      {"text": "کاکادو", "category": "animals", "difficulty": 2},
-      {"text": "پرنده مینا", "category": "animals", "difficulty": 2},
-      {"text": "لک‌لک", "category": "animals", "difficulty": 1},
-      {"text": "پرستو", "category": "animals", "difficulty": 1},
-      {"text": "دارکوب", "category": "animals", "difficulty": 2},
-      {"text": "مرغ ماهی‌خوار", "category": "animals", "difficulty": 2},
-      {"text": "آلباتروس", "category": "animals", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "jobs",
-    "name": "شغل و حرفه",
-    "emoji": "💼",
-    "words": [
-      {"text": "دکتر", "category": "jobs", "difficulty": 1},
-      {"text": "مهندس", "category": "jobs", "difficulty": 1},
-      {"text": "معلم", "category": "jobs", "difficulty": 1},
-      {"text": "آشپز", "category": "jobs", "difficulty": 1},
-      {"text": "خلبان", "category": "jobs", "difficulty": 1},
-      {"text": "آتش‌نشان", "category": "jobs", "difficulty": 1},
-      {"text": "بازیگر", "category": "jobs", "difficulty": 1},
-      {"text": "خواننده", "category": "jobs", "difficulty": 1},
-      {"text": "فضانورد", "category": "jobs", "difficulty": 2},
-      {"text": "جراح", "category": "jobs", "difficulty": 2},
-      {"text": "وکیل", "category": "jobs", "difficulty": 1},
-      {"text": "قاضی", "category": "jobs", "difficulty": 1},
-      {"text": "پلیس", "category": "jobs", "difficulty": 1},
-      {"text": "نقاش", "category": "jobs", "difficulty": 1},
-      {"text": "عکاس", "category": "jobs", "difficulty": 1},
-      {"text": "خبرنگار", "category": "jobs", "difficulty": 1},
-      {"text": "برنامه‌نویس", "category": "jobs", "difficulty": 1},
-      {"text": "معمار", "category": "jobs", "difficulty": 2},
-      {"text": "دندانپزشک", "category": "jobs", "difficulty": 1},
-      {"text": "داروساز", "category": "jobs", "difficulty": 2},
-      {"text": "پرستار", "category": "jobs", "difficulty": 1},
-      {"text": "ماما", "category": "jobs", "difficulty": 2},
-      {"text": "روانپزشک", "category": "jobs", "difficulty": 2},
-      {"text": "روانشناس", "category": "jobs", "difficulty": 2},
-      {"text": "دامپزشک", "category": "jobs", "difficulty": 1},
-      {"text": "کشاورز", "category": "jobs", "difficulty": 1},
-      {"text": "باغبان", "category": "jobs", "difficulty": 1},
-      {"text": "ماهیگیر", "category": "jobs", "difficulty": 1},
-      {"text": "نجار", "category": "jobs", "difficulty": 1},
-      {"text": "آهنگر", "category": "jobs", "difficulty": 1},
-      {"text": "جوشکار", "category": "jobs", "difficulty": 2},
-      {"text": "لوله‌کش", "category": "jobs", "difficulty": 1},
-      {"text": "برقکار", "category": "jobs", "difficulty": 1},
-      {"text": "مکانیک", "category": "jobs", "difficulty": 1},
-      {"text": "راننده", "category": "jobs", "difficulty": 1},
-      {"text": "کاپیتان", "category": "jobs", "difficulty": 2},
-      {"text": "کارگردان", "category": "jobs", "difficulty": 1},
-      {"text": "تهیه‌کننده", "category": "jobs", "difficulty": 2},
-      {"text": "فیلم‌بردار", "category": "jobs", "difficulty": 2},
-      {"text": "گریمور", "category": "jobs", "difficulty": 2},
-      {"text": "مجری", "category": "jobs", "difficulty": 1},
-      {"text": "گوینده", "category": "jobs", "difficulty": 1},
-      {"text": "نویسنده", "category": "jobs", "difficulty": 1},
-      {"text": "شاعر", "category": "jobs", "difficulty": 2},
-      {"text": "مترجم", "category": "jobs", "difficulty": 1},
-      {"text": "ویراستار", "category": "jobs", "difficulty": 2},
-      {"text": "کتابدار", "category": "jobs", "difficulty": 1},
-      {"text": "باستان‌شناس", "category": "jobs", "difficulty": 2},
-      {"text": "حسابدار", "category": "jobs", "difficulty": 1},
-      {"text": "بانکدار", "category": "jobs", "difficulty": 1},
-      {"text": "مشاور", "category": "jobs", "difficulty": 1},
-      {"text": "مدیر", "category": "jobs", "difficulty": 1},
-      {"text": "منشی", "category": "jobs", "difficulty": 1},
-      {"text": "فروشنده", "category": "jobs", "difficulty": 1},
-      {"text": "صندوقدار", "category": "jobs", "difficulty": 1},
-      {"text": "پیک", "category": "jobs", "difficulty": 1},
-      {"text": "پستچی", "category": "jobs", "difficulty": 1},
-      {"text": "نگهبان", "category": "jobs", "difficulty": 1},
-      {"text": "آرایشگر", "category": "jobs", "difficulty": 1},
-      {"text": "خیاط", "category": "jobs", "difficulty": 1},
-      {"text": "طراح مد", "category": "jobs", "difficulty": 2},
-      {"text": "مدل", "category": "jobs", "difficulty": 1},
-      {"text": "ورزشکار", "category": "jobs", "difficulty": 1},
-      {"text": "مربی", "category": "jobs", "difficulty": 1},
-      {"text": "داور", "category": "jobs", "difficulty": 1},
-      {"text": "سرآشپز", "category": "jobs", "difficulty": 2},
-      {"text": "قناد", "category": "jobs", "difficulty": 2},
-      {"text": "نانوا", "category": "jobs", "difficulty": 1},
-      {"text": "قصاب", "category": "jobs", "difficulty": 1},
-      {"text": "گارسون", "category": "jobs", "difficulty": 1},
-      {"text": "باریستا", "category": "jobs", "difficulty": 2},
-      {"text": "راهنمای تور", "category": "jobs", "difficulty": 1},
-      {"text": "مهماندار", "category": "jobs", "difficulty": 1},
-      {"text": "کارآگاه", "category": "jobs", "difficulty": 2},
-      {"text": "نظامی", "category": "jobs", "difficulty": 1},
-      {"text": "امدادگر", "category": "jobs", "difficulty": 1},
-      {"text": "زمین‌شناس", "category": "jobs", "difficulty": 2},
-      {"text": "ستاره‌شناس", "category": "jobs", "difficulty": 2},
-      {"text": "زیست‌شناس", "category": "jobs", "difficulty": 2},
-      {"text": "شیمیدان", "category": "jobs", "difficulty": 2},
-      {"text": "فیزیکدان", "category": "jobs", "difficulty": 2},
-      {"text": "ریاضیدان", "category": "jobs", "difficulty": 2},
-      {"text": "اقتصاددان", "category": "jobs", "difficulty": 2},
-      {"text": "جامعه‌شناس", "category": "jobs", "difficulty": 2},
-      {"text": "فیلسوف", "category": "jobs", "difficulty": 2},
-      {"text": "طراح گرافیک", "category": "jobs", "difficulty": 1},
-      {"text": "طراح وب", "category": "jobs", "difficulty": 1},
-      {"text": "تحلیلگر داده", "category": "jobs", "difficulty": 2},
-      {"text": "هکر", "category": "jobs", "difficulty": 2},
-      {"text": "یوتیوبر", "category": "jobs", "difficulty": 1},
-      {"text": "اینفلوئنسر", "category": "jobs", "difficulty": 1},
-      {"text": "بلاگر", "category": "jobs", "difficulty": 1},
-      {"text": "استریمر", "category": "jobs", "difficulty": 1},
-      {"text": "گیمر حرفه‌ای", "category": "jobs", "difficulty": 1},
-      {"text": "کارآفرین", "category": "jobs", "difficulty": 2},
-      {"text": "سرمایه‌گذار", "category": "jobs", "difficulty": 2},
-      {"text": "ناخدا", "category": "jobs", "difficulty": 2},
-      {"text": "غواص", "category": "jobs", "difficulty": 2},
-      {"text": "معدنچی", "category": "jobs", "difficulty": 2}
-    ]
-  },
-  {
-    "id": "general",
-    "name": "عمومی",
-    "emoji": "🎭",
-    "words": [
-      {"text": "عشق", "category": "general", "difficulty": 1},
-      {"text": "آزادی", "category": "general", "difficulty": 2},
-      {"text": "سفر", "category": "general", "difficulty": 1},
-      {"text": "جشن تولد", "category": "general", "difficulty": 1},
-      {"text": "عید نوروز", "category": "general", "difficulty": 1},
-      {"text": "یلدا", "category": "general", "difficulty": 1},
-      {"text": "کریسمس", "category": "general", "difficulty": 1},
-      {"text": "هالووین", "category": "general", "difficulty": 2},
-      {"text": "ماه عسل", "category": "general", "difficulty": 2},
-      {"text": "قایق", "category": "general", "difficulty": 1},
-      {"text": "هواپیما", "category": "general", "difficulty": 1},
-      {"text": "کشتی", "category": "general", "difficulty": 1},
-      {"text": "قطار", "category": "general", "difficulty": 1},
-      {"text": "اینترنت", "category": "general", "difficulty": 1},
-      {"text": "تلویزیون", "category": "general", "difficulty": 1},
-      {"text": "موبایل", "category": "general", "difficulty": 1},
-      {"text": "کتابخانه", "category": "general", "difficulty": 1},
-      {"text": "دانشگاه", "category": "general", "difficulty": 1},
-      {"text": "بیمارستان", "category": "general", "difficulty": 1},
-      {"text": "فرودگاه", "category": "general", "difficulty": 1},
-      {"text": "ایستگاه قطار", "category": "general", "difficulty": 1},
-      {"text": "مترو", "category": "general", "difficulty": 1},
-      {"text": "اتوبوس", "category": "general", "difficulty": 1},
-      {"text": "تاکسی", "category": "general", "difficulty": 1},
-      {"text": "دوچرخه", "category": "general", "difficulty": 1},
-      {"text": "ماشین", "category": "general", "difficulty": 1},
-      {"text": "هلیکوپتر", "category": "general", "difficulty": 1},
-      {"text": "بالون", "category": "general", "difficulty": 1},
-      {"text": "کمپ", "category": "general", "difficulty": 1},
-      {"text": "پیک‌نیک", "category": "general", "difficulty": 1},
-      {"text": "ساحل", "category": "general", "difficulty": 1},
-      {"text": "جنگل", "category": "general", "difficulty": 1},
-      {"text": "کوه", "category": "general", "difficulty": 1},
-      {"text": "رودخانه", "category": "general", "difficulty": 1},
-      {"text": "دریاچه", "category": "general", "difficulty": 1},
-      {"text": "آبشار", "category": "general", "difficulty": 1},
-      {"text": "صحرا", "category": "general", "difficulty": 1},
-      {"text": "جزیره", "category": "general", "difficulty": 1},
-      {"text": "غار", "category": "general", "difficulty": 1},
-      {"text": "آتشفشان", "category": "general", "difficulty": 2},
-      {"text": "زلزله", "category": "general", "difficulty": 1},
-      {"text": "طوفان", "category": "general", "difficulty": 1},
-      {"text": "رعد و برق", "category": "general", "difficulty": 1},
-      {"text": "رنگین‌کمان", "category": "general", "difficulty": 1},
-      {"text": "برف", "category": "general", "difficulty": 1},
-      {"text": "باران", "category": "general", "difficulty": 1},
-      {"text": "خورشید", "category": "general", "difficulty": 1},
-      {"text": "ماه", "category": "general", "difficulty": 1},
-      {"text": "ستاره", "category": "general", "difficulty": 1},
-      {"text": "فضا", "category": "general", "difficulty": 1},
-      {"text": "راکت", "category": "general", "difficulty": 1},
-      {"text": "ماهواره", "category": "general", "difficulty": 2},
-      {"text": "تلسکوپ", "category": "general", "difficulty": 2},
-      {"text": "فروشگاه", "category": "general", "difficulty": 1},
-      {"text": "رستوران", "category": "general", "difficulty": 1},
-      {"text": "کافه", "category": "general", "difficulty": 1},
-      {"text": "سینما", "category": "general", "difficulty": 1},
-      {"text": "تئاتر", "category": "general", "difficulty": 1},
-      {"text": "موزه", "category": "general", "difficulty": 1},
-      {"text": "پارک", "category": "general", "difficulty": 1},
-      {"text": "باغ وحش", "category": "general", "difficulty": 1},
-      {"text": "شهربازی", "category": "general", "difficulty": 1},
-      {"text": "استخر", "category": "general", "difficulty": 1},
-      {"text": "ورزشگاه", "category": "general", "difficulty": 1},
-      {"text": "باشگاه", "category": "general", "difficulty": 1},
-      {"text": "مسجد", "category": "general", "difficulty": 1},
-      {"text": "کلیسا", "category": "general", "difficulty": 1},
-      {"text": "عروسی", "category": "general", "difficulty": 1},
-      {"text": "مهمانی", "category": "general", "difficulty": 1},
-      {"text": "جشن", "category": "general", "difficulty": 1},
-      {"text": "کادو", "category": "general", "difficulty": 1},
-      {"text": "بادکنک", "category": "general", "difficulty": 1},
-      {"text": "کیک تولد", "category": "general", "difficulty": 1},
-      {"text": "شمع", "category": "general", "difficulty": 1},
-      {"text": "آتش‌بازی", "category": "general", "difficulty": 1},
-      {"text": "چراغ", "category": "general", "difficulty": 1},
-      {"text": "پنجره", "category": "general", "difficulty": 1},
-      {"text": "درب", "category": "general", "difficulty": 1},
-      {"text": "آسانسور", "category": "general", "difficulty": 1},
-      {"text": "پله برقی", "category": "general", "difficulty": 1},
-      {"text": "کامپیوتر", "category": "general", "difficulty": 1},
-      {"text": "لپ‌تاپ", "category": "general", "difficulty": 1},
-      {"text": "تبلت", "category": "general", "difficulty": 1},
-      {"text": "ساعت هوشمند", "category": "general", "difficulty": 1},
-      {"text": "دوربین", "category": "general", "difficulty": 1},
-      {"text": "ایرپاد", "category": "general", "difficulty": 1},
-      {"text": "شارژر", "category": "general", "difficulty": 1},
-      {"text": "وای‌فای", "category": "general", "difficulty": 1},
-      {"text": "بلوتوث", "category": "general", "difficulty": 1},
-      {"text": "پاوربانک", "category": "general", "difficulty": 1},
-      {"text": "پرینتر", "category": "general", "difficulty": 1},
-      {"text": "اسکنر", "category": "general", "difficulty": 2},
-      {"text": "فلش مموری", "category": "general", "difficulty": 1},
-      {"text": "هارد دیسک", "category": "general", "difficulty": 2},
-      {"text": "ربات", "category": "general", "difficulty": 1},
-      {"text": "پهپاد", "category": "general", "difficulty": 1},
-      {"text": "هوش مصنوعی", "category": "general", "difficulty": 2},
-      {"text": "واقعیت مجازی", "category": "general", "difficulty": 2},
-      {"text": "اپلیکیشن", "category": "general", "difficulty": 1}
-    ]
-  }
+ {
+  "id": "film",
+  "name": "فیلم و سریال",
+  "emoji": "🎬",
+  "words": [
+   {
+    "text": "تایتانیک",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "شوالیه تاریکی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "پدرخوانده",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "فرار از زندان",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "بازی تاج و تخت",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جومونگ",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "شهرزاد",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "پایتخت",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جدایی نادر از سیمین",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "مرد عنکبوتی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ماتریکس",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "آواتار",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جوکر",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "اینترستلار",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "فارست گامپ",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "گلادیاتور",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "لانتوری",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "متری شیش و نیم",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ابد و یک روز",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "سریال دوستان",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "کلاه قرمزی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "قهوه تلخ",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "شب‌های برره",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "بچه‌های آسمان",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "رنگ خدا",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "درباره الی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "قصه‌های مجید",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "سرزمین کهن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "یوسف پیامبر",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "مختارنامه",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "لاست",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "چرنوبیل",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "مانی هایست",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "بریکینگ بد",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "استرنجر ثینگز",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ویچر",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "پیکی بلایندرز",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "وایکینگز",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "ناروتو",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "دراگون بال",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "باب اسفنجی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "تام و جری",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "شرک",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "یخ‌زده",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "شیرشاه",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "علاءالدین",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "دزدان دریایی کارائیب",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "هابیت",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "ارباب حلقه‌ها",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "هری پاتر",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جنگ ستارگان",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ترمیناتور",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "مأموریت غیرممکن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جیمز باند",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "سریع و خشن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "راکی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "رمبو",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "جان ویک",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "انتقام‌جویان",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "مرد آهنی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "کاپیتان آمریکا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ثور",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "هالک",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "بتمن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "سوپرمن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "واندر وومن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "آکوامن",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "فلش",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ددپول",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "ایکس من",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "اسپایدرورس",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "دکتر استرنج",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "بلک پنتر",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "شانگ چی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "اترنالز",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "گاردینز آو گلکسی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "جوراسیک پارک",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "کینگ کونگ",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "گودزیلا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "جاودانگی",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "سیندرلا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "زیبای خفته",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "سفید برفی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "موآنا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "راپونزل",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "کوکو",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "روح",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "روبات‌ها",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "مینیون‌ها",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "من نفرت‌انگیز",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "زوتوپیا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ماداگاسکار",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "عصر یخبندان",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "کونگ فو پاندا",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "ماشین‌ها",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "داستان اسباب‌بازی",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "در جستجوی نمو",
+    "category": "film",
+    "difficulty": 1
+   },
+   {
+    "text": "بالا",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "درون و بیرون",
+    "category": "film",
+    "difficulty": 2
+   },
+   {
+    "text": "قیصر"
+   },
+   {
+    "text": "گوزن‌ها"
+   },
+   {
+    "text": "هامون"
+   },
+   {
+    "text": "اجاره‌نشین‌ها"
+   },
+   {
+    "text": "مادر"
+   },
+   {
+    "text": "کلاه‌قرمزی"
+   },
+   {
+    "text": "مارمولک"
+   },
+   {
+    "text": "آژانس‌شیشه‌ای"
+   },
+   {
+    "text": "لیلا"
+   },
+   {
+    "text": "سوته‌دلان"
+   },
+   {
+    "text": "درباره‌الی"
+   },
+   {
+    "text": "فروشنده"
+   },
+   {
+    "text": "جدایی"
+   },
+   {
+    "text": "گذشته"
+   },
+   {
+    "text": "قهرمان"
+   },
+   {
+    "text": "برادران‌لیلا"
+   },
+   {
+    "text": "ابد‌و‌یک‌روز"
+   },
+   {
+    "text": "مغزهای‌کوچک‌زنگ‌زده"
+   },
+   {
+    "text": "متری‌شیش‌ونیم"
+   },
+   {
+    "text": "علفزار"
+   },
+   {
+    "text": "نون‌خ"
+   },
+   {
+    "text": "لیسانسه‌ها"
+   },
+   {
+    "text": "ستایش"
+   },
+   {
+    "text": "دلدادگان"
+   },
+   {
+    "text": "شب‌های‌برره"
+   },
+   {
+    "text": "مرد‌هزارچهره"
+   },
+   {
+    "text": "خانه‌به‌دوش"
+   },
+   {
+    "text": "متهم‌گریخت"
+   },
+   {
+    "text": "تلقین"
+   },
+   {
+    "text": "بین‌ستاره‌ای"
+   },
+   {
+    "text": "فارست‌گامپ"
+   },
+   {
+    "text": "هری‌پاتر"
+   },
+   {
+    "text": "بازی‌مرکب"
+   },
+   {
+    "text": "وایکینگ‌ها"
+   },
+   {
+    "text": "شرلوک"
+   },
+   {
+    "text": "فرندز"
+   },
+   {
+    "text": "برکینگ‌بد"
+   },
+   {
+    "text": "پیکی‌بلایندرز"
+   },
+   {
+    "text": "تاج‌وتخت"
+   },
+   {
+    "text": "وست‌ورلد"
+   },
+   {
+    "text": "روز‌واقعه"
+   },
+   {
+    "text": "بچه‌های‌آسمان"
+   },
+   {
+    "text": "رنگ‌خدا"
+   },
+   {
+    "text": "باشو"
+   },
+   {
+    "text": "خانه‌دوست‌کجاست"
+   },
+   {
+    "text": "طعم‌گیلاس"
+   },
+   {
+    "text": "زیر‌درختان‌زیتون"
+   },
+   {
+    "text": "گاو"
+   },
+   {
+    "text": "ناخدا‌خورشید"
+   },
+   {
+    "text": "هزاردستان"
+   },
+   {
+    "text": "دلیران‌تنگستان"
+   },
+   {
+    "text": "روزی‌روزگاری"
+   },
+   {
+    "text": "کیف‌انگلیسی"
+   },
+   {
+    "text": "وضعیت‌سفید"
+   },
+   {
+    "text": "یاغی"
+   }
+  ]
+ },
+ {
+  "id": "sports",
+  "name": "ورزش",
+  "emoji": "⚽",
+  "words": [
+   {
+    "text": "فوتبال",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "والیبال",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "بسکتبال",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "کشتی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "شنا",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "تنیس",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "بوکس",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "دوچرخه‌سواری",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "اسکی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پرش با چتر",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "بدمینتون",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "گلف",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "بیلیارد",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "تیراندازی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "وزنه‌برداری",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "ژیمناستیک",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "کاراته",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "تکواندو",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پینگ پنگ",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "موج‌سواری",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "هندبال",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "واترپلو",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "هاکی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "راگبی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "کریکت",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "بیسبال",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "فوتسال",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "دو و میدانی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "ماراتن",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پرتاب نیزه",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پرتاب دیسک",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پرش طول",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پرش ارتفاع",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پرش با نیزه",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "دو با مانع",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "دو امدادی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "شیرجه",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "قایقرانی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "کایاک",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "اسکیت",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "اسکیت‌بورد",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پاتیناژ",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "اسنوبورد",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "جودو",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "آیکیدو",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "جوجیتسو",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "کیک‌بوکسینگ",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "موی تای",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "شمشیربازی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "تیراندازی با کمان",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "سوارکاری",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "چوگان",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پولو",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "اتومبیل‌رانی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "موتورسواری",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "رالی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "فرمول یک",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "کوهنوردی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "سنگ‌نوردی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "غواصی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پاراگلایدر",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "بانجی جامپینگ",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "کایت سواری",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "جت اسکی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "اسکی روی آب",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "پارکور",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "کراس‌فیت",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "یوگا",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پیلاتس",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "ایروبیک",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "بدنسازی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پاورلیفتینگ",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "زورخانه",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "ورزش باستانی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "اسکواش",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "دارت",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "بولینگ",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "شطرنج",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "تخته نرد",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "ای‌اسپورت",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "فوتبال آمریکایی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "فریزبی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "والیبال ساحلی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "طناب‌کشی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "دوی سرعت",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "دوی استقامت",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پرتاب وزنه",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "ترامپولین",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "اسکی صحرانوردی",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "بیاتلون",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "تریاتلون",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "دکتلون",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "هفت‌گانه",
+    "category": "sports",
+    "difficulty": 2
+   },
+   {
+    "text": "المپیک",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "جام جهانی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "لیگ قهرمانان",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "پنالتی",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "کارت قرمز",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "آفساید",
+    "category": "sports",
+    "difficulty": 1
+   },
+   {
+    "text": "دوومیدانی"
+   },
+   {
+    "text": "پرش‌ارتفاع"
+   },
+   {
+    "text": "پرش‌طول"
+   },
+   {
+    "text": "پرتاب‌دیسک"
+   },
+   {
+    "text": "پرتاب‌نیزه"
+   },
+   {
+    "text": "سه‌گانه"
+   },
+   {
+    "text": "شنای‌پروانه"
+   },
+   {
+    "text": "شنای‌کرال"
+   },
+   {
+    "text": "سافت‌بال"
+   },
+   {
+    "text": "قایق‌بادبانی"
+   },
+   {
+    "text": "رفتینگ"
+   },
+   {
+    "text": "یخ‌نوردی"
+   },
+   {
+    "text": "اسکای‌دایوینگ"
+   },
+   {
+    "text": "بانجی‌جامپینگ"
+   },
+   {
+    "text": "کونگ‌فو"
+   },
+   {
+    "text": "ووشو"
+   },
+   {
+    "text": "ام‌ام‌ای"
+   },
+   {
+    "text": "سومو"
+   },
+   {
+    "text": "ساواته"
+   },
+   {
+    "text": "کرنر"
+   },
+   {
+    "text": "هت‌تریک"
+   },
+   {
+    "text": "دربی"
+   },
+   {
+    "text": "فینال"
+   },
+   {
+    "text": "نیمه‌نهایی"
+   },
+   {
+    "text": "داور"
+   },
+   {
+    "text": "تعویض"
+   },
+   {
+    "text": "تمدید"
+   },
+   {
+    "text": "کشتی‌فرنگی"
+   },
+   {
+    "text": "کشتی‌آزاد"
+   },
+   {
+    "text": "زومبا"
+   },
+   {
+    "text": "دوچرخه‌کوهستان"
+   },
+   {
+    "text": "بی‌ام‌ایکس"
+   },
+   {
+    "text": "اسکیت‌برد"
+   },
+   {
+    "text": "اسنوبرد"
+   }
+  ]
+ },
+ {
+  "id": "food",
+  "name": "غذا و نوشیدنی",
+  "emoji": "🍕",
+  "words": [
+   {
+    "text": "پیتزا",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "چلوکباب",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "قرمه‌سبزی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سوشی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "همبرگر",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "فسنجان",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "آش رشته",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "دوغ",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "چای",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "بستنی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "لازانیا",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "ساندویچ",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سالاد",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "پاستا",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "قهوه",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "شیری��ی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کباب کوبیده",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "زرشک پلو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "میرزا قاسمی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "باقالی پلو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "تهچین",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کوفته تبریزی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "دلمه",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کوکو سبزی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "آبگوشت",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "دیزی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کله پاچه",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "جوجه کباب",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "شیشلیک",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "برگ",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سولت",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "جگر",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "بریانی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "کباب ترکی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "شاورما",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "فلافل",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "حمص",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "کشک بادمجان",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "بورانی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "ماست موسیر",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سوپ جو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سوپ مرغ",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "آش جو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "حلیم",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "ماکارونی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "استیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "ماهی سوخاری",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "میگو سوخاری",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "خوراک مرغ",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "املت",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "نیمرو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "پنکیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "وافل",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "نان بربری",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سنگک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "لواش",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "نان تافتون",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "باگت",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "کروسان",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "دونات",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "تیرامیسو",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "شکلات",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کاپوچینو",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "اسپرسو",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "لاته",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "آیس کافی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "چای سبز",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "دمنوش",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "آبمیوه",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "اسموتی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "میلک‌شیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "نوشابه",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "ماءالشعیر",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "شربت",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "فالوده",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "یخ در بهشت",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "باقلوا",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "زولبیا بامیه",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "سوهان",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "گز",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "پشمک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "حلوا",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "رانی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "شله زرد",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "فرنی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "نان خامه‌ای",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "رولت",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "پای سیب",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کرم کاراملی",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "پاناکوتا",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "چیز کیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "براونی",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "مافین",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "کاپ کیک",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "ژله",
+    "category": "food",
+    "difficulty": 1
+   },
+   {
+    "text": "پودینگ",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "تارت میوه",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "پروفیترول",
+    "category": "food",
+    "difficulty": 2
+   },
+   {
+    "text": "میرزاقاسمی"
+   },
+   {
+    "text": "کشک‌بادمجان"
+   },
+   {
+    "text": "نرگسی"
+   },
+   {
+    "text": "دمی‌گوجه"
+   },
+   {
+    "text": "استانبولی"
+   },
+   {
+    "text": "عدس‌پلو"
+   },
+   {
+    "text": "لوبیاپلو"
+   },
+   {
+    "text": "کلم‌پلو"
+   },
+   {
+    "text": "مرصع‌پلو"
+   },
+   {
+    "text": "خورشت‌بامیه"
+   },
+   {
+    "text": "خورشت‌کرفس"
+   },
+   {
+    "text": "خورشت‌آلو"
+   },
+   {
+    "text": "خورشت‌ریواس"
+   },
+   {
+    "text": "قلیه‌ماهی"
+   },
+   {
+    "text": "دوپیازه"
+   },
+   {
+    "text": "شیرین‌پلو"
+   },
+   {
+    "text": "رشته‌پلو"
+   },
+   {
+    "text": "ته‌چین‌مرغ"
+   },
+   {
+    "text": "ریزوتو"
+   },
+   {
+    "text": "راهن"
+   },
+   {
+    "text": "پاد‌تای"
+   },
+   {
+    "text": "تاکو"
+   },
+   {
+    "text": "بوریتو"
+   },
+   {
+    "text": "کباب‌ترکی"
+   },
+   {
+    "text": "پاییا"
+   },
+   {
+    "text": "شله‌زرد"
+   },
+   {
+    "text": "مسقطی"
+   },
+   {
+    "text": "رنگینک"
+   },
+   {
+    "text": "کاچی"
+   },
+   {
+    "text": "زولبیا"
+   },
+   {
+    "text": "قطاب"
+   },
+   {
+    "text": "گلاب"
+   },
+   {
+    "text": "سکنجبین"
+   },
+   {
+    "text": "خاکشیر"
+   },
+   {
+    "text": "عرق‌نعنا"
+   },
+   {
+    "text": "شربت‌آبلیمو"
+   },
+   {
+    "text": "شربت‌سکنجبین"
+   },
+   {
+    "text": "چای‌ترش"
+   },
+   {
+    "text": "قهوه‌ترک"
+   },
+   {
+    "text": "ماچا"
+   },
+   {
+    "text": "کوفته‌تبریزی"
+   },
+   {
+    "text": "آبگوشت‌بزباش"
+   },
+   {
+    "text": "خورشت‌فسنجون"
+   },
+   {
+    "text": "کوکوسیب‌زمینی"
+   },
+   {
+    "text": "ماکارونی‌فر"
+   },
+   {
+    "text": "پیراشکی"
+   },
+   {
+    "text": "سمبوسه"
+   },
+   {
+    "text": "هات‌داگ"
+   },
+   {
+    "text": "چیزبرگر"
+   },
+   {
+    "text": "ناگت"
+   },
+   {
+    "text": "سیب‌زمینی‌سرخ‌کرده"
+   },
+   {
+    "text": "سالاد‌سزار"
+   },
+   {
+    "text": "سوپ‌جو"
+   },
+   {
+    "text": "خوراک‌زبان"
+   }
+  ]
+ },
+ {
+  "id": "places",
+  "name": "مکان و کشور",
+  "emoji": "🌍",
+  "words": [
+   {
+    "text": "برج ایفل",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "دیوار چین",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "برج میلاد",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "تخت جمشید",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "اهرام مصر",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "تاج محل",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "آبشار نیاگارا",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "کلوسئوم",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "برج پیزا",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "سیدنی",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "پاریس",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "لندن",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "دبی",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "استانبول",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "رم",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "توکیو",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "نیویورک",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "مسکو",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "آنتالیا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کیش",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "اصفهان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "شیراز",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "مشهد",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "تبریز",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "یزد",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کرمان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "رشت",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "اهواز",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "قم",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کاشان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "همدان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کرمانشاه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "ارومیه",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "اردبیل",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "ساری",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "بندرعباس",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "قشم",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "چابهار",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "آمریکا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کانادا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "آلمان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "فرانسه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "انگلیس",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "ایت��لیا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "اسپانیا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "ترکیه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "امارات",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "عربستان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "مصر",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "هند",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "چین",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "ژاپن",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کره جنوبی",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "استرالیا",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "برزیل",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "آرژانتین",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "مکزیک",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "روسیه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "سوئیس",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "هلند",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "یونان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "نروژ",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "سوئد",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "مالزی",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "تایلند",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "سنگاپور",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "پاکستان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "افغانستان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "عراق",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "سوریه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "لبنان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "اردن",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "قطر",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "کویت",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "بحرین",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "عمان",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "آفریقای جنوبی",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "مراکش",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "ماچوپیچو",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "گرند کنیون",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "پل طلایی",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "مجسمه آزادی",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "بیگ بن",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "سی و سه پل",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "میدان نقش جهان",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "پل خواجو",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "حافظیه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "پاسارگاد",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "ارگ بم",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "نارنجستان",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "باغ ارم",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "کاخ گلستان",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "برج آزادی",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "پل طبیعت",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "دریاچه ارومیه",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "جنگل ابر",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "کویر لوت",
+    "category": "places",
+    "difficulty": 2
+   },
+   {
+    "text": "دماوند",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "خلیج فارس",
+    "category": "places",
+    "difficulty": 1
+   },
+   {
+    "text": "مادرید"
+   },
+   {
+    "text": "پکن"
+   },
+   {
+    "text": "سئول"
+   },
+   {
+    "text": "لس‌آنجلس"
+   },
+   {
+    "text": "تورنتو"
+   },
+   {
+    "text": "ریو"
+   },
+   {
+    "text": "قاهره"
+   },
+   {
+    "text": "دهلی"
+   },
+   {
+    "text": "بمبئی"
+   },
+   {
+    "text": "آتن"
+   },
+   {
+    "text": "وین"
+   },
+   {
+    "text": "تخت‌جمشید"
+   },
+   {
+    "text": "پرسپولیس"
+   },
+   {
+    "text": "چغازنبیل"
+   },
+   {
+    "text": "بیستون"
+   },
+   {
+    "text": "ارگ‌بم"
+   },
+   {
+    "text": "سی‌وسه‌پل"
+   },
+   {
+    "text": "خواجو"
+   },
+   {
+    "text": "عالی‌قاپو"
+   },
+   {
+    "text": "گنبد‌قابوس"
+   },
+   {
+    "text": "اورست"
+   },
+   {
+    "text": "کلیمانجارو"
+   },
+   {
+    "text": "آمازون"
+   },
+   {
+    "text": "صحرای‌بزرگ"
+   },
+   {
+    "text": "نیل"
+   },
+   {
+    "text": "آلپ"
+   },
+   {
+    "text": "سبلان"
+   },
+   {
+    "text": "خزر"
+   },
+   {
+    "text": "خلیج‌فارس"
+   },
+   {
+    "text": "هرمز"
+   },
+   {
+    "text": "لاوان"
+   },
+   {
+    "text": "ابوموسی"
+   },
+   {
+    "text": "ماسوله"
+   },
+   {
+    "text": "ابیانه"
+   },
+   {
+    "text": "کندوان"
+   },
+   {
+    "text": "پالنگان"
+   },
+   {
+    "text": "اورامان"
+   },
+   {
+    "text": "جواهرده"
+   },
+   {
+    "text": "فیلبند"
+   },
+   {
+    "text": "باداب‌سورت"
+   },
+   {
+    "text": "دریاچه‌ارومیه"
+   },
+   {
+    "text": "جزیره‌آشوراده"
+   }
+  ]
+ },
+ {
+  "id": "people",
+  "name": "شخصیت‌های معروف",
+  "emoji": "👤",
+  "words": [
+   {
+    "text": "مسی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "رونالدو",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "محمدرضا گلزار",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "فردوسی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "حافظ",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "اینشتین",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "لئوناردو داوینچی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "مایکل جکسون",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "علی دایی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "شجریان",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "امین حیایی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "بهرام رادان",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "هدیه تهرانی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ابی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "گوگوش",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "استیو جابز",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "بیل گیتس",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "ایلان ماسک",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "نلسون ماندلا",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "مهران مدیری",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "رضا عطاران",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "پژمان جمشیدی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "نوید محمدزاده",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "شهاب حسینی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "پرویز پرستویی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "لیلا حاتمی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ترانه علیدوستی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "گلشیفته فراهانی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ساره بیات",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "نیکی کریمی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "اکبر عبدی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "جواد عزتی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "محسن تنابنده",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "احمد مهران‌فر",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "امیر جعفری",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "حامد بهداد",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "محسن چاووشی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "سیروان خسروی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "رضا صادقی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "محسن یگانه",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "بنیامین بهادری",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "شادمهر عقیلی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "داریوش",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "علیرضا بیرانوند",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "سردار آزمون",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مهدی طارمی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "علیرضا جهانبخش",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "کریم باقری",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مهدوی‌کیا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "علی کریمی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "فردین",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "بهروز وثوقی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "ناصر ملک‌مطیعی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "عزت‌الله انتظامی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "کوروش کبیر",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "داریوش بزرگ",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "نادر شاه",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "سعدی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مولانا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "خیام",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "ابن سینا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "خوارزمی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "زکریای رازی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "مریم میرزاخانی",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "محمدعلی کلی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مایکل جردن",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "راجر فدرر",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "نادال",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "اوساین بولت",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "مارادونا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "پله",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "زیدان",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "بکام",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "امباپه",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "نیمار",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "هالند",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "دی‌کاپریو",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "تام کروز",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "براد پیت",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "جانی دپ",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "آنجلینا جولی",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "کیانو ریوز",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "دواین جانسون",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ویل اسمیت",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مورگان فریمن",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "تیلور سوئیفت",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "بیانسه",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ریحانا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "ادل",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "جاستین بیبر",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "امینم",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "دریک",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "اد شیرن",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "لیدی گاگا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مدونا",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "بیلی آیلیش",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "آریانا گرانده",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "سلنا گومز",
+    "category": "people",
+    "difficulty": 1
+   },
+   {
+    "text": "مارک زاکربرگ",
+    "category": "people",
+    "difficulty": 2
+   },
+   {
+    "text": "عطار"
+   },
+   {
+    "text": "نظامی"
+   },
+   {
+    "text": "رودکی"
+   },
+   {
+    "text": "باباطاهر"
+   },
+   {
+    "text": "شهریار"
+   },
+   {
+    "text": "ابن‌سینا"
+   },
+   {
+    "text": "رازی"
+   },
+   {
+    "text": "بیرونی"
+   },
+   {
+    "text": "فارابی"
+   },
+   {
+    "text": "دکتر‌حسابی"
+   },
+   {
+    "text": "پروفسور‌سمیعی"
+   },
+   {
+    "text": "مریم‌میرزاخانی"
+   },
+   {
+    "text": "شریعتی"
+   },
+   {
+    "text": "مطهری"
+   },
+   {
+    "text": "انیشتین"
+   },
+   {
+    "text": "نیوتن"
+   },
+   {
+    "text": "ادیسون"
+   },
+   {
+    "text": "تسلا"
+   },
+   {
+    "text": "داروین"
+   },
+   {
+    "text": "گالیله"
+   },
+   {
+    "text": "هاوکینگ"
+   },
+   {
+    "text": "کوری"
+   },
+   {
+    "text": "پاستور"
+   },
+   {
+    "text": "فروید"
+   },
+   {
+    "text": "بوفون"
+   },
+   {
+    "text": "چاپلین"
+   },
+   {
+    "text": "هیچکاک"
+   },
+   {
+    "text": "اسپیلبرگ"
+   },
+   {
+    "text": "نولان"
+   },
+   {
+    "text": "تارانتینو"
+   },
+   {
+    "text": "دیکاپریو"
+   },
+   {
+    "text": "براد‌پیت"
+   },
+   {
+    "text": "آنجلینا"
+   },
+   {
+    "text": "مرلین‌مونرو"
+   },
+   {
+    "text": "آل‌پاچینو"
+   },
+   {
+    "text": "ستارخان"
+   },
+   {
+    "text": "باقرخان"
+   },
+   {
+    "text": "امیرکبیر"
+   },
+   {
+    "text": "میرزاکوچک‌خان"
+   },
+   {
+    "text": "یعقوب‌لیث"
+   },
+   {
+    "text": "نادرشاه"
+   },
+   {
+    "text": "کریمخان"
+   },
+   {
+    "text": "آریوبرزن"
+   },
+   {
+    "text": "بابک‌خرمدین"
+   },
+   {
+    "text": "سورنا"
+   },
+   {
+    "text": "رستم‌فرخزاد"
+   },
+   {
+    "text": "آرش‌کمانگیر"
+   },
+   {
+    "text": "کاوه‌آهنگر"
+   },
+   {
+    "text": "بزرگمهر"
+   },
+   {
+    "text": "انوشیروان"
+   }
+  ]
+ },
+ {
+  "id": "music",
+  "name": "موسیقی",
+  "emoji": "🎵",
+  "words": [
+   {
+    "text": "گیتار",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "پیانو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ویولن",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "درامز",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "تار",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سنتور",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "رپ",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "پاپ",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "راک",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کنسرت",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "فلوت",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "هارمونیکا",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "ارکستر",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "آهنگساز",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "خواننده",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کلیپ",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "آلبوم",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "دف",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کمانچه",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "نی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "سه‌تار",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "عود",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "تنبک",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "دایره",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "آکاردئون",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "بانجو",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "ساکسیفون",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "ترومپت",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "شیپور",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کلارینت",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "هارپ",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "ویولنسل",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "گیتار بیس",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "گیتار الکتریک",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کیبورد",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ارگ",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "دی‌جی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "بیت",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ملودی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ریتم",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "نت",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "آواز",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "تصنیف",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "ترانه",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "سرود",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "لالایی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "جاز",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "بلوز",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "دیسکو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "تکنو",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "هیپ‌هاپ",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "متال",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "پانک",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "فولک",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "کانتری",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سالسا",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "تانگو",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "فلامنکو",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "کلاسیک",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "اپرا",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سمفونی",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "کر",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "گروه موسیقی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "موزیسین",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "نوازنده",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "استودیو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "میکسر",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "پلی‌لیست",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "پادکست",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "هدفون",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "بلندگو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "میکروفون",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کاست",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "سی‌دی",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "وینیل",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "گرامافون",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "رادیو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "اسپاتیفای",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "کاور",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ریمیکس",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "لایو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "تور کنسرت",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "فستیوال",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "جایزه گرمی",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "چارت موسیقی",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سینگل",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "ای‌پی",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "موزیک ویدئو",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "باند",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "دوئت",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سولو",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "آکاپلا",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "کوک کردن",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "تمرین",
+    "category": "music",
+    "difficulty": 1
+   },
+   {
+    "text": "نت‌خوانی",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "سلفژ",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "رهبر ارکستر",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "باتون",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "پارتیتور",
+    "category": "music",
+    "difficulty": 2
+   },
+   {
+    "text": "قانون"
+   },
+   {
+    "text": "بربط"
+   },
+   {
+    "text": "اکاردئون"
+   },
+   {
+    "text": "شجریان"
+   },
+   {
+    "text": "بنان"
+   },
+   {
+    "text": "قوامی"
+   },
+   {
+    "text": "ایرج"
+   },
+   {
+    "text": "گلپا"
+   },
+   {
+    "text": "هایده"
+   },
+   {
+    "text": "مهستی"
+   },
+   {
+    "text": "دلکش"
+   },
+   {
+    "text": "پوران"
+   },
+   {
+    "text": "مرضیه"
+   },
+   {
+    "text": "ابی"
+   },
+   {
+    "text": "داریوش"
+   },
+   {
+    "text": "گوگوش"
+   },
+   {
+    "text": "ستار"
+   },
+   {
+    "text": "معین"
+   },
+   {
+    "text": "شادمهر"
+   },
+   {
+    "text": "سیاوش‌قمیشی"
+   },
+   {
+    "text": "فرامرز‌اصلانی"
+   },
+   {
+    "text": "فریدون‌فروغی"
+   },
+   {
+    "text": "حبیب"
+   },
+   {
+    "text": "همایون‌شجریان"
+   },
+   {
+    "text": "علیرضا‌قربانی"
+   },
+   {
+    "text": "چاوشی"
+   },
+   {
+    "text": "یگانه"
+   },
+   {
+    "text": "سیروان"
+   },
+   {
+    "text": "زانیار"
+   },
+   {
+    "text": "ماکان‌بند"
+   },
+   {
+    "text": "رستاک"
+   },
+   {
+    "text": "کاوه‌آفاق"
+   },
+   {
+    "text": "مرتضی‌پاشایی"
+   },
+   {
+    "text": "تحریر"
+   },
+   {
+    "text": "دستگاه"
+   },
+   {
+    "text": "ماهور"
+   },
+   {
+    "text": "شور"
+   },
+   {
+    "text": "همایون"
+   },
+   {
+    "text": "سه‌گاه"
+   },
+   {
+    "text": "چهارگاه"
+   },
+   {
+    "text": "اصفهان"
+   },
+   {
+    "text": "نوا"
+   },
+   {
+    "text": "ردیف"
+   },
+   {
+    "text": "گوشه"
+   },
+   {
+    "text": "تکنوازی"
+   }
+  ]
+ },
+ {
+  "id": "books",
+  "name": "کتاب",
+  "emoji": "📚",
+  "words": [
+   {
+    "text": "شاهنامه",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "هری پاتر",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "کیمیاگر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "شازده کوچولو",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "بینوایان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "گلستان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "مثنوی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "ارباب حلقه‌ها",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "جنگ و صلح",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "صد سال تنهایی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بوف کور",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سووشون",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "دن کیشوت",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "آنا کارنینا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "رومئو و ژولیت",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "قرآن",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "دیوان حافظ",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "رباعیات خیام",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سمفونی مردگان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "چشم‌هایش",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "کلیدر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "دا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "جای خالی سلوچ",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "قلعه حیوانات",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "جنایت و مکافات",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "برادران کارامازوف",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "مسخ",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بیگانه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "غرور و تعصب",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "جین ایر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بلندی‌های بادگیر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "الیور توییست",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "داستان دو شهر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "موبی دیک",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "تام سایر",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "دور دنیا در 80 روز",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "سفر به مرکز زمین",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "گتسبی بزرگ",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "پیرمرد و دریا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "شرلوک هولمز",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "آرسن لوپن",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "رمز داوینچی",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "فرشتگان و شیاطین",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سرگذشت نارنیا",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "بازی تاج و تخت",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "دون",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بنیاد",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "مریخی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "اندر گیم",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "ایت",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "درخشش",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "دراکولا",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "فرانکنشتاین",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "عطر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "ملت عشق",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "چهل قانون عشق",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "نام گل سرخ",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "کوری",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "هزار خورشید تابان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بادبادک‌باز",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "عشق سال‌های وبا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "خانه ارواح",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "انجیل",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "تورات",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "اوستا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بوستان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "لیلی و مجنون",
+    "category": "books",
+    "difficulty": 1
+   },
+   {
+    "text": "خسرو و شیرین",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "هفت پیکر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "ویس و رامین",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "کلیله و دمنه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "مرزبان‌نامه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سیاست‌نامه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "قابوس‌نامه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "تاریخ بیهقی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سفرنامه ناصرخسرو",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "گرگ بیابان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سیذارتا",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "دمیان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "نروژی جنگل",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "کافکا در کرانه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سالمرگی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "زیر گنبد کبود",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "روزهای آبی",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سنگ صبور",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "اول شخص مفرد",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "نیمه تاریک ماه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "همنوایی شبانه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "عادت می‌کنیم",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "روی ماه خدا را ببوس",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "بامداد خمار",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "چراغ‌ها را من خاموش می‌کنم",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "طوبی و معنای شب",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "زنان بدون مردان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "ساربان سرگردان",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "تنگسیر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "مدیر مدرسه",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "سنگ و ساغر",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "آزاده خانم",
+    "category": "books",
+    "difficulty": 2
+   },
+   {
+    "text": "دیوان‌حافظ"
+   },
+   {
+    "text": "رباعیات"
+   },
+   {
+    "text": "هفت‌پیکر"
+   },
+   {
+    "text": "لیلی‌و‌مجنون"
+   },
+   {
+    "text": "منطق‌الطیر"
+   },
+   {
+    "text": "کلیله‌و‌دمنه"
+   },
+   {
+    "text": "بوف‌کور"
+   },
+   {
+    "text": "سمفونی‌مردگان"
+   },
+   {
+    "text": "بامداد‌خمار"
+   },
+   {
+    "text": "دایی‌جان‌ناپلئون"
+   },
+   {
+    "text": "شازده‌احتجاب"
+   },
+   {
+    "text": "همسایه‌ها"
+   },
+   {
+    "text": "چراغ‌ها‌را‌من‌خاموش‌می‌کنم"
+   },
+   {
+    "text": "جنایت‌و‌مکافات"
+   },
+   {
+    "text": "برادران‌کارامازوف"
+   },
+   {
+    "text": "جنگ‌و‌صلح"
+   },
+   {
+    "text": "آناکارنینا"
+   },
+   {
+    "text": "مادام‌بواری"
+   },
+   {
+    "text": "کنت‌مونت‌کریستو"
+   },
+   {
+    "text": "سه‌تفنگدار"
+   },
+   {
+    "text": "دن‌کیشوت"
+   },
+   {
+    "text": "صدسال‌تنهایی"
+   },
+   {
+    "text": "شازده‌کوچولو"
+   },
+   {
+    "text": "قلعه‌حیوانات"
+   },
+   {
+    "text": "۱۹۸۴"
+   },
+   {
+    "text": "دنیای‌قشنگ‌نو"
+   },
+   {
+    "text": "مزرعه‌حیوانات"
+   },
+   {
+    "text": "پیرمرد‌و‌دریا"
+   },
+   {
+    "text": "خوشه‌های‌خشم"
+   },
+   {
+    "text": "موش‌ها‌و‌آدم‌ها"
+   },
+   {
+    "text": "ناتور‌دشت"
+   },
+   {
+    "text": "هزار‌و‌یک‌شب"
+   },
+   {
+    "text": "امیرارسلان"
+   },
+   {
+    "text": "حسین‌کرد"
+   },
+   {
+    "text": "سمک‌عیار"
+   },
+   {
+    "text": "داستان‌راستان"
+   },
+   {
+    "text": "قصه‌های‌مجید"
+   },
+   {
+    "text": "ماهی‌سیاه‌کوچولو"
+   },
+   {
+    "text": "شلوارهای‌وصله‌دار"
+   },
+   {
+    "text": "تن‌تن"
+   },
+   {
+    "text": "هری‌پاتر"
+   },
+   {
+    "text": "غرور‌و‌تعصب"
+   },
+   {
+    "text": "بلندی‌های‌بادگیر"
+   },
+   {
+    "text": "جین‌ایر"
+   },
+   {
+    "text": "شرلوک‌هلمز"
+   },
+   {
+    "text": "آگاتا‌کریستی"
+   },
+   {
+    "text": "ده‌بچه‌زنگی"
+   },
+   {
+    "text": "قتل‌در‌قطار‌سریع‌السیر"
+   },
+   {
+    "text": "پرتقال‌کوکی"
+   },
+   {
+    "text": "سیدارتها"
+   },
+   {
+    "text": "گرگ‌بیابان"
+   },
+   {
+    "text": "ملت‌عشق"
+   }
+  ]
+ },
+ {
+  "id": "animals",
+  "name": "حیوانات",
+  "emoji": "🐾",
+  "words": [
+   {
+    "text": "شیر",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "فیل",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "زرافه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "دلفین",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "پنگوئن",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کانگورو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "پلنگ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "عقاب",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کوسه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "اختاپوس",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "گرگ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "روباه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خرس",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "میمون",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "طوطی",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "مار",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "تمساح",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "شترمرغ",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "کرگدن",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "اسب آبی",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "ببر",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "یوزپلنگ",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "گوریل",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "شامپانزه",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "گوزن",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "آهو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گاومیش",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گراز",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "خوک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گاو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گوسفند",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "بز",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "اسب",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "الاغ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "شتر",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "لاما",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "سگ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گربه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خرگوش",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "همستر",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "موش",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "سنجاب",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خارپشت",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "جوجه‌تیغی",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "پاندا",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کوآلا",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خفاش",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "نهنگ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "فوک",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "شیر دریایی",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "لاک‌پشت",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "آفتاب‌پرست",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "مارمولک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "سوسمار",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "قورباغه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "ماهی",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "اسب دریایی",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "ستاره دریایی",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "عروس دریایی",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خرچنگ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "میگو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "صدف",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "حلزون",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "پروانه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "ز��بور",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "مورچه",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "سنجاقک",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "ملخ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "سوسک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "عنکبوت",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "عقرب",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کفشدوزک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کرم ابریشم",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "کبوتر",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کلاغ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "گنجشک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "قو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "فلامینگو",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "طاووس",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "جغد",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "باز",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "شاهین",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "قرقاول",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "مرغ",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "خروس",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "اردک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "غاز",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "بوقلمون",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کبک",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "بلبل",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "قناری",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "مرغ عشق",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "کاکادو",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "پرنده مینا",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "لک‌لک",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "پرستو",
+    "category": "animals",
+    "difficulty": 1
+   },
+   {
+    "text": "دارکوب",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "مرغ ماهی‌خوار",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "آلباتروس",
+    "category": "animals",
+    "difficulty": 2
+   },
+   {
+    "text": "یوزپلنگ‌ایرانی"
+   },
+   {
+    "text": "گور‌ایرانی"
+   },
+   {
+    "text": "خرس‌قهوه‌ای"
+   },
+   {
+    "text": "پلنگ‌ایرانی"
+   },
+   {
+    "text": "گوزن‌زرد"
+   },
+   {
+    "text": "قوچ"
+   },
+   {
+    "text": "میش"
+   },
+   {
+    "text": "کل"
+   },
+   {
+    "text": "بز‌کوهی"
+   },
+   {
+    "text": "جبیر"
+   },
+   {
+    "text": "هدهد"
+   },
+   {
+    "text": "سار"
+   },
+   {
+    "text": "چکاوک"
+   },
+   {
+    "text": "کاکایی"
+   },
+   {
+    "text": "حواصیل"
+   },
+   {
+    "text": "درنا"
+   },
+   {
+    "text": "هما"
+   },
+   {
+    "text": "نهنگ‌آبی"
+   },
+   {
+    "text": "اورکا"
+   },
+   {
+    "text": "فک"
+   },
+   {
+    "text": "شیر‌دریایی"
+   },
+   {
+    "text": "گراز‌ماهی"
+   },
+   {
+    "text": "هشت‌پا"
+   },
+   {
+    "text": "مرکب‌ماهی"
+   },
+   {
+    "text": "عروس‌دریایی"
+   },
+   {
+    "text": "توتیا"
+   },
+   {
+    "text": "شقایق‌دریایی"
+   },
+   {
+    "text": "ایگوانا"
+   },
+   {
+    "text": "وارانوس"
+   },
+   {
+    "text": "افعی"
+   },
+   {
+    "text": "کبرا"
+   },
+   {
+    "text": "پیتون"
+   },
+   {
+    "text": "بوآ"
+   },
+   {
+    "text": "سمندر"
+   },
+   {
+    "text": "قورباغه‌درختی"
+   },
+   {
+    "text": "تریتون"
+   },
+   {
+    "text": "گورخر"
+   },
+   {
+    "text": "اسب‌آبی"
+   },
+   {
+    "text": "بوفالو"
+   },
+   {
+    "text": "آنتلوپ"
+   },
+   {
+    "text": "غزال"
+   },
+   {
+    "text": "آلپاکا"
+   },
+   {
+    "text": "جیرجیرک"
+   },
+   {
+    "text": "سوسک‌سرگین"
+   },
+   {
+    "text": "شب‌تاب"
+   },
+   {
+    "text": "پروانه‌مونارک"
+   },
+   {
+    "text": "زنبور‌گاوی"
+   },
+   {
+    "text": "موریانه"
+   },
+   {
+    "text": "هزارپا"
+   },
+   {
+    "text": "رتیل"
+   },
+   {
+    "text": "کژدم‌آبی"
+   },
+   {
+    "text": "خرخاکی"
+   },
+   {
+    "text": "حلزون‌دریایی"
+   },
+   {
+    "text": "صدف‌مروارید"
+   }
+  ]
+ },
+ {
+  "id": "jobs",
+  "name": "شغل و حرفه",
+  "emoji": "💼",
+  "words": [
+   {
+    "text": "دکتر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مهندس",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "معلم",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "آشپز",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "خلبان",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "آتش‌نشان",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "بازیگر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "خواننده",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "فضانورد",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "جراح",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "وکیل",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "قاضی",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "پلیس",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "نقاش",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "عکاس",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "خبرنگار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "برنامه‌نویس",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "معمار",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "دندانپزشک",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "داروساز",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "پرستار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "ماما",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "روانپزشک",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "روانشناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "دامپزشک",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "کشاورز",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "باغبان",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "ماهیگیر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "نجار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "آهنگر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "جوشکار",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "لوله‌کش",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "برقکار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مکانیک",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "راننده",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "کاپیتان",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "کارگردان",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "تهیه‌کننده",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "فیلم‌بردار",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "گریمور",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "مجری",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "گوینده",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "نویسنده",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "شاعر",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "مترجم",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "ویراستار",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "کتابدار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "باستان‌شناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "حسابدار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "بانکدار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مشاور",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مدیر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "منشی",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "فروشنده",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "صندوقدار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "پیک",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "پستچی",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "نگهبان",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "آرایشگر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "خیاط",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "طراح مد",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "مدل",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "ورزشکار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مربی",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "داور",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "سرآشپز",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "قناد",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "نانوا",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "قصاب",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "گارسون",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "باریستا",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "راهنمای تور",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "مهماندار",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "کارآگاه",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "نظامی",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "امدادگر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "زمین‌شناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "ستاره‌شناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "زیست‌شناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "شیمیدان",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "فیزیکدان",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "ریاضیدان",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "اقتصاددان",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "جامعه‌شناس",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "فیلسوف",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "طراح گرافیک",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "طراح وب",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "تحلیلگر داده",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "هکر",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "یوتیوبر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "اینفلوئنسر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "بلاگر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "استریمر",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "گیمر حرفه‌ای",
+    "category": "jobs",
+    "difficulty": 1
+   },
+   {
+    "text": "کارآفرین",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "سرمایه‌گذار",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "ناخدا",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "غواص",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "معدنچی",
+    "category": "jobs",
+    "difficulty": 2
+   },
+   {
+    "text": "تراشکار"
+   },
+   {
+    "text": "ریخته‌گر"
+   },
+   {
+    "text": "قالب‌ساز"
+   },
+   {
+    "text": "برق‌کار"
+   },
+   {
+    "text": "کاشی‌کار"
+   },
+   {
+    "text": "گچ‌کار"
+   },
+   {
+    "text": "بنا"
+   },
+   {
+    "text": "ملوان"
+   },
+   {
+    "text": "راهنمای‌تور"
+   },
+   {
+    "text": "هتلدار"
+   },
+   {
+    "text": "طراح‌سایت"
+   },
+   {
+    "text": "گرافیست"
+   },
+   {
+    "text": "انیماتور"
+   },
+   {
+    "text": "تدوینگر"
+   },
+   {
+    "text": "صدابردار"
+   },
+   {
+    "text": "فیلمبردار"
+   },
+   {
+    "text": "نورپرداز"
+   },
+   {
+    "text": "بازیگردان"
+   },
+   {
+    "text": "سردفتر"
+   },
+   {
+    "text": "کارشناس‌بیمه"
+   },
+   {
+    "text": "حسابرس"
+   },
+   {
+    "text": "ممیز‌مالیاتی"
+   },
+   {
+    "text": "صراف"
+   },
+   {
+    "text": "بورس‌باز"
+   },
+   {
+    "text": "دلال"
+   },
+   {
+    "text": "گیاه‌پزشک"
+   },
+   {
+    "text": "زنبوردار"
+   },
+   {
+    "text": "نوغان‌دار"
+   },
+   {
+    "text": "صیاد"
+   },
+   {
+    "text": "جنگل‌بان"
+   },
+   {
+    "text": "محیط‌بان"
+   },
+   {
+    "text": "هواشناس"
+   },
+   {
+    "text": "بایگان"
+   },
+   {
+    "text": "دبیر"
+   },
+   {
+    "text": "مدیرعامل"
+   },
+   {
+    "text": "تحلیل‌گر"
+   },
+   {
+    "text": "بازاریاب"
+   },
+   {
+    "text": "ویزیتور"
+   },
+   {
+    "text": "انباردار"
+   },
+   {
+    "text": "ترخیص‌کار"
+   },
+   {
+    "text": "گمرک‌چی"
+   },
+   {
+    "text": "بارانداز"
+   }
+  ]
+ },
+ {
+  "id": "general",
+  "name": "عمومی",
+  "emoji": "🎭",
+  "words": [
+   {
+    "text": "عشق",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آزادی",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "سفر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "جشن تولد",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "عید نوروز",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "یلدا",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کریسمس",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "هالووین",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "ماه عسل",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "قایق",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "هواپیما",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کشتی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "قطار",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "اینترنت",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "تلویزیون",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "موبایل",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کتابخانه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "دانشگاه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "بیمارستان",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "فرودگاه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ایستگاه قطار",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "مترو",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "اتوبوس",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "تاکسی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "دوچرخه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ماشین",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "هلیکوپتر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "بالون",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کمپ",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پیک‌نیک",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ساحل",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "جنگل",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کوه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "رودخانه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "دریاچه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آبشار",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "صحرا",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "جزیره",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "غار",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آتشفشان",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "زلزله",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "طوفان",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "رعد و برق",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "رنگین‌کمان",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "برف",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "باران",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "خورشید",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ماه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ستاره",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "فضا",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "راکت",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ماهواره",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "تلسکوپ",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "فروشگاه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "رستوران",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کافه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "سینما",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "تئاتر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "موزه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پارک",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "باغ وحش",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "شهربازی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "استخر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ورزشگاه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "باشگاه",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "مسجد",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کلیسا",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "عروسی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "مهمانی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "جشن",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کادو",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "بادکنک",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کیک تولد",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "شمع",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آتش‌بازی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "چراغ",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پنجره",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "درب",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آسانسور",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پله برقی",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "کامپیوتر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "لپ‌تاپ",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "تبلت",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ساعت هوشمند",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "دوربین",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "ایرپاد",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "شارژر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "وای‌فای",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "بلوتوث",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پاوربانک",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پرینتر",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "اسکنر",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "فلش مموری",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "هارد دیسک",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "ربات",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "پهپاد",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "هوش مصنوعی",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "واقعیت مجازی",
+    "category": "general",
+    "difficulty": 2
+   },
+   {
+    "text": "اپلیکیشن",
+    "category": "general",
+    "difficulty": 1
+   },
+   {
+    "text": "آسمان‌خراش"
+   },
+   {
+    "text": "فانوس‌دریایی"
+   },
+   {
+    "text": "آب‌انبار"
+   },
+   {
+    "text": "بادگیر"
+   },
+   {
+    "text": "کاروانسرا"
+   },
+   {
+    "text": "یخدان"
+   },
+   {
+    "text": "گرمابه"
+   },
+   {
+    "text": "قنات"
+   },
+   {
+    "text": "سقاخانه"
+   },
+   {
+    "text": "حسینیه"
+   },
+   {
+    "text": "قطب‌نما"
+   },
+   {
+    "text": "دوربین‌شکاری"
+   },
+   {
+    "text": "ذره‌بین"
+   },
+   {
+    "text": "میکروسکوپ"
+   },
+   {
+    "text": "آهنربا"
+   },
+   {
+    "text": "فرفره"
+   },
+   {
+    "text": "پاندول"
+   },
+   {
+    "text": "ساعت‌شنی"
+   },
+   {
+    "text": "جعبه‌موسیقی"
+   },
+   {
+    "text": "سایه"
+   },
+   {
+    "text": "انعکاس"
+   },
+   {
+    "text": "پژواک"
+   },
+   {
+    "text": "شفق"
+   },
+   {
+    "text": "سراب"
+   },
+   {
+    "text": "گرداب"
+   },
+   {
+    "text": "موج"
+   },
+   {
+    "text": "جزر‌و‌مد"
+   },
+   {
+    "text": "شهاب"
+   },
+   {
+    "text": "گره"
+   },
+   {
+    "text": "قفل"
+   },
+   {
+    "text": "کلید"
+   },
+   {
+    "text": "زنجیر"
+   },
+   {
+    "text": "پل"
+   },
+   {
+    "text": "تونل"
+   },
+   {
+    "text": "نردبان"
+   },
+   {
+    "text": "طناب"
+   },
+   {
+    "text": "چرخ"
+   },
+   {
+    "text": "اهرم"
+   },
+   {
+    "text": "خاطره"
+   },
+   {
+    "text": "آرزو"
+   },
+   {
+    "text": "قول"
+   },
+   {
+    "text": "راز"
+   },
+   {
+    "text": "لبخند"
+   },
+   {
+    "text": "اشک"
+   },
+   {
+    "text": "سکوت"
+   },
+   {
+    "text": "فریاد"
+   },
+   {
+    "text": "نجوا"
+   },
+   {
+    "text": "خمیازه"
+   },
+   {
+    "text": "قاصدک"
+   },
+   {
+    "text": "شبنم"
+   },
+   {
+    "text": "ژاله"
+   },
+   {
+    "text": "بلور"
+   },
+   {
+    "text": "مرمر"
+   },
+   {
+    "text": "عقیق"
+   },
+   {
+    "text": "فیروزه"
+   },
+   {
+    "text": "یشم"
+   },
+   {
+    "text": "کهربا"
+   },
+   {
+    "text": "صدف"
+   },
+   {
+    "text": "مرجان"
+   },
+   {
+    "text": "لعل"
+   },
+   {
+    "text": "زمرد"
+   },
+   {
+    "text": "الماس‌سیاه"
+   },
+   {
+    "text": "گوی‌بلورین"
+   },
+   {
+    "text": "گنجینه"
+   },
+   {
+    "text": "نقشه‌گنج"
+   },
+   {
+    "text": "جادوگر"
+   },
+   {
+    "text": "قالیچه‌پرنده"
+   },
+   {
+    "text": "چراغ‌جادو"
+   },
+   {
+    "text": "غول‌چراغ"
+   }
+  ]
+ }
 ]

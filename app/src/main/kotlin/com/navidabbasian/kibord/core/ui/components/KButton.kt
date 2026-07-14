@@ -87,11 +87,11 @@ fun KButton(
             .fillMaxWidth()
             .height(60.dp)
     ) {
-        // لبه‌ی سه‌بعدی پایین
+        // لبه‌ی سه‌بعدی: تمام‌قد پشتِ بدنه تا در بدنه‌ی شیشه‌ای درزِ بالا نیفتد؛
+        // لبه‌ی پایین از padding(bottom)ِ بدنه پدیدار می‌شود و موقع فشار هم بالای دکمه همین رنگ دیده می‌شود
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .padding(top = edgeHeight)
                 .background(edgeColor.copy(alpha = if (enabled) edgeColor.alpha else edgeColor.alpha * 0.4f), shape)
         )
         // بدنه — با فشار به سمت لبه فرو می‌رود

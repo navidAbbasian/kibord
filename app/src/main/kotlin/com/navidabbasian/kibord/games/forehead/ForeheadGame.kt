@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
@@ -67,9 +68,12 @@ import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
+import com.navidabbasian.kibord.core.ui.components.TeamMedallions
 import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
@@ -104,6 +108,8 @@ private data class FhCategory(
 )
 
 sealed class FhPhase {
+    /** انتخاب دو یا سه تیم با حباب */
+    data object TeamCount : FhPhase()
     data object TeamNames : FhPhase()
     data object Category : FhPhase()
     data object Ready : FhPhase()
@@ -113,13 +119,16 @@ sealed class FhPhase {
 }
 
 data class FhUiState(
-    val phase: FhPhase = FhPhase.TeamNames,
+    val phase: FhPhase = FhPhase.TeamCount,
     /** دو یا سه تیم */
     val teamCount: Int = 2,
     val teamNames: List<String> = List(2) { "" },
     /** نوبت کدام تیم است */
     val currentTeam: Int = 0,
     val totalScores: List<Int> = List(2) { 0 },
+    /** راند جاری از ۱ — هر راند یک نوبت برای هر تیم */
+    val roundIndex: Int = 1,
+    val totalRounds: Int = 3,
     val categories: List<Pair<String, String>> = emptyList(), // (نام، ایموجی)
     val selectedCategory: String = "",
     val turnSeconds: Int = 60,
@@ -189,6 +198,17 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
+        val count = GamePrefs.getInt(application, "forehead_teams", 2).coerceIn(2, 3)
+        val names = GamePrefs.getNames(application, "forehead_names")
+        _uiState.update {
+            it.copy(
+                teamCount = count,
+                teamNames = List(count) { i -> names.getOrElse(i) { "" } },
+                totalScores = List(count) { 0 },
+                turnSeconds = GamePrefs.getInt(application, "forehead_seconds", 60),
+                totalRounds = GamePrefs.getInt(application, "forehead_rounds", 3),
+            )
+        }
         bank = try {
             json.decodeFromString<List<FhCategory>>(ContentBank.open(application, "forehead.json"))
         } catch (_: Exception) {
@@ -201,7 +221,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
 
     // ---- راه‌اندازی بازیکن‌ها ----
 
-    /** دو یا سه تیم — اسم‌های واردشده حفظ می‌شوند */
+    /** انتخاب دو یا سه تیم — اسم‌های قبلی حفظ می‌شوند و می‌رویم سراغ اسم‌ها */
     fun setTeamCount(count: Int) {
         val c = count.coerceIn(2, 3)
         _uiState.update { s ->
@@ -209,6 +229,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
                 teamCount = c,
                 teamNames = List(c) { i -> s.teamNames.getOrElse(i) { "" } },
                 totalScores = List(c) { 0 },
+                phase = FhPhase.TeamNames,
             )
         }
     }
@@ -219,13 +240,23 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun confirmTeams() = _uiState.update { it.copy(phase = FhPhase.Category, currentTeam = 0) }
+    fun confirmTeams() {
+        val s = _uiState.value
+        val app = getApplication<Application>()
+        GamePrefs.setInt(app, "forehead_teams", s.teamCount)
+        GamePrefs.setNames(app, "forehead_names", s.teamNames)
+        GamePrefs.setInt(app, "forehead_rounds", s.totalRounds)
+        _uiState.update { it.copy(phase = FhPhase.Category, currentTeam = 0, roundIndex = 1) }
+    }
 
     fun selectCategory(name: String) {
         _uiState.update { it.copy(selectedCategory = name, phase = FhPhase.Ready) }
     }
 
     fun setTurnSeconds(seconds: Int) = _uiState.update { it.copy(turnSeconds = seconds) }
+
+    fun setTotalRounds(rounds: Int) =
+        _uiState.update { it.copy(totalRounds = rounds.coerceIn(1, 10)) }
 
     // ---- نوبت ----
 
@@ -239,6 +270,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
             playedStore.clear(key)
             fresh = cat.words.map { it.text }
         }
+        GamePrefs.setInt(getApplication(), "forehead_seconds", _uiState.value.turnSeconds)
         deck = ArrayDeque(fresh.shuffled())
         neutral = true
         _uiState.update {
@@ -319,31 +351,24 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(turnBonus = it.turnBonus + delta) }
     }
 
-    /** ثبت امتیاز نوبت برای بازیکن فعلی + رفتن سراغ نفر بعد */
+    /** ثبت امتیاز نوبت؛ تیم بعد، راند بعد یا اعلام خودکار برنده */
     fun confirmTurn(changeCategory: Boolean) {
         val s = _uiState.value
         if (s.phase != FhPhase.Result) return
+        val lastTeamOfRound = s.currentTeam == s.teamCount - 1
+        val gameOver = lastTeamOfRound && s.roundIndex >= s.totalRounds
         _uiState.update {
             it.copy(
                 totalScores = it.totalScores.mapIndexed { i, v ->
                     if (i == it.currentTeam) v + it.turnScore else v
                 },
-                currentTeam = (it.currentTeam + 1) % it.teamCount,
-                phase = if (changeCategory) FhPhase.Category else FhPhase.Ready,
-            )
-        }
-    }
-
-    /** ثبت امتیاز آخرین نوبت و اعلام برنده */
-    fun finishGame() {
-        val s = _uiState.value
-        if (s.phase != FhPhase.Result) return
-        _uiState.update {
-            it.copy(
-                totalScores = it.totalScores.mapIndexed { i, v ->
-                    if (i == it.currentTeam) v + it.turnScore else v
+                currentTeam = if (gameOver) it.currentTeam else (it.currentTeam + 1) % it.teamCount,
+                roundIndex = if (!gameOver && lastTeamOfRound) it.roundIndex + 1 else it.roundIndex,
+                phase = when {
+                    gameOver -> FhPhase.Winner
+                    changeCategory -> FhPhase.Category
+                    else -> FhPhase.Ready
                 },
-                phase = FhPhase.Winner,
             )
         }
     }
@@ -359,6 +384,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 totalScores = List(it.teamCount) { 0 },
                 currentTeam = 0,
+                roundIndex = 1,
                 phase = FhPhase.Category,
             )
         }
@@ -367,6 +393,7 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
     fun navigateBack() {
         _uiState.update { s ->
             when (s.phase) {
+                FhPhase.TeamNames -> s.copy(phase = FhPhase.TeamCount)
                 FhPhase.Ready -> s.copy(phase = FhPhase.Category)
                 else -> s
             }
@@ -443,13 +470,21 @@ fun ForeheadGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == FhPhase.TeamCount || state.phase == FhPhase.TeamNames || state.phase == FhPhase.Category || state.phase == FhPhase.Ready) {
+            GameHelpButton(gameId = "forehead", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (state.phase) {
+                FhPhase.TeamCount -> {
+                    BackHandler { onExitToHub() }
+                    FhTeamCountScreen(onSelected = viewModel::setTeamCount)
+                }
+
                 FhPhase.TeamNames -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { viewModel.navigateBack() }
                     FhTeamNamesScreen(
                         state = state,
-                        onTeamCount = viewModel::setTeamCount,
+                        onRounds = viewModel::setTotalRounds,
                         onNameChanged = viewModel::updateTeamName,
                         onConfirm = viewModel::confirmTeams,
                     )
@@ -485,7 +520,6 @@ fun ForeheadGame(
                         onAdjust = viewModel::adjustTurnScore,
                         onNextPlayer = { viewModel.confirmTurn(changeCategory = false) },
                         onCategories = { viewModel.confirmTurn(changeCategory = true) },
-                        onFinish = viewModel::finishGame,
                     )
                 }
 
@@ -503,10 +537,55 @@ fun ForeheadGame(
     }
 }
 
+/** انتخاب دو یا سه تیم — حباب‌های آشنای اپ */
+@Composable
+private fun FhTeamCountScreen(onSelected: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(26.dp))
+        BobbingEmoji(emoji = "🤳", fontSize = 54.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "حدس روی پیشونی", rotation = -2f)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "تیمی بازی کنید! هر نوبت یکی گوشی رو می‌ذاره رو پیشونیش — چند تیم هستید؟",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(2, 3).forEachIndexed { i, count ->
+                ChoiceBubble(
+                    main = count.toPersianDigits(),
+                    sub = "تیم",
+                    size = 132.dp,
+                    mainFontSize = 36.sp,
+                    accent = kiExtras.teamColors.teamColorFor(i),
+                    tilt = if (i == 0) -3f else 3f,
+                    phase = i * 1.5f,
+                    modifier = if (i == 1) Modifier.offset(y = 18.dp) else Modifier,
+                    onClick = { onSelected(count) }
+                )
+            }
+        }
+    }
+}
+
+/** ورود نام تیم‌ها + تعداد راند */
 @Composable
 private fun FhTeamNamesScreen(
     state: FhUiState,
-    onTeamCount: (Int) -> Unit,
+    onRounds: (Int) -> Unit,
     onNameChanged: (Int, String) -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -526,35 +605,7 @@ private fun FhTeamNamesScreen(
         Spacer(modifier = Modifier.height(24.dp))
         BobbingEmoji(emoji = "🤳", fontSize = 50.sp)
         Spacer(modifier = Modifier.height(8.dp))
-        StickerTitle(text = "حدس روی پیشونی", rotation = -2f, fontSize = 26.sp)
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "تیمی بازی کنید! هر نوبت یکی از تیم گوشی رو می‌ذاره رو پیشونیش و هم‌تیمی‌ها توضیح می‌دن",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(2, 3).forEach { c ->
-                val selected = state.teamCount == c
-                val interaction = remember { MutableInteractionSource() }
-                Text(
-                    text = "${c.toPersianDigits()} تیم",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
-                        .clickable(interactionSource = interaction, indication = null) {
-                            sound?.playButtonClick()
-                            onTeamCount(c)
-                        }
-                        .padding(horizontal = 16.dp, vertical = 9.dp),
-                )
-            }
-        }
+        StickerTitle(text = "اسم تیم‌ها", rotation = -2f, fontSize = 26.sp)
         Spacer(modifier = Modifier.height(14.dp))
 
         repeat(state.teamCount) { i ->
@@ -569,6 +620,29 @@ private fun FhTeamNamesScreen(
                 modifier = Modifier.padding(vertical = 6.dp)
             )
         }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "🔁 تعداد راند (هر راند یک نوبت برای هر تیم)",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            FhPill(text = "−", selected = false, onClick = { onRounds(state.totalRounds - 1) })
+            Text(
+                text = state.totalRounds.toPersianDigits(),
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Black,
+                color = accent,
+            )
+            FhPill(text = "+", selected = false, onClick = { onRounds(state.totalRounds + 1) })
+        }
 
         Spacer(modifier = Modifier.weight(1f))
         Box(
@@ -580,6 +654,28 @@ private fun FhTeamNamesScreen(
             KButton(text = "بریم بازی!", onClick = onConfirm)
         }
     }
+}
+
+/** تراشه‌ی قرصی کوچک */
+@Composable
+private fun FhPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val interaction = remember { MutableInteractionSource() }
+    Text(
+        text = text,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
+            .clickable(interactionSource = interaction, indication = null) {
+                sound?.playButtonClick()
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+    )
 }
 
 @Composable
@@ -662,6 +758,30 @@ private fun FhReadyScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        if (state.roundIndex >= state.totalRounds) {
+            Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1300)) {
+                Text(
+                    text = "🤫 راند آخره — مجموع‌ها مخفیه!",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.gold,
+                )
+            }
+        } else {
+            TeamMedallions(
+                count = state.teamCount,
+                nameOf = state::teamDisplayName,
+                scoreOf = { state.totalScores[it] },
+                highlight = state.currentTeam,
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "راند ${state.roundIndex.toPersianDigits()} از ${state.totalRounds.toPersianDigits()}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         BobbingEmoji(emoji = "🤳", fontSize = 52.sp)
         Spacer(modifier = Modifier.height(10.dp))
         Text(
@@ -822,7 +942,6 @@ private fun FhResultScreen(
     onAdjust: (Int) -> Unit,
     onNextPlayer: () -> Unit,
     onCategories: () -> Unit,
-    onFinish: () -> Unit,
 ) {
     val extras = kiExtras
     val sound = LocalSoundManager.current
@@ -932,17 +1051,19 @@ private fun FhResultScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            KButton(text = "ثبت — تیم بعد", onClick = onNextPlayer, accent = playerColor)
+            KButton(
+                text = if (state.currentTeam == state.teamCount - 1 && state.roundIndex >= state.totalRounds)
+                    "ثبت — کی برد؟ 🏆" else "ثبت — تیم بعد",
+                onClick = onNextPlayer,
+                accent = playerColor,
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    KButton(text = "دسته‌ی دیگه", onClick = onCategories, style = KButtonStyle.Glass)
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                Box(modifier = Modifier.weight(1f)) {
-                    KButton(text = "کی برد؟ 🏆", onClick = onFinish, style = KButtonStyle.Glass)
-                }
-            }
+            KButton(
+                text = "ثبت و دسته‌ی دیگه",
+                onClick = onCategories,
+                style = KButtonStyle.Glass,
+                modifier = Modifier.navigationBarsPadding(),
+            )
         }
     }
 }
@@ -1015,6 +1136,15 @@ private fun FhWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(22.dp))
+            ShareWinButton(
+                gameId = "forehead",
+                gameTitle = "حدس روی پیشونی",
+                gameEmoji = "🤳",
+                winnerText = winners.joinToString(" و ") { state.teamDisplayName(it) },
+                scoreLines = (0 until state.teamCount).map { state.teamDisplayName(it) to state.totalScores[it].toPersianDigits() },
+                winnerNames = winners.map { state.teamDisplayName(it) },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

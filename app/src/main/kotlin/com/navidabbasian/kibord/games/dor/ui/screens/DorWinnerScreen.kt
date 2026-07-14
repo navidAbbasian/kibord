@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.formatMillisAsClock
@@ -102,6 +103,19 @@ fun DorWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "dor",
+                gameTitle = "دور",
+                gameEmoji = "💣",
+                winnerText = winner?.players?.joinToString(" و ") ?: "هیچ‌کس!",
+                scoreLines = winner?.let {
+                    listOf(
+                        "کلمات درست" to it.events.count { e -> e.type == DorGameEvent.EventType.WORD_GUESSED }.toPersianDigits(),
+                    )
+                } ?: emptyList(),
+                winnerNames = winner?.players ?: emptyList(),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(12.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

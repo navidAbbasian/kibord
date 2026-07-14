@@ -60,6 +60,7 @@ import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
@@ -1037,6 +1038,16 @@ fun EfWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            ShareWinButton(
+                gameId = "esm_famil",
+                gameTitle = "اسم فامیل",
+                gameEmoji = "✍️",
+                winnerText = winners.joinToString(" و ") { it.name },
+                scoreLines = snapshot.players.sortedByDescending { it.totalScore }
+                    .map { it.name to it.totalScore.toPersianDigits() },
+                winnerNames = winners.map { it.name },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             if (state.isHost) {
                 KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
                 Spacer(modifier = Modifier.height(10.dp))

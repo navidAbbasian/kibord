@@ -32,6 +32,7 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.TicketCard
@@ -82,10 +83,13 @@ fun EsmFamilGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.localScreen != EfLocalScreen.IN_GAME || state.snapshot.phase == EfPhase.LOBBY) {
+            GameHelpButton(gameId = "esm_famil", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.localScreen to snapshot.phase::class) {
             when (state.localScreen) {
                 EfLocalScreen.ENTRY -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     EfEntryScreen(
                         state = state,
                         onNameChanged = viewModel::setMyName,

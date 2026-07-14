@@ -37,6 +37,7 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -340,6 +341,18 @@ fun ClassicGoldenLossScreen(
         }
 
         Spacer(modifier = Modifier.height(28.dp))
+        ShareWinButton(
+            gameId = "pantomime_classic",
+            gameTitle = "پانتومیم کلاسیک",
+            gameEmoji = "🤫",
+            winnerText = state.teamDisplayName(winnerTeam),
+            scoreLines = listOf(
+                state.teamDisplayName(0) to state.scores[0].toPersianDigits(),
+                state.teamDisplayName(1) to state.scores[1].toPersianDigits(),
+            ),
+            winnerNames = listOf(state.teamDisplayName(winnerTeam)),
+        )
+        Spacer(modifier = Modifier.height(10.dp))
         KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
         Spacer(modifier = Modifier.height(12.dp))
         KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
@@ -413,6 +426,18 @@ fun ClassicWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "pantomime_classic",
+                gameTitle = "پانتومیم کلاسیک",
+                gameEmoji = "🤫",
+                winnerText = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
+                scoreLines = listOf(
+                    state.teamDisplayName(0) to state.scores[0].toPersianDigits(),
+                    state.teamDisplayName(1) to state.scores[1].toPersianDigits(),
+                ),
+                winnerNames = winners.map { state.teamDisplayName(it) },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(12.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

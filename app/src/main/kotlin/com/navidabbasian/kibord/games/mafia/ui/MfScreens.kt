@@ -48,6 +48,7 @@ import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TicketCard
@@ -934,6 +935,19 @@ fun MfGameOverScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            ShareWinButton(
+                gameId = "mafia",
+                gameTitle = "شب مافیا",
+                gameEmoji = "🌙",
+                winnerText = if (mafiaWon) "مافیا" else "شهروندها",
+                scoreLines = snapshot.players.map { p ->
+                    p.name to (snapshot.roleOf(p.name)?.title ?: "—")
+                },
+                winnerNames = snapshot.players
+                    .filter { (snapshot.roleOf(it.name) == MfRole.MAFIA) == mafiaWon }
+                    .map { it.name },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             if (state.isHost) {
                 KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
                 Spacer(modifier = Modifier.height(10.dp))

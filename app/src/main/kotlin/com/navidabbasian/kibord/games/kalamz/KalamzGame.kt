@@ -2,6 +2,8 @@ package com.navidabbasian.kibord.games.kalamz
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.kalamz.model.GamePhase
@@ -61,10 +64,18 @@ fun KalamzGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        // راهنما فقط روی صفحه‌های پیش از شروع بازی — تا با تایمر/امتیاز وسط بازی تداخل نکند
+        val setupPhase = state.phase is GamePhase.Setup || state.phase is GamePhase.TeamSetup ||
+            state.phase is GamePhase.CustomSettings || state.phase is GamePhase.WordEntry
+        if (setupPhase) {
+            GameHelpButton(gameId = "kalamz", modifier = Modifier.align(Alignment.TopStart))
+        }
+        // بک وسط بازی نباید بی‌هوا از بازی خارج شود
+        val exitConfirm = { pendingExit = { viewModel.resetGame(); onExitToHub() } }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 is GamePhase.Setup -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     PlayerCountScreen(
                         onPlayerCountSelected = { count -> viewModel.setPlayerCount(count) }
                     )
@@ -103,13 +114,15 @@ fun KalamzGame(
                 }
     
                 is GamePhase.RoundIntro -> {
+                    BackHandler { exitConfirm() }
                     RoundIntroScreen(
                         round = phase.round,
                         onStartRound = { viewModel.startRound() }
                     )
                 }
-    
+
                 is GamePhase.TurnReady, is GamePhase.TurnActive, is GamePhase.TurnEnd -> {
+                    BackHandler { exitConfirm() }
                     TurnScreen(
                         state = state,
                         onStartTurn = { viewModel.startTurn() },
@@ -124,6 +137,7 @@ fun KalamzGame(
                 }
     
                 is GamePhase.RoundEnd -> {
+                    BackHandler { exitConfirm() }
                     val roundIndex = phase.round.roundNumber - 1
                     val teamScores = state.teams.map { team -> Pair(team.id, team.scoresPerRound[roundIndex]) }
                     RoundEndScreen(

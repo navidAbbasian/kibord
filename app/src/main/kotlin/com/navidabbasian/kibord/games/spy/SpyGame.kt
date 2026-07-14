@@ -38,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
@@ -45,7 +46,9 @@ import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
@@ -110,6 +113,17 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
     private var tickerJob: Job? = null
 
     init {
+        val count = GamePrefs.getInt(application, "spy_players", 0)
+        if (count >= 3) {
+            val names = GamePrefs.getNames(application, "spy_names")
+            _uiState.update {
+                it.copy(
+                    playerCount = count,
+                    playerNames = List(count) { i -> names.getOrElse(i) { "" } },
+                    discussionMinutes = GamePrefs.getInt(application, "spy_minutes", 5),
+                )
+            }
+        }
         locations = try {
             json.decodeFromString<List<SpyLocation>>(ContentBank.open(application, "spy.json"))
         } catch (_: Exception) {
@@ -133,9 +147,18 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun confirmNames() = _uiState.update { it.copy(phase = SpyPhase.Settings) }
+    fun confirmNames() {
+        val s = _uiState.value
+        val app = getApplication<Application>()
+        GamePrefs.setInt(app, "spy_players", s.playerCount)
+        GamePrefs.setNames(app, "spy_names", s.playerNames)
+        _uiState.update { it.copy(phase = SpyPhase.Settings) }
+    }
 
-    fun setDiscussionMinutes(minutes: Int) = _uiState.update { it.copy(discussionMinutes = minutes) }
+    fun setDiscussionMinutes(minutes: Int) {
+        GamePrefs.setInt(getApplication(), "spy_minutes", minutes)
+        _uiState.update { it.copy(discussionMinutes = minutes) }
+    }
 
     fun startGame() {
         // مکان بازی‌نشده؛ بعد از یک دور کامل، سابقه ریست می‌شود
@@ -266,10 +289,13 @@ fun SpyGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == SpyPhase.PlayerCount || state.phase == SpyPhase.PlayerNames || state.phase == SpyPhase.Settings) {
+            GameHelpButton(gameId = "spy", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 SpyPhase.PlayerCount -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     SpyPlayerCountScreen(onSelected = viewModel::setPlayerCount)
                 }
 
@@ -683,6 +709,16 @@ private fun SpyUncoverScreen(
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "spy",
+                gameTitle = "جاسوس",
+                gameEmoji = "🕵️",
+                winnerText = "جاسوس: ${state.playerDisplayName(state.spyIndex)}",
+                scoreLines = listOf(
+                    "مکان" to (state.location?.name ?: "—"),
+                ),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

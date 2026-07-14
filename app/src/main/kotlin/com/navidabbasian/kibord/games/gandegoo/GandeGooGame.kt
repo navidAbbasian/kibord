@@ -2,6 +2,8 @@ package com.navidabbasian.kibord.games.gandegoo
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.gandegoo.model.GgPhase
@@ -72,10 +75,13 @@ fun GandeGooGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == GgPhase.TeamCount || state.phase == GgPhase.TeamNames || state.phase == GgPhase.Mode || state.phase == GgPhase.Setup) {
+            GameHelpButton(gameId = "gandegoo", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (state.phase) {
                 GgPhase.TeamCount -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     GgTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
                 }
     

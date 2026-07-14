@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
@@ -55,6 +56,8 @@ import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
@@ -139,6 +142,10 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
     private var allWords: List<String> = emptyList()
 
     init {
+        val names = GamePrefs.getNames(application, "esmramz_names")
+        if (names.isNotEmpty()) {
+            _uiState.update { it.copy(teamNames = List(2) { i -> names.getOrElse(i) { "" } }) }
+        }
         allWords = decodeWords(ContentBank.open(application, "esmramz.json"))
         if (allWords.isEmpty()) {
             allWords = decodeWords(
@@ -168,6 +175,7 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun confirmTeamNames() {
+        GamePrefs.setNames(getApplication(), "esmramz_names", _uiState.value.teamNames)
         dealBoard()
         _uiState.update { it.copy(phase = ErPhase.KeyReveal(shown = false)) }
     }
@@ -342,10 +350,13 @@ fun EsmRamzGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == ErPhase.TeamNames) {
+            GameHelpButton(gameId = "esm_ramz", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 ErPhase.TeamNames -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     ErTeamNamesScreen(
                         state = state,
                         onNameChanged = viewModel::updateTeamName,
@@ -764,6 +775,18 @@ private fun ErGameOverScreen(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
+            ShareWinButton(
+                gameId = "esm_ramz",
+                gameTitle = "اسم‌رمز",
+                gameEmoji = "🗝️",
+                winnerText = state.teamDisplayName(winner),
+                scoreLines = listOf(
+                    state.teamDisplayName(0) to state.matchWins[0].toPersianDigits(),
+                    state.teamDisplayName(1) to state.matchWins[1].toPersianDigits(),
+                ),
+                winnerNames = listOf(state.teamDisplayName(winner)),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دست بعد — تخته‌ی تازه!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "بازگشت به خانه", onClick = onExit, style = KButtonStyle.Glass)

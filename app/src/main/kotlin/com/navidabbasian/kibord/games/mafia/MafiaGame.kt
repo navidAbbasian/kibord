@@ -32,6 +32,7 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.TicketCard
@@ -81,10 +82,13 @@ fun MafiaGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.localScreen != MfLocalScreen.IN_GAME || state.snapshot.phase == MfPhase.LOBBY) {
+            GameHelpButton(gameId = "mafia", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.localScreen to snapshot.phase) {
             when (state.localScreen) {
                 MfLocalScreen.ENTRY -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     MfEntryScreen(
                         state = state,
                         onNameChanged = viewModel::setMyName,

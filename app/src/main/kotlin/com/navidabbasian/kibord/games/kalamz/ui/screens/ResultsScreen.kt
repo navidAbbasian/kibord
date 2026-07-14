@@ -19,6 +19,8 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
+import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.kalamz.model.RoundType
@@ -103,6 +105,21 @@ fun ResultsScreen(teams: List<Team>, onPlayAgain: () -> Unit, onExitToHub: () ->
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            ShareWinButton(
+                gameId = "kalamz",
+                gameTitle = "کلمز",
+                gameEmoji = "🗣",
+                winnerText = sortedTeams.filter { it.totalScore == winnerScore }
+                    .joinToString(" و ") { it.name.ifBlank { "${it.player1.name} و ${it.player2.name}" } },
+                scoreLines = sortedTeams.map { t ->
+                    t.name.ifBlank { "${t.player1.name} و ${t.player2.name}" } to t.totalScore.toPersianDigits()
+                },
+                winnerNames = sortedTeams.filter { it.totalScore == winnerScore }
+                    .flatMap { listOf(it.player1.name, it.player2.name) },
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             KButton(text = "بازی دوباره", onClick = onPlayAgain, style = KButtonStyle.Primary)
 

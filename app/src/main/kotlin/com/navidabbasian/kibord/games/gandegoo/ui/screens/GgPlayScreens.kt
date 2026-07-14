@@ -53,6 +53,7 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -832,6 +833,16 @@ fun GgWinnerScreen(
             }
 
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "gandegoo",
+                gameTitle = "گنده گو",
+                gameEmoji = "🎭",
+                winnerText = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
+                scoreLines = (0 until state.teamCount).sortedByDescending { state.scores[it] }
+                    .map { state.teamDisplayName(it) to state.scores[it].toPersianDigits() },
+                winnerNames = winners.map { state.teamDisplayName(it) },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(12.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

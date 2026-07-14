@@ -28,6 +28,7 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.dor.model.DorPhase
@@ -92,10 +93,13 @@ fun DorGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == DorPhase.PlayerCount || state.phase == DorPhase.PlayerNames || state.phase == DorPhase.Categories || state.phase == DorPhase.Mode) {
+            GameHelpButton(gameId = "dor", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 DorPhase.PlayerCount -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { onExitToHub() }
                     DorPlayerCountScreen(onPlayerCountSelected = viewModel::setPlayerCount)
                 }
     

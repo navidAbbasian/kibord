@@ -41,9 +41,11 @@ import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TeamMedallions
@@ -55,11 +57,54 @@ import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.taboo.model.TabooUiState
 
-/** ورود نام تیم‌ها + انتخاب دو یا سه تیم */
+/** انتخاب دو یا سه تیم — حباب‌های آشنای اپ */
+@Composable
+fun TabooTeamCountScreen(onSelected: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(26.dp))
+        BobbingEmoji(emoji = "🤐", fontSize = 54.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "کلمه ممنوعه!", rotation = -2f)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "کلمه رو برسون بدون گفتنِ پنج کلمه‌ی ممنوعه — چند تیم بازی می‌کنید؟",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally)
+        ) {
+            listOf(2, 3).forEachIndexed { i, count ->
+                ChoiceBubble(
+                    main = count.toPersianDigits(),
+                    sub = "تیم",
+                    size = 132.dp,
+                    mainFontSize = 36.sp,
+                    accent = kiExtras.teamColors.teamColorFor(i),
+                    tilt = if (i == 0) -3f else 3f,
+                    phase = i * 1.5f,
+                    modifier = if (i == 1) Modifier.offset(y = 18.dp) else Modifier,
+                    onClick = { onSelected(count) }
+                )
+            }
+        }
+    }
+}
+
+/** ورود نام تیم‌ها */
 @Composable
 fun TabooTeamNamesScreen(
     state: TabooUiState,
-    onTeamCount: (Int) -> Unit,
     onNameChanged: (Int, String) -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -84,18 +129,7 @@ fun TabooTeamNamesScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(2, 3).forEach { c ->
-                TabooPill(
-                    text = "${c.toPersianDigits()} تیم",
-                    selected = state.teamCount == c,
-                    onClick = { onTeamCount(c) },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         repeat(state.teamCount) { i ->
             BlobTextField(
@@ -405,6 +439,8 @@ fun TabooTurnEndScreen(
     val color = kiExtras.teamColors.teamColorFor(team)
     val extras = kiExtras
     val turnScore = correct - foul + state.turnBonus
+    // نوبت آخرِ راند آخر: مجموع‌ها تا لحظه‌ی «کی برد؟» مخفی می‌مانند
+    val suspense = state.roundIndex >= state.totalRounds && team == state.teamCount - 1
 
     Column(
         modifier = Modifier
@@ -473,13 +509,29 @@ fun TabooTurnEndScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        TeamMedallions(
-            count = state.teamCount,
-            nameOf = state::teamDisplayName,
-            scoreOf = { state.scores[it] },
-        )
+        if (suspense) {
+            Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1300)) {
+                Text(
+                    text = "🤫 مجموع امتیازها مخفیه… بزن ببین کی برد!",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.gold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            TeamMedallions(
+                count = state.teamCount,
+                nameOf = state::teamDisplayName,
+                scoreOf = { state.scores[it] },
+            )
+        }
         Spacer(modifier = Modifier.height(26.dp))
-        KButton(text = "ادامه", onClick = onProceed, modifier = Modifier.navigationBarsPadding())
+        KButton(
+            text = if (suspense) "کی برد؟ 🏆" else "ادامه",
+            onClick = onProceed,
+            modifier = Modifier.navigationBarsPadding(),
+        )
     }
 }
 
@@ -524,6 +576,15 @@ fun TabooWinnerScreen(
                 scoreOf = { state.scores[it] },
             )
             Spacer(modifier = Modifier.height(28.dp))
+            ShareWinButton(
+                gameId = "taboo",
+                gameTitle = "کلمه ممنوعه",
+                gameEmoji = "🤐",
+                winnerText = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
+                scoreLines = (0 until state.teamCount).map { state.teamDisplayName(it) to state.scores[it].toPersianDigits() },
+                winnerNames = winners.map { state.teamDisplayName(it) },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
             Spacer(modifier = Modifier.height(10.dp))
             KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)

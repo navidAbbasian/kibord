@@ -11,6 +11,8 @@ data class TabooCard(
 )
 
 sealed class TabooPhase {
+    /** انتخاب دو یا سه تیم با حباب */
+    data object TeamCount : TabooPhase()
     data object TeamNames : TabooPhase()
     /** تنظیمات: مدت نوبت و تعداد راند */
     data object Settings : TabooPhase()
@@ -22,7 +24,7 @@ sealed class TabooPhase {
 }
 
 data class TabooUiState(
-    val phase: TabooPhase = TabooPhase.TeamNames,
+    val phase: TabooPhase = TabooPhase.TeamCount,
     /** دو یا سه تیم */
     val teamCount: Int = 2,
     val teamNames: List<String> = List(2) { "" },

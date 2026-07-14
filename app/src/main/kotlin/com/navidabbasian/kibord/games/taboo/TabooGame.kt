@@ -2,6 +2,8 @@ package com.navidabbasian.kibord.games.taboo
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,11 +14,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.taboo.model.TabooPhase
 import com.navidabbasian.kibord.games.taboo.model.TabooSoundEvent
 import com.navidabbasian.kibord.games.taboo.ui.TabooSettingsScreen
+import com.navidabbasian.kibord.games.taboo.ui.TabooTeamCountScreen
 import com.navidabbasian.kibord.games.taboo.ui.TabooTeamNamesScreen
 import com.navidabbasian.kibord.games.taboo.ui.TabooTurnEndScreen
 import com.navidabbasian.kibord.games.taboo.ui.TabooTurnReadyScreen
@@ -58,7 +62,7 @@ fun TabooGame(
 
     LaunchedEffect(state.phase) {
         val track = when (state.phase) {
-            TabooPhase.TeamNames, TabooPhase.Settings -> MusicTrack.HUB
+            TabooPhase.TeamCount, TabooPhase.TeamNames, TabooPhase.Settings -> MusicTrack.HUB
             else -> MusicTrack.DOR
         }
         sound?.switchMusic(track)
@@ -70,13 +74,20 @@ fun TabooGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
+        if (state.phase == TabooPhase.TeamCount || state.phase == TabooPhase.TeamNames || state.phase == TabooPhase.Settings) {
+            GameHelpButton(gameId = "taboo", modifier = Modifier.align(Alignment.TopStart))
+        }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
+                TabooPhase.TeamCount -> {
+                    BackHandler { onExitToHub() }
+                    TabooTeamCountScreen(onSelected = viewModel::setTeamCount)
+                }
+
                 TabooPhase.TeamNames -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    BackHandler { viewModel.navigateBack() }
                     TabooTeamNamesScreen(
                         state = state,
-                        onTeamCount = viewModel::setTeamCount,
                         onNameChanged = viewModel::updateTeamName,
                         onConfirm = viewModel::confirmTeamNames,
                     )

@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.taboo.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.games.taboo.data.TabooRepository
 import com.navidabbasian.kibord.games.taboo.model.TabooCard
 import com.navidabbasian.kibord.games.taboo.model.TabooPhase
@@ -38,6 +39,18 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         repository.load()
+        // آخرین تنظیمات همین بازی از حافظه برمی‌گردد تا شروع یک‌ضربه‌ای باشد
+        val count = GamePrefs.getInt(application, "taboo_teams", 2).coerceIn(2, 3)
+        val names = GamePrefs.getNames(application, "taboo_names")
+        _uiState.update {
+            it.copy(
+                teamCount = count,
+                teamNames = List(count) { i -> names.getOrElse(i) { "" } },
+                scores = List(count) { 0 },
+                turnSeconds = GamePrefs.getInt(application, "taboo_seconds", 60),
+                totalRounds = GamePrefs.getInt(application, "taboo_rounds", 3),
+            )
+        }
     }
 
     private fun emit(e: TabooSoundEvent) = _soundEvents.tryEmit(e)
@@ -50,7 +63,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** دو یا سه تیم — اسم‌های واردشده حفظ می‌شوند */
+    /** انتخاب دو یا سه تیم — اسم‌های قبلی حفظ می‌شوند و می‌رویم سراغ اسم‌ها */
     fun setTeamCount(count: Int) {
         val c = count.coerceIn(2, 3)
         _uiState.update { s ->
@@ -58,6 +71,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
                 teamCount = c,
                 teamNames = List(c) { i -> s.teamNames.getOrElse(i) { "" } },
                 scores = List(c) { 0 },
+                phase = TabooPhase.TeamNames,
             )
         }
     }
@@ -70,6 +84,12 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(totalRounds = rounds.coerceIn(1, 10)) }
 
     fun startGame() {
+        val s = _uiState.value
+        val app = getApplication<Application>()
+        GamePrefs.setInt(app, "taboo_teams", s.teamCount)
+        GamePrefs.setNames(app, "taboo_names", s.teamNames)
+        GamePrefs.setInt(app, "taboo_seconds", s.turnSeconds)
+        GamePrefs.setInt(app, "taboo_rounds", s.totalRounds)
         deck = ArrayDeque(repository.prepareDeck())
         _uiState.update {
             it.copy(
@@ -221,6 +241,7 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
     fun navigateBack() {
         _uiState.update { s ->
             when (s.phase) {
+                TabooPhase.TeamNames -> s.copy(phase = TabooPhase.TeamCount)
                 TabooPhase.Settings -> s.copy(phase = TabooPhase.TeamNames)
                 else -> s
             }

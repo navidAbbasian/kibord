@@ -1,14 +1,6 @@
 package com.navidabbasian.kibord.games.whoami
 
-import android.app.Activity
 import android.app.Application
-import android.content.Context
-import android.content.pm.ActivityInfo
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,25 +19,22 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,8 +52,10 @@ import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
+import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.core.ui.components.breathing
@@ -72,262 +63,395 @@ import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.navidabbasian.kibord.games.esmfamil.model.sameName
+import com.navidabbasian.kibord.games.whoami.model.WA_MAX_PLAYERS
+import com.navidabbasian.kibord.games.whoami.model.WA_MIN_PLAYERS
+import com.navidabbasian.kibord.games.whoami.model.WaPhase
+import com.navidabbasian.kibord.games.whoami.model.WaPlayer
+import com.navidabbasian.kibord.games.whoami.model.WaSnapshot
+import com.navidabbasian.kibord.games.whoami.net.WaClient
+import com.navidabbasian.kibord.games.whoami.net.WaDiscoveredGame
+import com.navidabbasian.kibord.games.whoami.net.WaMessage
+import com.navidabbasian.kibord.games.whoami.net.WaNsd
+import com.navidabbasian.kibord.games.whoami.net.WaServer
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
-// ================= مدل =================
+// ================= وضعیت محلی =================
 
-sealed class WaPhase {
-    data object PlayerCount : WaPhase()
-    data object PlayerNames : WaPhase()
-    /** نویسنده اسم مخفی را برای حدس‌زننده می‌نویسد */
-    data object Write : WaPhase()
-    /** گوشی به حدس‌زننده می‌رسد */
-    data object Ready : WaPhase()
-    data object Play : WaPhase()
-    data class Result(val guessed: Boolean) : WaPhase()
-    data object Winner : WaPhase()
-}
+/** نقش این گوشی در ارتباط شبکه */
+enum class WaNetRole { NONE, HOST, CLIENT }
 
-data class WaUiState(
-    val phase: WaPhase = WaPhase.PlayerCount,
-    val playerCount: Int = 2,
-    val playerNames: List<String> = emptyList(),
-    /** حدس‌زننده‌ی این نوبت */
-    val currentPlayer: Int = 0,
-    val totalScores: List<Int> = emptyList(),
-    /** اسم مخفی که نویسنده وارد کرده */
-    val secretName: String = "",
-    val turnSeconds: Int = 120,
-    val secondsLeft: Int = 0,
-    /** جمع دستکاری داورانه‌ی امتیازِ همین نوبت در بخش بررسی */
-    val turnBonus: Int = 0,
+/** صفحه‌های محلیِ قبل از ورود به جریان مشترک بازی */
+enum class WaLocalScreen { ENTRY, JOIN, IN_GAME }
+
+data class WhoAmIUiState(
+    val role: WaNetRole = WaNetRole.NONE,
+    val localScreen: WaLocalScreen = WaLocalScreen.ENTRY,
+    val myName: String = "",
+    val snapshot: WaSnapshot = WaSnapshot(),
+    val discovered: List<WaDiscoveredGame> = emptyList(),
+    val connecting: Boolean = false,
+    val connectError: String? = null,
+    /** اسمی که دارم برای هدفم می‌نویسم */
+    val myDraft: String = "",
+    val hostAddress: String = "",
+    val hostPort: Int = 0,
+    val lostConnection: Boolean = false,
 ) {
-    fun playerDisplayName(index: Int): String =
-        playerNames.getOrNull(index)?.ifBlank { "بازیکن ${(index + 1).toPersianDigits()}" }
-            ?: "بازیکن ${(index + 1).toPersianDigits()}"
-
-    /** نویسنده‌ی این نوبت: نفر بعد از حدس‌زننده */
-    val writerIndex: Int get() = (currentPlayer + 1) % playerCount
+    val isHost: Boolean get() = role == WaNetRole.HOST
+    val me: WaPlayer? get() = snapshot.player(myName)
+    val myTarget: String get() = snapshot.targetOf(myName)
+    val iHaveSubmitted: Boolean get() = snapshot.hasSubmitted(myName)
+    val iHaveGuessed: Boolean get() = snapshot.hasGuessed(myName)
+    /** اسمِ روی پیشانی من — نباید بخوانمش! */
+    val myForeheadName: String get() = snapshot.assignmentOf(myName)
 }
-
-enum class WaSoundEvent { TICK, TICK_WARNING, TIME_UP, CORRECT }
 
 // ================= موتور =================
 
 /**
- * من کی‌ام؟ — نویسنده اسم یک آدم معروف (یا آشنا) را مخفیانه می‌نویسد،
- * حدس‌زننده گوشی را افقی روی پیشونی می‌گذارد و با سوال‌های بله/نه
- * باید بفهمد کیست. حدس درست ۱ امتیاز؛ خم به جلو = حدس زد.
+ * من کی‌ام؟ — چندگوشی: هر کس مخفیانه برای نفر دیگری اسم می‌نویسد،
+ * همه گوشی را روی پیشانی می‌گذارند و با سوال بله/نه حدس می‌زنند.
+ * زمان ندارد؛ هر که زودتر «حدس زدم» بزند امتیاز بیشتری می‌گیرد و
+ * پایان بازی هم دست خود جمع است.
  */
 class WhoAmIViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(WaUiState())
-    val uiState: StateFlow<WaUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(WhoAmIUiState())
+    val uiState: StateFlow<WhoAmIUiState> = _uiState.asStateFlow()
 
-    private val _soundEvents = MutableSharedFlow<WaSoundEvent>(extraBufferCapacity = 16)
-    val soundEvents: SharedFlow<WaSoundEvent> = _soundEvents.asSharedFlow()
+    private val nsd = WaNsd(application)
+    private var server: WaServer? = null
+    private var client: WaClient? = null
 
-    private var tickerJob: Job? = null
+    // ================= ورود =================
 
-    // ---- حسگر حرکت: مثل حدس روی پیشونی — خم به جلو = حدس زد ----
-    private val sensorManager =
-        application.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-    private var lastGestureAt = 0L
-    private var neutral = true
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent) {
-            if (_uiState.value.phase != WaPhase.Play) return
-            val z = event.values.getOrNull(2) ?: return
-            val now = SystemClock.elapsedRealtime()
-            when {
-                neutral && z < -7f && now - lastGestureAt > 800 -> {
-                    lastGestureAt = now; neutral = false
-                    markGuessed()
-                }
-                kotlin.math.abs(z) < 4f -> neutral = true
-            }
-        }
-
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    fun setMyName(name: String) {
+        _uiState.update { it.copy(myName = name.take(16)) }
     }
 
-    private fun emit(e: WaSoundEvent) = _soundEvents.tryEmit(e)
+    // ================= میزبانی =================
 
-    // ---- راه‌اندازی ----
-
-    fun setPlayerCount(count: Int) {
+    fun startHosting() {
+        val name = _uiState.value.myName.trim()
+        if (name.isBlank()) return
+        val srv = WaServer(
+            scope = viewModelScope,
+            onClientJoin = ::acceptJoin,
+            onCommand = ::handleCommand,
+            onClientDisconnected = ::handleDisconnect,
+            latestState = { WaMessage.State(_uiState.value.snapshot) },
+        )
+        if (!srv.start()) {
+            _uiState.update { it.copy(connectError = "سرور روی این گوشی راه نیفتاد") }
+            return
+        }
+        server = srv
+        nsd.register(name, srv.port)
+        val snapshot = WaSnapshot(
+            phase = WaPhase.LOBBY,
+            players = listOf(WaPlayer(name = name, colorIndex = 0)),
+            hostName = name,
+        )
         _uiState.update {
             it.copy(
-                playerCount = count,
-                playerNames = List(count) { "" },
-                totalScores = List(count) { 0 },
-                phase = WaPhase.PlayerNames,
+                role = WaNetRole.HOST,
+                localScreen = WaLocalScreen.IN_GAME,
+                // اسم محلی باید دقیقاً همان اسمِ ثبت‌شده در بازی باشد
+                myName = name,
+                hostAddress = WaNsd.localIpAddress() ?: "",
+                hostPort = srv.port,
+                connectError = null,
+            )
+        }
+        setSnapshot(snapshot)
+    }
+
+    private fun acceptJoin(name: String): String? {
+        val snapshot = _uiState.value.snapshot
+        val existing = snapshot.player(name)
+        return when {
+            name.isBlank() -> "اسم خالی است"
+            existing != null && !existing.connected -> {
+                mutateSnapshot { s ->
+                    s.copy(players = s.players.map { if (sameName(it.name, name)) it.copy(connected = true) else it })
+                }
+                null
+            }
+
+            existing != null -> "این اسم الان توی بازیه — یک اسم دیگر انتخاب کن"
+            snapshot.phase != WaPhase.LOBBY -> "بازی شروع شده — منتظر دست بعدی باش"
+            snapshot.players.size >= WA_MAX_PLAYERS -> "ظرفیت بازی پر است"
+            else -> {
+                mutateSnapshot { s ->
+                    s.copy(players = s.players + WaPlayer(name = name, colorIndex = s.players.size))
+                }
+                null
+            }
+        }
+    }
+
+    private fun handleDisconnect(name: String) {
+        if (_uiState.value.role != WaNetRole.HOST) return
+        mutateSnapshot { s ->
+            s.copy(players = s.players.map { if (sameName(it.name, name)) it.copy(connected = false) else it })
+        }
+        maybeFinishWrite()
+        maybeFinishRound()
+    }
+
+    // ================= پیوستن مهمان =================
+
+    fun openJoinScreen() {
+        if (_uiState.value.myName.isBlank()) return
+        _uiState.update { it.copy(localScreen = WaLocalScreen.JOIN, discovered = emptyList(), connectError = null) }
+        nsd.discover(
+            onFound = { game ->
+                _uiState.update { st ->
+                    st.copy(discovered = st.discovered.filter { it.hostName != game.hostName } + game)
+                }
+            },
+            onLost = { name ->
+                _uiState.update { st -> st.copy(discovered = st.discovered.filter { it.hostName != name }) }
+            },
+        )
+    }
+
+    fun joinGame(address: String, port: Int = WaServer.BASE_PORT) {
+        val name = _uiState.value.myName.trim()
+        if (name.isBlank() || address.isBlank()) return
+        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
+        val c = WaClient(
+            scope = viewModelScope,
+            onMessage = ::handleServerMessage,
+            onDisconnected = {
+                if (_uiState.value.role == WaNetRole.CLIENT) {
+                    _uiState.update { it.copy(lostConnection = true) }
+                }
+            },
+        )
+        client = c
+        c.connect(address, port, name) { error ->
+            if (error != null) {
+                client = null
+                _uiState.update { it.copy(connecting = false, connectError = error) }
+            } else {
+                nsd.stopDiscovery()
+                _uiState.update {
+                    it.copy(
+                        role = WaNetRole.CLIENT,
+                        localScreen = WaLocalScreen.IN_GAME,
+                        connecting = false,
+                        connectError = null,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleServerMessage(msg: WaMessage) {
+        when (msg) {
+            is WaMessage.State -> setSnapshot(msg.snapshot)
+            else -> Unit
+        }
+    }
+
+    // ================= فرمان‌های داخل بازی =================
+
+    fun startGame() = hostOnly {
+        val s = _uiState.value.snapshot
+        if (s.players.count { it.connected } < WA_MIN_PLAYERS) return@hostOnly
+        dealRound(roundIndex = 1, resetScores = true)
+    }
+
+    /** قرعه‌ی راند: هر نویسنده برای نفرِ چندخانه‌بعدی می‌نویسد تا هر راند عوض شود */
+    private fun dealRound(roundIndex: Int, resetScores: Boolean = false) {
+        val s = _uiState.value.snapshot
+        val connected = s.players.filter { it.connected }
+        if (connected.size < WA_MIN_PLAYERS) return
+        val shift = ((roundIndex - 1) % (connected.size - 1)) + 1
+        val targets = connected.mapIndexed { i, writer ->
+            writer.name to connected[(i + shift) % connected.size].name
+        }.toMap()
+        mutateSnapshot { snap ->
+            snap.copy(
+                phase = WaPhase.WRITE,
+                roundIndex = roundIndex,
+                players = if (resetScores) snap.players.map { it.copy(totalScore = 0) } else snap.players,
+                targets = targets,
+                assignments = emptyMap(),
+                submitted = emptyList(),
+                guessedOrder = emptyList(),
             )
         }
     }
 
-    fun updatePlayerName(index: Int, name: String) {
-        _uiState.update { s ->
-            s.copy(playerNames = s.playerNames.mapIndexed { i, n -> if (i == index) name else n })
-        }
+    fun updateDraft(text: String) = _uiState.update { it.copy(myDraft = text.take(30)) }
+
+    /** اسم مخفی را برای هدفم می‌فرستم */
+    fun submitName() {
+        val st = _uiState.value
+        val text = st.myDraft.trim()
+        if (st.snapshot.phase != WaPhase.WRITE || st.iHaveSubmitted || text.isBlank()) return
+        if (st.isHost) hostReceiveName(st.myName, text) else client?.send(WaMessage.SubmitName(text))
+        _uiState.update { it.copy(myDraft = "") }
     }
 
-    fun confirmNames() =
-        _uiState.update { it.copy(phase = WaPhase.Write, currentPlayer = 0, secretName = "") }
-
-    fun setTurnSeconds(seconds: Int) = _uiState.update { it.copy(turnSeconds = seconds) }
-
-    // ---- نوبت ----
-
-    fun updateSecretName(name: String) = _uiState.update { it.copy(secretName = name.take(30)) }
-
-    fun confirmSecret() {
-        if (_uiState.value.secretName.isBlank()) return
-        _uiState.update { it.copy(phase = WaPhase.Ready) }
-    }
-
-    fun startTurn() {
-        neutral = true
-        _uiState.update {
-            it.copy(phase = WaPhase.Play, secondsLeft = it.turnSeconds, turnBonus = 0)
-        }
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensor ->
-            sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_GAME)
-        }
-        startTicker()
-    }
-
-    private fun startTicker() {
-        tickerJob?.cancel()
-        tickerJob = viewModelScope.launch {
-            while (isActive) {
-                delay(1000)
-                val s = _uiState.value
-                if (s.phase != WaPhase.Play) break
-                val left = s.secondsLeft - 1
-                emit(if (left <= 10) WaSoundEvent.TICK_WARNING else WaSoundEvent.TICK)
-                if (left <= 0) {
-                    emit(WaSoundEvent.TIME_UP)
-                    endTurn(guessed = false)
-                    break
-                }
-                _uiState.update { it.copy(secondsLeft = left) }
-            }
-        }
-    }
-
-    /** حدس زد! (حسگر یا لمس) */
+    /** «حدس زدم!» — فقط لمسی، بدون حسگر و بدون زمان */
     fun markGuessed() {
-        if (_uiState.value.phase != WaPhase.Play) return
-        emit(WaSoundEvent.CORRECT)
-        endTurn(guessed = true)
+        val st = _uiState.value
+        if (st.snapshot.phase != WaPhase.PLAY || st.iHaveGuessed) return
+        if (st.isHost) hostMarkGuessed(st.myName) else client?.send(WaMessage.Guessed)
     }
 
-    /** تسلیم شد — نوبت بدون امتیاز تمام می‌شود */
-    fun giveUp() {
-        if (_uiState.value.phase != WaPhase.Play) return
-        endTurn(guessed = false)
+    /** میزبان: راند بعد */
+    fun nextRound() = hostOnly {
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.ROUND_RESULT) return@hostOnly
+        dealRound(roundIndex = s.roundIndex + 1)
     }
 
-    private fun endTurn(guessed: Boolean) {
-        tickerJob?.cancel()
-        sensorManager?.unregisterListener(sensorListener)
-        _uiState.update { it.copy(phase = WaPhase.Result(guessed)) }
+    /** میزبان: پایان بازی و اعلام برنده — پایان دست خود جمع است */
+    fun finishGame() = hostOnly {
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.ROUND_RESULT) return@hostOnly
+        mutateSnapshot { it.copy(phase = WaPhase.GAME_OVER) }
     }
 
-    // ---- بررسی و ثبت امتیاز ----
-
-    /** بررسی امتیاز نوبت: جمع می‌تواند حکم نهایی را کم و زیاد کند */
-    fun adjustTurnScore(delta: Int) {
-        if (_uiState.value.phase !is WaPhase.Result) return
-        _uiState.update { it.copy(turnBonus = it.turnBonus + delta) }
+    fun playAgain() = hostOnly {
+        mutateSnapshot { s ->
+            s.copy(
+                phase = WaPhase.LOBBY,
+                roundIndex = 0,
+                targets = emptyMap(),
+                assignments = emptyMap(),
+                submitted = emptyList(),
+                guessedOrder = emptyList(),
+                players = s.players.map { it.copy(totalScore = 0) },
+            )
+        }
     }
 
-    private fun turnScore(): Int {
-        val s = _uiState.value
-        val base = if ((s.phase as? WaPhase.Result)?.guessed == true) 1 else 0
-        return base + s.turnBonus
+    fun winners(): List<WaPlayer> {
+        val players = _uiState.value.snapshot.players
+        val max = players.maxOfOrNull { it.totalScore } ?: return emptyList()
+        return players.filter { it.totalScore == max }
     }
 
-    /** ثبت امتیاز نوبت برای حدس‌زننده + نوبت نفر بعد */
-    fun confirmTurn() {
-        val s = _uiState.value
-        if (s.phase !is WaPhase.Result) return
-        val score = turnScore()
-        _uiState.update {
-            it.copy(
-                totalScores = it.totalScores.mapIndexed { i, v ->
-                    if (i == it.currentPlayer) v + score else v
+    // ================= منطق میزبان =================
+
+    private fun handleCommand(playerName: String, msg: WaMessage) {
+        when (msg) {
+            is WaMessage.SubmitName -> hostReceiveName(playerName, msg.text.trim())
+            is WaMessage.Guessed -> hostMarkGuessed(playerName)
+            else -> Unit
+        }
+    }
+
+    private fun hostReceiveName(writer: String, text: String) {
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.WRITE || text.isBlank()) return
+        val target = s.targetOf(writer)
+        if (target.isBlank() || s.hasSubmitted(writer)) return
+        mutateSnapshot { snap ->
+            snap.copy(
+                assignments = snap.assignments + (target to text),
+                submitted = snap.submitted + writer,
+            )
+        }
+        maybeFinishWrite()
+    }
+
+    private fun maybeFinishWrite() {
+        if (_uiState.value.role != WaNetRole.HOST) return
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.WRITE) return
+        val waiting = s.players.filter {
+            it.connected && s.targets.containsKey(it.name) && !s.hasSubmitted(it.name)
+        }
+        if (waiting.isEmpty() && s.submitted.isNotEmpty()) {
+            mutateSnapshot { it.copy(phase = WaPhase.PLAY) }
+        }
+    }
+
+    private fun hostMarkGuessed(playerName: String) {
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.PLAY || s.hasGuessed(playerName)) return
+        // هر چه زودتر حدس بزنی، امتیاز بیشتر: نفر اول بیشترین را می‌گیرد
+        val playing = s.players.count { p ->
+            p.connected && s.assignments.keys.any { k -> sameName(k, p.name) }
+        }
+        val gained = (playing - s.guessedOrder.size).coerceAtLeast(1)
+        mutateSnapshot { snap ->
+            snap.copy(
+                guessedOrder = snap.guessedOrder + playerName,
+                players = snap.players.map { p ->
+                    if (sameName(p.name, playerName)) p.copy(totalScore = p.totalScore + gained) else p
                 },
-                currentPlayer = (it.currentPlayer + 1) % it.playerCount,
-                secretName = "",
-                phase = WaPhase.Write,
             )
         }
+        maybeFinishRound()
     }
 
-    /** ثبت امتیاز آخرین نوبت و اعلام برنده */
-    fun finishGame() {
-        val s = _uiState.value
-        if (s.phase !is WaPhase.Result) return
-        val score = turnScore()
-        _uiState.update {
-            it.copy(
-                totalScores = it.totalScores.mapIndexed { i, v ->
-                    if (i == it.currentPlayer) v + score else v
-                },
-                phase = WaPhase.Winner,
-            )
+    private fun maybeFinishRound() {
+        if (_uiState.value.role != WaNetRole.HOST) return
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.PLAY) return
+        val waiting = s.players.filter {
+            it.connected &&
+                s.assignments.keys.any { k -> sameName(k, it.name) } &&
+                !s.hasGuessed(it.name)
+        }
+        if (waiting.isEmpty()) {
+            mutateSnapshot { it.copy(phase = WaPhase.ROUND_RESULT) }
         }
     }
 
-    fun winners(): List<Int> {
-        val scores = _uiState.value.totalScores
-        val max = scores.maxOrNull() ?: return emptyList()
-        return scores.withIndex().filter { it.value == max }.map { it.index }
+    // ================= هسته‌ی همگام‌سازی =================
+
+    private fun mutateSnapshot(transform: (WaSnapshot) -> WaSnapshot) {
+        val next = transform(_uiState.value.snapshot)
+        setSnapshot(next)
+        server?.broadcast(WaMessage.State(next))
     }
 
-    fun playAgain() {
-        _uiState.update {
-            it.copy(
-                totalScores = List(it.playerCount) { 0 },
-                currentPlayer = 0,
-                secretName = "",
-                phase = WaPhase.Write,
-            )
-        }
+    private fun setSnapshot(next: WaSnapshot) {
+        _uiState.update { it.copy(snapshot = next) }
     }
 
-    fun navigateBack() {
-        _uiState.update { s ->
-            when (s.phase) {
-                WaPhase.PlayerNames -> s.copy(phase = WaPhase.PlayerCount)
-                WaPhase.Ready -> s.copy(phase = WaPhase.Write)
-                else -> s
-            }
-        }
+    private inline fun hostOnly(block: () -> Unit) {
+        if (_uiState.value.role == WaNetRole.HOST) block()
+    }
+
+    // ================= خروج =================
+
+    fun leaveGame() {
+        nsd.release()
+        client?.close()
+        client = null
+        server?.stop()
+        server = null
+        val name = _uiState.value.myName
+        _uiState.value = WhoAmIUiState(myName = name)
+    }
+
+    fun backToEntryFromJoin() {
+        nsd.stopDiscovery()
+        _uiState.update { it.copy(localScreen = WaLocalScreen.ENTRY, connectError = null, connecting = false) }
     }
 
     override fun onCleared() {
         super.onCleared()
-        tickerJob?.cancel()
-        sensorManager?.unregisterListener(sensorListener)
+        leaveGame()
     }
 }
 
-// ================= ریشه و صفحه‌ها =================
+// ================= ریشه =================
 
-/** ریشه‌ی من کی‌ام؟ */
+/** ریشه‌ی من کی‌ام؟ — بازی چندگوشی روی شبکه‌ی محلی */
 @Composable
 fun WhoAmIGame(
     onExitToHub: () -> Unit,
@@ -338,43 +462,20 @@ fun WhoAmIGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
-    val context = LocalContext.current
+    val snapshot = state.snapshot
 
-    // هنگام بازی گوشی افقی می‌شود تا صاف روی پیشونی بنشیند
-    LaunchedEffect(state.phase) {
-        (context as? Activity)?.requestedOrientation =
-            if (state.phase == WaPhase.Play) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.soundEvents.collect { event ->
-            when (event) {
-                WaSoundEvent.TICK -> sound?.playTimerTick()
-                WaSoundEvent.TICK_WARNING -> sound?.playTimerWarning()
-                WaSoundEvent.TIME_UP -> {
-                    sound?.playTimerEnd()
-                    sound?.vibrate(200)
-                }
-                WaSoundEvent.CORRECT -> {
-                    sound?.playCorrectWord()
-                    sound?.vibrate(80)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            WaPhase.Play -> MusicTrack.KALAMZ_ROUND_3
-            else -> MusicTrack.HUB
+    LaunchedEffect(state.localScreen, snapshot.phase) {
+        val track = when {
+            state.localScreen != WaLocalScreen.IN_GAME -> MusicTrack.HUB
+            snapshot.phase == WaPhase.LOBBY -> MusicTrack.HUB
+            else -> MusicTrack.ESM_FAMIL
         }
         sound?.switchMusic(track)
+    }
+
+    val leaveAndExit = {
+        viewModel.leaveGame()
+        onExitToHub()
     }
 
     KiBackground {
@@ -383,73 +484,490 @@ fun WhoAmIGame(
             onConfirm = { pendingExit?.invoke(); pendingExit = null },
             onDismiss = { pendingExit = null },
         )
-        PhaseTransition(key = state.phase::class) {
-            when (val phase = state.phase) {
-                WaPhase.PlayerCount -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
-                    WaPlayerCountScreen(onSelected = viewModel::setPlayerCount)
-                }
-
-                WaPhase.PlayerNames -> {
-                    BackHandler { viewModel.navigateBack() }
-                    WaPlayerNamesScreen(
+        if (state.localScreen != WaLocalScreen.IN_GAME || state.snapshot.phase == WaPhase.LOBBY) {
+            GameHelpButton(gameId = "who_am_i", modifier = Modifier.align(Alignment.TopStart))
+        }
+        PhaseTransition(key = state.localScreen to snapshot.phase) {
+            when (state.localScreen) {
+                WaLocalScreen.ENTRY -> {
+                    BackHandler { onExitToHub() }
+                    WaEntryScreen(
                         state = state,
-                        onNameChanged = viewModel::updatePlayerName,
-                        onConfirm = viewModel::confirmNames,
+                        onNameChanged = viewModel::setMyName,
+                        onHost = viewModel::startHosting,
+                        onJoin = viewModel::openJoinScreen,
                     )
                 }
 
-                WaPhase.Write -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
-                    WaWriteScreen(
+                WaLocalScreen.JOIN -> {
+                    BackHandler { viewModel.backToEntryFromJoin() }
+                    WaJoinScreen(
                         state = state,
-                        onSecretChanged = viewModel::updateSecretName,
-                        onSeconds = viewModel::setTurnSeconds,
-                        onConfirm = viewModel::confirmSecret,
+                        onJoin = { game -> viewModel.joinGame(game.address, game.port) },
+                        onManualJoin = { address -> viewModel.joinGame(address) },
                     )
                 }
 
-                WaPhase.Ready -> {
-                    BackHandler { viewModel.navigateBack() }
-                    WaReadyScreen(state = state, onStart = viewModel::startTurn)
-                }
+                WaLocalScreen.IN_GAME -> {
+                    BackHandler { pendingExit = { leaveAndExit() } }
+                    when (snapshot.phase) {
+                        WaPhase.LOBBY -> WaLobbyScreen(state = state, onStart = viewModel::startGame)
 
-                WaPhase.Play -> {
-                    BackHandler { }
-                    WaPlayScreen(
-                        state = state,
-                        onGuessed = viewModel::markGuessed,
-                        onGiveUp = viewModel::giveUp,
-                    )
-                }
+                        WaPhase.WRITE -> WaWriteScreen(
+                            state = state,
+                            onDraftChanged = viewModel::updateDraft,
+                            onSubmit = viewModel::submitName,
+                        )
 
-                is WaPhase.Result -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
-                    WaResultScreen(
-                        state = state,
-                        guessed = phase.guessed,
-                        onAdjust = viewModel::adjustTurnScore,
-                        onNext = viewModel::confirmTurn,
-                        onFinish = viewModel::finishGame,
-                    )
-                }
+                        WaPhase.PLAY -> WaPlayScreen(state = state, onGuessed = viewModel::markGuessed)
 
-                WaPhase.Winner -> {
-                    BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
-                    WaWinnerScreen(
-                        state = state,
-                        winners = viewModel.winners(),
-                        onPlayAgain = viewModel::playAgain,
-                        onExitToHub = onExitToHub,
-                    )
+                        WaPhase.ROUND_RESULT -> WaRoundResultScreen(
+                            state = state,
+                            onNextRound = viewModel::nextRound,
+                            onFinish = viewModel::finishGame,
+                        )
+
+                        WaPhase.GAME_OVER -> {
+                            LaunchedEffect(Unit) { sound?.playGameOver() }
+                            WaGameOverScreen(
+                                state = state,
+                                winners = viewModel.winners(),
+                                onPlayAgain = viewModel::playAgain,
+                                onExit = leaveAndExit,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- ارتباط با میزبان قطع شد ----
+        if (state.lostConnection) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { },
+                contentAlignment = Alignment.Center
+            ) {
+                TicketCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 28.dp),
+                    tilt = -1.5f
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        BobbingEmoji(emoji = "📴", fontSize = 44.sp)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "ارتباط با میزبان قطع شد!",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        KButton(text = "باشه", onClick = leaveAndExit)
+                    }
                 }
             }
         }
     }
 }
 
+// ================= صفحه‌ها =================
+
 @Composable
-private fun WaPlayerCountScreen(onSelected: (Int) -> Unit) {
+private fun WaEntryScreen(
+    state: WhoAmIUiState,
+    onNameChanged: (String) -> Unit,
+    onHost: () -> Unit,
+    onJoin: () -> Unit,
+) {
+    var showNameError by remember { mutableStateOf(false) }
+    val guardName: (() -> Unit) -> Unit = { action ->
+        if (state.myName.isBlank()) showNameError = true else action()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .imePadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(30.dp))
+        BobbingEmoji(emoji = "🏷️", fontSize = 58.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = "من کی‌ام؟", rotation = -2f)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "هر کی برای یکی دیگه اسم می‌نویسه؛ گوشی می‌ره رو پیشونی و با سوال بله/نه باید بفهمی کی هستی! همه روی یک وای‌فای یا هات‌اسپات باشید",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        BlobTextField(
+            value = state.myName,
+            onValueChange = {
+                onNameChanged(it)
+                if (it.isNotBlank()) showNameError = false
+            },
+            placeholder = "اسمت چیه؟ (شناسه‌ی تو در بازی)",
+            badge = "👤",
+            tilt = -1f,
+        )
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(26.dp, Alignment.CenterHorizontally)
+        ) {
+            ChoiceBubble(
+                main = "میزبان شو",
+                sub = "بازی بساز و\nرفقا رو دعوت کن",
+                emoji = "👑",
+                size = 148.dp,
+                mainFontSize = 22.sp,
+                tilt = -3f,
+                onClick = { guardName(onHost) },
+            )
+            ChoiceBubble(
+                main = "بپیوند",
+                sub = "به بازیِ ساخته‌شده\nوصل شو",
+                emoji = "🚪",
+                size = 148.dp,
+                mainFontSize = 22.sp,
+                tilt = 3f,
+                phase = 1.5f,
+                modifier = Modifier.offset(y = 26.dp),
+                onClick = { guardName(onJoin) },
+            )
+        }
+
+        if (showNameError && state.myName.isBlank()) {
+            Spacer(modifier = Modifier.height(40.dp))
+            Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1100)) {
+                StickerTitle(
+                    text = "✋ اول اسمت رو بنویس!",
+                    accent = kiExtras.danger,
+                    rotation = -2f,
+                    fontSize = 22.sp,
+                )
+            }
+        }
+        state.connectError?.let {
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(text = it, style = MaterialTheme.typography.labelLarge, color = kiExtras.danger)
+        }
+    }
+}
+
+@Composable
+private fun WaJoinScreen(
+    state: WhoAmIUiState,
+    onJoin: (WaDiscoveredGame) -> Unit,
+    onManualJoin: (String) -> Unit,
+) {
+    var manualAddress by rememberSaveable { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .imePadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        BobbingEmoji(emoji = "📡", fontSize = 46.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        StickerTitle(text = "به کدوم بازی بپیوندیم؟", rotation = 2f, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (state.discovered.isEmpty()) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(modifier = Modifier.breathing(intensity = 0.05f, periodMs = 1800)) {
+                        Text(text = "🔎", fontSize = 30.sp)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "دنبال بازی می‌گردم…\nمیزبان باید بازی رو ساخته باشه و روی همین شبکه باشید",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(count = state.discovered.size, key = { state.discovered[it].hostName }) { i ->
+                    val game = state.discovered[i]
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 22.dp,
+                        strong = true,
+                        tilt = if (i % 2 == 0) -1f else 1f,
+                        onClick = { onJoin(game) },
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "🏷️", fontSize = 26.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "بازیِ ${game.hostName}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "لمس کن تا وصل شی",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(text = "🚪", fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "پیدا نشد؟ آدرسِ نمایش‌داده‌شده در لابی میزبان رو بزن:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        BlobTextField(
+            value = manualAddress,
+            onValueChange = { manualAddress = it },
+            placeholder = "مثلاً 192.168.1.5",
+            badge = "🔗",
+            tilt = 0.8f,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        KButton(
+            text = if (state.connecting) "در حال اتصال…" else "اتصال دستی",
+            enabled = !state.connecting && manualAddress.isNotBlank(),
+            onClick = { onManualJoin(manualAddress.trim()) },
+        )
+        state.connectError?.let {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(text = it, style = MaterialTheme.typography.labelLarge, color = kiExtras.danger, textAlign = TextAlign.Center)
+        }
+        Spacer(modifier = Modifier.navigationBarsPadding().height(12.dp))
+    }
+}
+
+@Composable
+private fun WaLobbyScreen(
+    state: WhoAmIUiState,
+    onStart: () -> Unit,
+) {
+    val snapshot = state.snapshot
+    val connected = snapshot.players.count { it.connected }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(18.dp))
+        StickerTitle(text = "لابی من کی‌ام؟", rotation = -2f, fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(14.dp))
+
+        GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
+            Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                Text(
+                    text = "بازیکن‌ها (${snapshot.players.size.toPersianDigits()} از ۸)",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                snapshot.players.chunked(4).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+                    ) {
+                        row.forEach { p ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "🏷️", fontSize = 26.sp)
+                                Text(
+                                    text = if (sameName(p.name, snapshot.hostName)) "${p.name} 👑" else p.name,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = kiExtras.teamColors.teamColorFor(p.colorIndex),
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "هر راند، هر کی برای یکی دیگه اسم می‌نویسه. زمان نداره — هر کی زودتر حدس بزنه امتیاز بیشتری می‌گیره و پایان بازی هم دست خودتونه!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        if (state.isHost) {
+            if (state.hostAddress.isNotBlank()) {
+                Text(
+                    text = "اتصال دستی مهمان‌ها: ${state.hostAddress}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            KButton(
+                text = if (connected < WA_MIN_PLAYERS) "منتظر حداقل ${WA_MIN_PLAYERS.toPersianDigits()} بازیکن…"
+                else "شروع بازی!",
+                enabled = connected >= WA_MIN_PLAYERS,
+                onClick = onStart,
+            )
+        } else {
+            BobbingEmoji(emoji = "🍿", fontSize = 40.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "منتظریم ${snapshot.hostName} بازی رو شروع کنه…",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
+    }
+}
+
+@Composable
+private fun WaWriteScreen(
+    state: WhoAmIUiState,
+    onDraftChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    val snapshot = state.snapshot
+    val target = state.myTarget
+    val waitingCount = snapshot.connectedPlayers.count {
+        snapshot.targets.containsKey(it.name) && !snapshot.hasSubmitted(it.name)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .imePadding()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "راند ${snapshot.roundIndex.toPersianDigits()}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        BobbingEmoji(emoji = "🤫", fontSize = 48.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (!state.iHaveSubmitted) {
+            Text(
+                text = "یواشکی برای ${target.ifBlank { "…" }} یه اسم بنویس!",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = kiExtras.teamColors.teamColorFor(snapshot.player(target)?.colorIndex ?: 0),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "آدم معروف، شخصیت کارتونی یا حتی یکی از همین جمع — فقط خودش نفهمه!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            BlobTextField(
+                value = state.myDraft,
+                onValueChange = onDraftChanged,
+                placeholder = "مثلاً: فردوسی، باب اسفنجی…",
+                badge = "🏷️",
+                tilt = -1f,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            KButton(
+                text = "فرستادم 🤐",
+                enabled = state.myDraft.isNotBlank(),
+                onClick = onSubmit,
+            )
+        } else {
+            BobbingEmoji(emoji = "⏳", fontSize = 36.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "اسمت رسید! منتظر ${waitingCount.toPersianDigits()} نویسنده‌ی دیگه…",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WaPlayScreen(
+    state: WhoAmIUiState,
+    onGuessed: () -> Unit,
+) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val snapshot = state.snapshot
+    val stillPlaying = snapshot.connectedPlayers.filter {
+        snapshot.assignments.keys.any { k -> sameName(k, it.name) } && !snapshot.hasGuessed(it.name)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -457,460 +975,218 @@ private fun WaPlayerCountScreen(onSelected: (Int) -> Unit) {
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        BobbingEmoji(emoji = "🏷️", fontSize = 50.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        StickerTitle(text = "من کی‌ام؟", rotation = -2f)
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "برات یه اسم می‌نویسن، می‌ذاری رو پیشونیت و با سوال‌های بله/نه باید بفهمی کی هستی!",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "راند ${snapshot.roundIndex.toPersianDigits()} — بدون زمان، با خیال راحت!",
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        listOf(2, 3, 4, 5, 6, 7).chunked(2).forEachIndexed { rowIndex, row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally)
-            ) {
-                row.forEachIndexed { colIndex, count ->
-                    val i = rowIndex * 2 + colIndex
-                    val zig = i % 2 == 0
-                    ChoiceBubble(
-                        main = count.toPersianDigits(),
-                        sub = "نفر",
-                        size = 104.dp,
-                        mainFontSize = 30.sp,
-                        accent = kiExtras.teamColors.teamColorFor(i + 1),
-                        tilt = if (zig) -3f else 3f,
-                        phase = i * 1.3f,
-                        modifier = Modifier.offset(y = if (zig) 0.dp else 12.dp),
-                        onClick = { onSelected(count) }
+        if (!state.iHaveGuessed) {
+            TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1.5f) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 26.dp, horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "نخونش! 🙈 بگیرش بالا رو پیشونیت تا بقیه ببینن",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = extras.danger,
+                        textAlign = TextAlign.Center,
                     )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 1800)) {
+                        Text(
+                            text = state.myForeheadName.ifBlank { "…" },
+                            fontSize = 46.sp,
+                            fontWeight = FontWeight.Black,
+                            color = accent,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 58.sp,
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-        }
-    }
-}
-
-@Composable
-private fun WaPlayerNamesScreen(
-    state: WaUiState,
-    onNameChanged: (Int, String) -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val teamColors = kiExtras.teamColors
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .imePadding()
-            .padding(horizontal = 24.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 20.dp, bottom = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            StickerTitle(text = "اسم بازیکن‌ها", rotation = 2f, fontSize = 24.sp)
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-        ) {
-            repeat(state.playerCount) { i ->
-                BlobTextField(
-                    value = state.playerNames.getOrElse(i) { "" },
-                    onValueChange = { onNameChanged(i, it.take(16)) },
-                    placeholder = "بازیکن ${(i + 1).toPersianDigits()}",
-                    color = teamColors.teamColorFor(i),
-                    badge = (i + 1).toPersianDigits(),
-                    tilt = if (i % 2 == 0) -1f else 1f,
-                    phase = i * 1.4f,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(vertical = 12.dp)
-        ) {
-            KButton(text = "بریم بازی!", onClick = onConfirm)
-        }
-    }
-}
-
-@Composable
-private fun WaWriteScreen(
-    state: WaUiState,
-    onSecretChanged: (String) -> Unit,
-    onSeconds: (Int) -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val accent = LocalGameAccent.current
-    val extras = kiExtras
-    val sound = LocalSoundManager.current
-    val writerColor = kiExtras.teamColors.teamColorFor(state.writerIndex)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .imePadding()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        BobbingEmoji(emoji = "🤫", fontSize = 48.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "گوشی دست ${state.playerDisplayName(state.writerIndex)}",
-            style = MaterialTheme.typography.headlineMedium,
-            color = writerColor,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "یواشکی اسم یه آدم معروف (یا یکی از جمع!) رو بنویس تا " +
-                "${state.playerDisplayName(state.currentPlayer)} حدسش بزنه — نبینه!",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(18.dp))
-
-        BlobTextField(
-            value = state.secretName,
-            onValueChange = onSecretChanged,
-            placeholder = "مثلاً: فردوسی، مسی، عمه فخری…",
-            badge = "🏷️",
-            tilt = -1f,
-        )
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(60, 120, 180).forEach { sec ->
-                val selected = state.turnSeconds == sec
-                val interaction = remember { MutableInteractionSource() }
-                Text(
-                    text = "${sec.toPersianDigits()} ثانیه",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
-                        .clickable(interactionSource = interaction, indication = null) {
-                            sound?.playButtonClick()
-                            onSeconds(sec)
-                        }
-                        .padding(horizontal = 16.dp, vertical = 9.dp),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(22.dp))
-        KButton(
-            text = "نوشتم — بده به ${state.playerDisplayName(state.currentPlayer)}",
-            enabled = state.secretName.isNotBlank(),
-            onClick = onConfirm,
-        )
-    }
-}
-
-@Composable
-private fun WaReadyScreen(
-    state: WaUiState,
-    onStart: () -> Unit,
-) {
-    val playerColor = kiExtras.teamColors.teamColorFor(state.currentPlayer)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        BobbingEmoji(emoji = "🏷️", fontSize = 52.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = "نوبت ${state.playerDisplayName(state.currentPlayer)}",
-            style = MaterialTheme.typography.displayMedium,
-            fontSize = 30.sp,
-            color = playerColor,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            text = "اسمت آماده‌ست! گوشی خودش افقی می‌شه — بذارش عرضی روی پیشونیت تا بقیه ببینن کی هستی.\n" +
-                "با سوال‌های بله/نه بفهم کی هستی: «زنده‌ام؟»، «ورزشکارم؟»، «ایرانی‌ام؟»\n" +
-                "حدس زدی؟ گوشی رو به جلو خم کن ✅",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            lineHeight = 24.sp,
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        KButton(text = "بذار رو پیشونی و شروع کن!", onClick = onStart, accent = playerColor)
-    }
-}
-
-@Composable
-private fun WaPlayScreen(
-    state: WaUiState,
-    onGuessed: () -> Unit,
-    onGiveUp: () -> Unit,
-) {
-    val extras = kiExtras
-    val accent = LocalGameAccent.current
-    val urgent = state.secondsLeft <= 10
-
-    val view = LocalView.current
-    DisposableEffect(Unit) {
-        view.keepScreenOn = true
-        onDispose { view.keepScreenOn = false }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        // ---- نیمه‌ی بالا: تسلیم ----
-        val giveUpInteraction = remember { MutableInteractionSource() }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.5f)
-                .background(Brush.verticalGradient(listOf(extras.warning.copy(alpha = 0.25f), Color.Transparent)))
-                .clickable(interactionSource = giveUpInteraction, indication = null, onClick = onGiveUp),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Row(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(top = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🏳️ تسلیم — لمس بالا",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = state.secondsLeft.toPersianDigits(),
-                    fontSize = if (urgent) 44.sp else 34.sp,
-                    fontWeight = FontWeight.Black,
-                    color = if (urgent) extras.danger else MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-
-        // ---- اسم بزرگ وسط: جمع می‌بینند، خودش نه! ----
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 1800)) {
-                Text(
-                    text = state.secretName,
-                    fontSize = 54.sp,
-                    fontWeight = FontWeight.Black,
-                    color = accent,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 66.sp,
-                )
-            }
-        }
-
-        // ---- نیمه‌ی پایین: حدس زد ----
-        val guessedInteraction = remember { MutableInteractionSource() }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.5f)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, extras.success.copy(alpha = 0.30f))))
-                .clickable(interactionSource = guessedInteraction, indication = null, onClick = onGuessed),
-            contentAlignment = Alignment.BottomCenter
-        ) {
             Text(
-                text = "✅ حدس زد! — خم به جلو",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
+                text = "با سوال‌های بله/نه بفهم کی هستی: «زنده‌ام؟»، «ایرانی‌ام؟»، «ورزشکارم؟»",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            Spacer(modifier = Modifier.height(16.dp))
+            BobbingEmoji(emoji = "😎", fontSize = 52.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "آفرین! تو لیست انتظارِ راند بعدی",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = extras.success,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "به بقیه کمک بده — فقط لو نده! 🤐",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // ---- لیست انتظار ----
+        if (snapshot.guessedOrder.isNotEmpty()) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "🏁 حدس زدن (به ترتیب):",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = snapshot.guessedOrder.joinToString("  ←  "),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+        Text(
+            text = "هنوز دارن فکر می‌کنن: ${stillPlaying.joinToString("، ") { it.name }.ifBlank { "—" }}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+        if (!state.iHaveGuessed) {
+            KButton(
+                text = "حدس زدم! ✅",
+                onClick = onGuessed,
                 modifier = Modifier
                     .navigationBarsPadding()
                     .padding(bottom = 12.dp),
             )
+        } else {
+            Spacer(modifier = Modifier.navigationBarsPadding().height(12.dp))
         }
     }
 }
 
 @Composable
-private fun WaResultScreen(
-    state: WaUiState,
-    guessed: Boolean,
-    onAdjust: (Int) -> Unit,
-    onNext: () -> Unit,
+private fun WaRoundResultScreen(
+    state: WhoAmIUiState,
+    onNextRound: () -> Unit,
     onFinish: () -> Unit,
 ) {
-    val extras = kiExtras
-    val sound = LocalSoundManager.current
-    val playerColor = kiExtras.teamColors.teamColorFor(state.currentPlayer)
-    val turnScore = (if (guessed) 1 else 0) + state.turnBonus
+    val snapshot = state.snapshot
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (guessed) ConfettiOverlay()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(text = if (guessed) "🎉" else "⏰", fontSize = 60.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (guessed) "${state.playerDisplayName(state.currentPlayer)} حدس زد!"
-                else "وقت تموم شد!",
-                style = MaterialTheme.typography.displayMedium,
-                fontSize = 30.sp,
-                color = if (guessed) extras.success else extras.danger,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+        BobbingEmoji(emoji = "🎉", fontSize = 48.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        StickerTitle(text = "راند ${snapshot.roundIndex.toPersianDigits()} تموم شد!", rotation = -2f, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(14.dp))
 
-            TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1.2f) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "اسم مخفی این بود:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = state.secretName,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontSize = 32.sp,
-                        color = playerColor,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ---- بررسی امتیاز: جمع می‌تواند حکم نهایی را کم و زیاد کند ----
-            GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "بررسی امتیاز این نوبت",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+        // ---- رو شدن اسم‌ها ----
+        GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = "🏷️ کی، کی بود؟",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                snapshot.players.filter { snapshot.assignmentOf(it.name).isNotBlank() }.forEach { p ->
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val minus = remember { MutableInteractionSource() }
                         Text(
-                            text = "−۱",
-                            fontSize = 15.sp,
+                            text = p.name,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .background(extras.glassStrong, RoundedCornerShape(50))
-                                .clickable(interactionSource = minus, indication = null) {
-                                    sound?.playButtonClick(); onAdjust(-1)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 9.dp),
+                            color = kiExtras.teamColors.teamColorFor(p.colorIndex),
                         )
                         Text(
-                            text = turnScore.toPersianDigits(),
-                            style = MaterialTheme.typography.displayMedium,
+                            text = snapshot.assignmentOf(p.name),
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
-                            color = if (turnScore >= 0) extras.success else extras.danger,
-                        )
-                        val plus = remember { MutableInteractionSource() }
-                        Text(
-                            text = "+۱",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .background(extras.glassStrong, RoundedCornerShape(50))
-                                .clickable(interactionSource = plus, indication = null) {
-                                    sound?.playButtonClick(); onAdjust(1)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 9.dp),
                         )
                     }
-                    if (state.turnBonus != 0) {
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ---- جدول امتیازها ----
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = "💯 امتیازها",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                snapshot.players.sortedByDescending { it.totalScore }.forEach { p ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "حکم داورها: ${if (state.turnBonus > 0) "+" else "−"}${kotlin.math.abs(state.turnBonus).toPersianDigits()}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = extras.gold,
+                            text = p.name,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
+                            color = kiExtras.teamColors.teamColorFor(p.colorIndex),
+                        )
+                        Text(
+                            text = p.totalScore.toPersianDigits(),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-            // ---- جدول امتیازها ----
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    (0 until state.playerCount)
-                        .sortedByDescending { state.totalScores[it] }
-                        .forEach { i ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = state.playerDisplayName(i),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = kiExtras.teamColors.teamColorFor(i),
-                                )
-                                Text(
-                                    text = state.totalScores[i].toPersianDigits(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            KButton(text = "ثبت — نفر بعد", onClick = onNext, accent = playerColor)
+        Spacer(modifier = Modifier.height(18.dp))
+        if (state.isHost) {
+            KButton(text = "راند بعد! 🔁", onClick = onNextRound)
             Spacer(modifier = Modifier.height(8.dp))
             KButton(
-                text = "کی برد؟ 🏆",
-                onClick = onFinish,
+                text = "بسه دیگه — کی برد؟ 🏆",
                 style = KButtonStyle.Glass,
+                onClick = onFinish,
+                modifier = Modifier.navigationBarsPadding(),
+            )
+        } else {
+            Text(
+                text = "${snapshot.hostName} تصمیم می‌گیره: راند بعد یا اعلام برنده…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.navigationBarsPadding(),
             )
         }
@@ -918,23 +1194,26 @@ private fun WaResultScreen(
 }
 
 @Composable
-private fun WaWinnerScreen(
-    state: WaUiState,
-    winners: List<Int>,
+private fun WaGameOverScreen(
+    state: WhoAmIUiState,
+    winners: List<WaPlayer>,
     onPlayAgain: () -> Unit,
-    onExitToHub: () -> Unit,
+    onExit: () -> Unit,
 ) {
+    val snapshot = state.snapshot
+
     Box(modifier = Modifier.fillMaxSize()) {
         ConfettiOverlay()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "🏆", fontSize = 76.sp)
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = "🏆", fontSize = 80.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "کی برد؟",
@@ -942,52 +1221,62 @@ private fun WaWinnerScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = winners.joinToString(" و ") { state.playerDisplayName(it) },
+                text = winners.joinToString(" و ") { it.name },
                 style = MaterialTheme.typography.displayMedium,
-                color = kiExtras.teamColors.teamColorFor(winners.firstOrNull() ?: 0),
+                color = kiExtras.teamColors.teamColorFor(winners.firstOrNull()?.colorIndex ?: 0),
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(18.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    (0 until state.playerCount)
-                        .sortedByDescending { state.totalScores[it] }
-                        .forEachIndexed { rank, i ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 5.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = if (i in winners) "🥇" else (rank + 1).toPersianDigits(),
-                                        fontSize = 17.sp,
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = state.playerDisplayName(i),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = kiExtras.teamColors.teamColorFor(i),
-                                    )
-                                }
+                    snapshot.players.sortedByDescending { it.totalScore }.forEachIndexed { rank, p ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = state.totalScores[i].toPersianDigits(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    text = if (p in winners) "🥇" else (rank + 1).toPersianDigits(),
+                                    fontSize = 17.sp,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = p.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = kiExtras.teamColors.teamColorFor(p.colorIndex),
                                 )
                             }
+                            Text(
+                                text = p.totalScore.toPersianDigits(),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
-            KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(20.dp))
+            ShareWinButton(
+                gameId = "who_am_i",
+                gameTitle = "من کی‌ام؟",
+                gameEmoji = "🏷️",
+                winnerText = winners.joinToString(" و ") { it.name },
+                scoreLines = snapshot.players.sortedByDescending { it.totalScore }
+                    .map { it.name to it.totalScore.toPersianDigits() },
+                winnerNames = winners.map { it.name },
+            )
             Spacer(modifier = Modifier.height(10.dp))
-            KButton(text = "بازگشت به خانه", onClick = onExitToHub, style = KButtonStyle.Glass)
+            if (state.isHost) {
+                KButton(text = "دوباره بازی کنیم!", onClick = onPlayAgain)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+            KButton(text = "بازگشت به خانه", onClick = onExit, style = KButtonStyle.Glass)
         }
     }
 }

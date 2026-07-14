@@ -68,16 +68,25 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
             .padding(horizontal = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ---- هدر فشرده ----
+        // ---- هدر فشرده + تاس شانسی ----
         Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 2.1f)
-            Spacer(modifier = Modifier.width(8.dp))
-            BobbingEmoji(emoji = "🏆", fontSize = 32.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 22.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 4.4f)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 2.1f)
+                Spacer(modifier = Modifier.width(8.dp))
+                BobbingEmoji(emoji = "🏆", fontSize = 32.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 22.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 4.4f)
+            }
+            TeamPickerButton(
+                modifier = Modifier.align(Alignment.CenterStart),
+                onClick = { onOpenGame(Routes.TEAM_PICKER) },
+            )
         }
         Spacer(modifier = Modifier.height(3.dp))
         Text(
@@ -158,6 +167,31 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
                 .navigationBarsPadding()
                 .height(92.dp)
         )
+    }
+
+}
+
+/** سنگریزه‌ی تیم‌چین کنار سربرگ — قرعه‌ی تیم قبل از هر بازی */
+@Composable
+private fun TeamPickerButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val sound = LocalSoundManager.current
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .breathing(intensity = 0.05f, periodMs = 2400)
+            .background(
+                Brush.radialGradient(listOf(lerp(VioletPrimary, Color.White, 0.28f), VioletPrimary)),
+                CircleShape
+            )
+            .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+            .clickable(interactionSource = interaction, indication = null) {
+                sound?.playButtonClick()
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = "🎰", fontSize = 21.sp)
     }
 }
 

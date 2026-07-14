@@ -53,6 +53,7 @@ object Routes {
     const val PANTOMIME_RIVAL = "game/pantomime_rival"
     const val ESM_FAMIL = "game/esm_famil"
     const val MORE_GAMES = "more_games"
+    const val TEAM_PICKER = "team_picker"
     const val TABOO = "game/taboo"
     const val SPY = "game/spy"
     const val FOREHEAD = "game/forehead"
@@ -202,11 +203,11 @@ val moreGamesCatalog = listOf(
     GameInfo(
         id = "who_am_i",
         title = "من کی‌ام؟",
-        tagline = "اسم رو پیشونیت! با سوال بله/نه بفهم کی هستی",
+        tagline = "شبکه‌ای! اسم رو پیشونیت، با سوال بله/نه بفهم کی هستی",
         emoji = "🏷️",
         accent = WhoAmIAccent,
         accentDark = WhoAmIAccentDark,
-        players = "۲+ نفر",
+        players = "۳ تا ۸ نفر",
         route = Routes.WHO_AM_I,
     ),
 )

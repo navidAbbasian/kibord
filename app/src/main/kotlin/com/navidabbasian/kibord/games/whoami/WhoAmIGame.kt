@@ -44,6 +44,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
+import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
@@ -124,6 +125,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
     val uiState: StateFlow<WhoAmIUiState> = _uiState.asStateFlow()
 
     private val nsd = WaNsd(application)
+    private val keepAlive = HostKeepAlive(application)
     private var server: WaServer? = null
     private var client: WaClient? = null
 
@@ -150,6 +152,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         server = srv
+        keepAlive.acquire()
         nsd.register(name, srv.port)
         val snapshot = WaSnapshot(
             phase = WaPhase.LOBBY,
@@ -434,6 +437,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         client = null
         server?.stop()
         server = null
+        keepAlive.release()
         val name = _uiState.value.myName
         _uiState.value = WhoAmIUiState(myName = name)
     }

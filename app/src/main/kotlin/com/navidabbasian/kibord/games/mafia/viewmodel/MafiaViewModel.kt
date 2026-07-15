@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.mafia.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.games.esmfamil.model.nameKey
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.mafia.model.MF_MAX_PLAYERS
@@ -73,6 +74,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MafiaUiState> = _uiState.asStateFlow()
 
     private val nsd = MfNsd(application)
+    private val keepAlive = HostKeepAlive(application)
     private var server: MfServer? = null
     private var client: MfClient? = null
 
@@ -99,6 +101,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         server = srv
+        keepAlive.acquire()
         nsd.register(name, srv.port)
         val snapshot = MfSnapshot(
             phase = MfPhase.LOBBY,
@@ -493,6 +496,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
         client = null
         server?.stop()
         server = null
+        keepAlive.release()
         val name = _uiState.value.myName
         _uiState.value = MafiaUiState(myName = name)
     }

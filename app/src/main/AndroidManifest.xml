@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- برای بیدار نگه‌داشتن وای‌فای/CPU وقتی میزبانِ بازی شبکه‌ای گوشی را قفل می‌کند -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".KiBordApplication"

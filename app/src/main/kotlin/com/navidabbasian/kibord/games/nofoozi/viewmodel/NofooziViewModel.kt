@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.nofoozi.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.content.ContentBank
 import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.games.esmfamil.model.nameKey
@@ -67,6 +68,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<NofooziUiState> = _uiState.asStateFlow()
 
     private val nsd = NfNsd(application)
+    private val keepAlive = HostKeepAlive(application)
     private var server: NfServer? = null
     private var client: NfClient? = null
 
@@ -105,6 +107,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
             return
         }
         server = srv
+        keepAlive.acquire()
         nsd.register(name, srv.port)
         val snapshot = NfSnapshot(
             phase = NfPhase.LOBBY,
@@ -424,6 +427,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
         client = null
         server?.stop()
         server = null
+        keepAlive.release()
         val name = _uiState.value.myName
         _uiState.value = NofooziUiState(myName = name)
     }

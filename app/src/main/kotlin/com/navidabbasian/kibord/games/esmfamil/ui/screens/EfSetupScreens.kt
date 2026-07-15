@@ -329,6 +329,7 @@ fun EfLobbyScreen(
     onAddTopic: (String) -> Unit,
     onRoundSeconds: (Int) -> Unit,
     onTotalRounds: (Int) -> Unit,
+    onStopEnabled: (Boolean) -> Unit,
     onStart: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
@@ -387,6 +388,30 @@ fun EfLobbyScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ---- حالت استپ ----
+            SettingLabel("✋ استپ")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                EfPillChip(
+                    text = "استپ داره ✋",
+                    selected = snapshot.settings.stopEnabled,
+                    onClick = { sound?.playButtonClick(); onStopEnabled(true) },
+                )
+                EfPillChip(
+                    text = "بدون استپ ⏱",
+                    selected = !snapshot.settings.stopEnabled,
+                    onClick = { sound?.playButtonClick(); onStopEnabled(false) },
+                )
+            }
+            Text(
+                text = if (snapshot.settings.stopEnabled)
+                    "هر کی همه رو پر کرد می‌تونه استپ بزنه و راند رو ببنده"
+                else "استپ نداریم — همه تا آخرِ زمان می‌نویسن",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            )
             Spacer(modifier = Modifier.height(14.dp))
 
             // ---- تعداد راند ----
@@ -476,7 +501,8 @@ fun EfLobbyScreen(
             Text(
                 text = "موضوعات: ${snapshot.settings.topics.joinToString("، ")}\n" +
                     "هر راند ${snapshot.settings.roundSeconds.toPersianDigits()} ثانیه — " +
-                    "${snapshot.settings.totalRounds.toPersianDigits()} راند",
+                    "${snapshot.settings.totalRounds.toPersianDigits()} راند\n" +
+                    if (snapshot.settings.stopEnabled) "با استپ ✋" else "بدون استپ ⏱",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

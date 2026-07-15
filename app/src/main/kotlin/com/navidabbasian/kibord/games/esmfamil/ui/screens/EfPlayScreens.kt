@@ -407,12 +407,24 @@ fun EfPlayScreen(
                 .navigationBarsPadding()
                 .padding(vertical = 10.dp)
         ) {
-            KButton(
-                text = if (state.allMyFieldsFilled) "استپ! ✋" else "همه رو بنویس تا استپ فعال شه",
-                style = KButtonStyle.Danger,
-                enabled = state.allMyFieldsFilled,
-                onClick = onStop,
-            )
+            if (snapshot.settings.stopEnabled) {
+                KButton(
+                    text = if (state.allMyFieldsFilled) "استپ! ✋" else "همه رو بنویس تا استپ فعال شه",
+                    style = KButtonStyle.Danger,
+                    enabled = state.allMyFieldsFilled,
+                    onClick = onStop,
+                )
+            } else {
+                // حالتِ بدون استپ: دکمه‌ای نیست، همه تا پایانِ زمان می‌نویسند
+                Text(
+                    text = "بدون استپ — تا آخرِ زمان بنویس ✍️",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                )
+            }
         }
     }
 }

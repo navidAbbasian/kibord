@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.esmfamil.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.games.esmfamil.logic.EfScoring
 import com.navidabbasian.kibord.games.esmfamil.model.DEFAULT_TOPICS
 import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
@@ -76,6 +77,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     val uiState: StateFlow<EsmFamilUiState> = _uiState.asStateFlow()
 
     private val nsd = EfNsd(application)
+    private val keepAlive = HostKeepAlive(application)
     private var server: EfServer? = null
     private var client: EfClient? = null
     private var tickerJob: Job? = null
@@ -108,6 +110,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             return
         }
         server = srv
+        keepAlive.acquire()
         nsd.register(name, srv.port)
         val snapshot = EfSnapshot(
             phase = EfPhase.LOBBY,
@@ -194,6 +197,11 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     fun setTotalRounds(rounds: Int) = hostOnly {
         mutateSnapshot { s -> s.copy(settings = s.settings.copy(totalRounds = rounds.coerceIn(1, 15))) }
+    }
+
+    /** حالت استپ: روشن یعنی هر کس همه را پر کرد می‌تواند استپ بزند؛ خاموش یعنی همه تا آخرِ زمان می‌نویسند */
+    fun setStopEnabled(enabled: Boolean) = hostOnly {
+        mutateSnapshot { s -> s.copy(settings = s.settings.copy(stopEnabled = enabled)) }
     }
 
     fun startGame() = hostOnly {
@@ -287,6 +295,8 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     fun pressStop() {
         val st = _uiState.value
+        // در حالتِ بدون استپ اصلاً استپ پذیرفته نمی‌شود
+        if (!st.snapshot.settings.stopEnabled) return
         if (st.snapshot.phase != EfPhase.PLAYING || !st.allMyFieldsFilled) return
         if (st.isHost) hostEndRound(stopper = st.myName) else client?.send(EfMessage.StopRound)
     }
@@ -452,6 +462,8 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private fun hostEndRound(stopper: String) {
         val s = _uiState.value.snapshot
         if (s.phase != EfPhase.PLAYING) return
+        // استپِ بازیکن در حالتِ بدون استپ نادیده گرفته می‌شود؛ فقط پایانِ زمان راند را می‌بندد
+        if (stopper.isNotBlank() && !s.settings.stopEnabled) return
         if (stopper.isNotBlank()) {
             // استپ فقط از بازیکنی پذیرفته می‌شود که واقعاً همه را پر کرده — میزبان جواب‌هایش را بعداً می‌گیرد
             tickerJob?.cancel()
@@ -600,6 +612,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         client = null
         server?.stop()
         server = null
+        keepAlive.release()
         collected.clear()
         val name = _uiState.value.myName
         _uiState.value = EsmFamilUiState(myName = name)

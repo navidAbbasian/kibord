@@ -116,6 +116,7 @@ fun EsmFamilGame(
                             onAddTopic = viewModel::addCustomTopic,
                             onRoundSeconds = viewModel::setRoundSeconds,
                             onTotalRounds = viewModel::setTotalRounds,
+                            onStopEnabled = viewModel::setStopEnabled,
                             onStart = viewModel::startGame,
                         )
 

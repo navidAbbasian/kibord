@@ -57,6 +57,8 @@ data class EfSettings(
     val topics: List<String> = DEFAULT_TOPICS.take(6),
     val roundSeconds: Int = 90,
     val totalRounds: Int = 5,
+    /** آیا بازیکن‌ها می‌توانند «استپ» بزنند؟ خاموش یعنی همه تا پایانِ زمان می‌نویسند */
+    val stopEnabled: Boolean = true,
 )
 
 /** یک جواب یک بازیکن برای یک موضوع در راند جاری */

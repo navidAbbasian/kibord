@@ -173,7 +173,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
 
 /** سنگریزه‌ی تیم‌چین کنار سربرگ — قرعه‌ی تیم قبل از هر بازی */
 @Composable
-private fun TeamPickerButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun TeamPickerButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     val sound = LocalSoundManager.current
     val interaction = remember { MutableInteractionSource() }
     Box(

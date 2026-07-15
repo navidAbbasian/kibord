@@ -60,32 +60,33 @@ fun MoreGamesScreen(onOpenGame: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(top = 14.dp, bottom = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(top = 14.dp, bottom = 6.dp)
                 ) {
-                    BobbingEmoji(emoji = "🎲", fontSize = 40.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    StickerTitle(text = "بازی‌های بیشتر", accent = VioletPrimary, rotation = -2f, fontSize = 26.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "این گنجه هی پرتر می‌شه! 🎁",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        BobbingEmoji(emoji = "🎲", fontSize = 40.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        StickerTitle(text = "بازی‌های بیشتر", accent = VioletPrimary, rotation = -2f, fontSize = 26.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "این گنجه هی پرتر می‌شه! 🎁",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    // آیکون تیم‌چین در همان جایگاهِ هابِ اصلی
+                    TeamPickerButton(
+                        modifier = Modifier.align(Alignment.CenterStart),
+                        onClick = { onOpenGame(Routes.TEAM_PICKER) },
                     )
                 }
-            }
-            item(key = "team_picker_tool") {
-                ToolCard(
-                    emoji = "🎰",
-                    title = "تیم‌چین",
-                    subtitle = "قرعه بزن و بی‌دعوا تیم شید — قبل از هر بازی تیمی!",
-                    onClick = { onOpenGame(Routes.TEAM_PICKER) },
-                )
             }
             items(count = moreGamesCatalog.size, key = { moreGamesCatalog[it].id }) { i ->
                 MoreGameCard(game = moreGamesCatalog[i], index = i, onOpenGame = onOpenGame)
@@ -184,51 +185,5 @@ private fun MoreGameCard(
                 )
             }
         }
-    }
-}
-
-
-/** کارت ابزار کمکی — ظاهر شیشه‌ای تا از کارت بازی‌ها جدا باشد */
-@Composable
-private fun ToolCard(
-    emoji: String,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-) {
-    val sound = LocalSoundManager.current
-    val interaction = remember { MutableInteractionSource() }
-    val extras = com.navidabbasian.kibord.core.ui.theme.kiExtras
-    val shape = RoundedCornerShape(24.dp)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(extras.glassStrong)
-            .border(2.dp, VioletPrimary.copy(alpha = 0.45f), shape)
-            .clickable(interactionSource = interaction, indication = null) {
-                sound?.playButtonClick()
-                onClick()
-            }
-            .padding(horizontal = 16.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        BobbingEmoji(emoji = emoji, fontSize = 30.sp)
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(text = "🎲", fontSize = 18.sp)
     }
 }

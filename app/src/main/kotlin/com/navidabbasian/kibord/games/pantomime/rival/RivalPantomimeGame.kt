@@ -81,7 +81,8 @@ fun RivalPantomimeGame(
         PhaseTransition(key = state.phase::class) {
             when (state.phase) {
                 RivalPhase.TeamCount -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    // صفحه‌ی اولِ راه‌اندازی: هنوز بازی شروع نشده، پس بی‌تاییدْ خروج
+                    BackHandler { onExitToHub() }
                     RivalTeamCountScreen(onTeamCountSelected = viewModel::setTeamCount)
                 }
     

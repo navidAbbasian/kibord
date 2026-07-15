@@ -88,7 +88,8 @@ fun ClassicPantomimeGame(
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
                 ClassicPhase.TeamNames -> {
-                    BackHandler { pendingExit = { onExitToHub() } }
+                    // صفحه‌ی اولِ راه‌اندازی: هنوز بازی شروع نشده، پس بی‌تاییدْ خروج
+                    BackHandler { onExitToHub() }
                     ClassicTeamNamesScreen(
                         teamNames = state.teamNames,
                         onNameChanged = viewModel::updateTeamName,

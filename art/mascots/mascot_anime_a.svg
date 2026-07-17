@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="ana-pebble" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#C4B0FF"/>
+      <stop offset="0.55" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#8B72E8"/>
+    </linearGradient>
+    <linearGradient id="ana-iris" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A3B66"/>
+      <stop offset="0.45" stop-color="#8B72E8"/>
+      <stop offset="1" stop-color="#C4B0FF"/>
+    </linearGradient>
+    <clipPath id="ana-clip">
+      <path d="M262 40 C364 32 474 98 468 222 C463 330 420 442 292 456 C160 470 44 400 46 254 C48 132 154 48 262 40 Z"/>
+    </clipPath>
+  </defs>
+  <path fill="url(#ana-pebble)" d="M262 40 C364 32 474 98 468 222 C463 330 420 442 292 456 C160 470 44 400 46 254 C48 132 154 48 262 40 Z"/>
+  <g clip-path="url(#ana-clip)">
+    <!-- شانه‌ها -->
+    <path fill="#6D57C7" stroke="#2F2842" stroke-width="7" d="M88 478 C100 396 174 358 256 358 C338 358 412 396 424 478 L424 512 L88 512 Z"/>
+    <path fill="#FAF7FF" stroke="#2F2842" stroke-width="6" d="M224 358 L256 396 L288 358 L288 350 L224 350 Z"/>
+    <!-- گردن با سایه -->
+    <path fill="#FFDCB8" stroke="#2F2842" stroke-width="6" d="M232 300 L232 344 C232 358 280 358 280 344 L280 300 Z"/>
+    <path fill="#F3C79B" d="M232 300 L280 300 L280 318 C262 328 248 328 232 316 Z"/>
+    <!-- گوش‌ها -->
+    <path fill="#FFDCB8" stroke="#2F2842" stroke-width="6" d="M138 236 C126 228 122 248 132 262 C138 270 146 268 148 260 Z"/>
+    <path fill="#FFDCB8" stroke="#2F2842" stroke-width="6" d="M374 236 C386 228 390 248 380 262 C374 270 366 268 364 260 Z"/>
+    <!-- صورت -->
+    <path fill="#FFDCB8" stroke="#2F2842" stroke-width="7" d="M140 232 C140 150 192 102 256 102 C320 102 372 150 372 232 C372 280 352 330 318 356 C296 372 216 372 194 356 C160 330 140 280 140 232 Z"/>
+    <!-- موی چتری تیغ‌تیغی -->
+    <path fill="#382E52" d="M140 248 C136 150 194 94 256 94 C318 94 376 150 372 248
+      C364 216 356 200 346 190 L338 232 C330 200 318 182 304 174 L292 218 C284 188 270 172 256 168 L246 214 C236 184 222 172 208 172 L200 216 C190 194 178 188 166 194 L162 238 C154 220 146 222 140 248 Z"/>
+    <path fill="#4A3B66" d="M196 128 L212 116 L222 130 L238 114 L248 130 L266 112 L274 130 L292 116 L300 132 L282 140 L264 128 L250 142 L236 128 L220 142 L206 132 Z" opacity="0.9"/>
+    <!-- زلف‌های کناری -->
+    <path fill="#382E52" stroke="#2F2842" stroke-width="5" d="M142 240 C134 300 144 336 158 352 C166 326 160 282 164 250 Z"/>
+    <path fill="#382E52" stroke="#2F2842" stroke-width="5" d="M370 240 C378 300 368 336 354 352 C346 326 352 282 348 250 Z"/>
+    <!-- سایه‌ی چتری روی پیشانی -->
+    <path fill="#F3C79B" d="M196 176 C220 188 292 188 316 176 C300 196 212 196 196 176 Z" opacity="0.7"/>
+    <!-- کلاه داوری -->
+    <path fill="#8B72E8" stroke="#2F2842" stroke-width="7" d="M150 178 C160 100 208 66 256 66 C304 66 352 100 362 178 C320 160 192 160 150 178 Z"/>
+    <path fill="#6D57C7" stroke="#2F2842" stroke-width="6" d="M136 188 C200 164 312 164 376 188 C382 200 376 212 364 209 C312 192 200 192 148 209 C136 212 130 200 136 188 Z"/>
+    <circle cx="256" cy="70" r="12" fill="#6D57C7" stroke="#2F2842" stroke-width="5"/>
+    <!-- ابروها -->
+    <path fill="none" stroke="#2F2842" stroke-width="7" stroke-linecap="round" d="M182 222 C198 214 222 214 236 220"/>
+    <path fill="none" stroke="#2F2842" stroke-width="7" stroke-linecap="round" d="M276 220 C290 214 314 214 330 222"/>
+    <!-- چشم چپ -->
+    <path fill="#FFFFFF" stroke="#2F2842" stroke-width="5" d="M180 246 C194 234 226 234 238 248 C240 270 230 292 208 292 C188 292 180 268 180 246 Z"/>
+    <ellipse cx="209" cy="266" rx="18" ry="23" fill="url(#ana-iris)"/>
+    <ellipse cx="209" cy="266" rx="8" ry="11" fill="#2F2842"/>
+    <circle cx="201" cy="254" r="7.5" fill="#FFFFFF"/>
+    <circle cx="217" cy="279" r="4" fill="#FFFFFF" opacity="0.85"/>
+    <path fill="none" stroke="#2F2842" stroke-width="10" stroke-linecap="round" d="M178 242 C194 230 226 230 240 244"/>
+    <!-- چشم راست -->
+    <path fill="#FFFFFF" stroke="#2F2842" stroke-width="5" d="M274 248 C286 234 318 234 332 246 C332 268 324 292 304 292 C282 292 272 270 274 248 Z"/>
+    <ellipse cx="303" cy="266" rx="18" ry="23" fill="url(#ana-iris)"/>
+    <ellipse cx="303" cy="266" rx="8" ry="11" fill="#2F2842"/>
+    <circle cx="295" cy="254" r="7.5" fill="#FFFFFF"/>
+    <circle cx="311" cy="279" r="4" fill="#FFFFFF" opacity="0.85"/>
+    <path fill="none" stroke="#2F2842" stroke-width="10" stroke-linecap="round" d="M272 244 C286 230 318 230 334 242"/>
+    <!-- بینی و دهان -->
+    <path fill="none" stroke="#2F2842" stroke-width="5" stroke-linecap="round" d="M256 294 L260 300"/>
+    <path fill="none" stroke="#2F2842" stroke-width="7" stroke-linecap="round" d="M238 318 C248 328 264 328 274 318"/>
+    <!-- رژگونه -->
+    <ellipse cx="176" cy="298" rx="16" ry="8" fill="#F99B9B" opacity="0.5"/>
+    <ellipse cx="336" cy="298" rx="16" ry="8" fill="#F99B9B" opacity="0.5"/>
+    <!-- بند و سوت -->
+    <path fill="none" stroke="#2F2842" stroke-width="5" d="M226 362 C240 400 250 416 256 428 M286 362 C272 400 262 416 256 428"/>
+    <g transform="rotate(-12 256 442)">
+      <rect x="234" y="428" width="44" height="26" rx="10" fill="#FFCF7D" stroke="#2F2842" stroke-width="6"/>
+      <circle cx="272" cy="450" r="13" fill="#FFCF7D" stroke="#2F2842" stroke-width="6"/>
+      <circle cx="248" cy="440" r="5" fill="#E09C3B"/>
+    </g>
+    <!-- بازو و تخته‌شاسی -->
+    <path fill="none" stroke="#6D57C7" stroke-width="40" stroke-linecap="round" d="M400 456 C414 424 410 398 392 378"/>
+    <path fill="none" stroke="#2F2842" stroke-width="7" d="M382 470 C400 440 400 408 378 384"/>
+    <g transform="rotate(-12 400 330)">
+      <rect x="336" y="242" width="132" height="172" rx="14" fill="#E09C3B" stroke="#2F2842" stroke-width="7"/>
+      <rect x="350" y="270" width="104" height="130" rx="8" fill="#FFFFFF"/>
+      <rect x="376" y="232" width="52" height="26" rx="9" fill="#8A93A8" stroke="#2F2842" stroke-width="6"/>
+      <path stroke="#C9D0F0" stroke-width="9" stroke-linecap="round" d="M364 296 L440 296 M364 322 L440 322 M364 348 L414 348"/>
+      <path fill="none" stroke="#2FA97C" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" d="M368 378 L382 392 L410 366"/>
+    </g>
+    <circle cx="352" cy="404" r="20" fill="#FFDCB8" stroke="#2F2842" stroke-width="6"/>
+  </g>
+  <!-- ستاره‌ها -->
+  <path fill="#FFD98E" d="M420 96 C423 111 429 117 444 120 C429 123 423 129 420 144 C417 129 411 123 396 120 C411 117 417 111 420 96 Z"/>
+  <path fill="#FFFFFF" d="M92 300 C94 310 98 314 108 316 C98 318 94 322 92 332 C90 322 86 318 76 316 C86 314 90 310 92 300 Z" opacity="0.85"/>
+</svg>

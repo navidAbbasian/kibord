@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="logo-pebble" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#C4B0FF"/>
+      <stop offset="0.55" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#8B72E8"/>
+    </linearGradient>
+  </defs>
+  <!-- سنگریزه‌ی حباب‌گفتار: بدنه + دنباله -->
+  <path fill="url(#logo-pebble)" d="M262 40
+    C364 32 474 98 468 222
+    C463 330 420 442 292 456
+    C270 458 250 458 232 455
+    C204 478 168 494 132 498
+    C150 474 160 452 162 432
+    C88 402 42 342 46 254
+    C51 136 154 48 262 40 Z"/>
+  <!-- درخشش ملایم بالای سنگریزه -->
+  <path fill="#FFFFFF" opacity="0.16" d="M170 78
+    C230 48 330 52 380 96
+    C330 82 240 84 186 112
+    C150 130 122 160 108 196
+    C112 146 132 98 170 78 Z"/>
+  <!-- علامت سوال گنده -->
+  <path fill="none" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round"
+    d="M196 200 C196 146 226 120 262 118 C304 116 332 148 332 188 C332 234 288 244 272 280 L269 306"/>
+  <circle cx="267" cy="368" r="27" fill="#FFFFFF"/>
+  <!-- تاج برنده روی علامت سوال -->
+  <g transform="rotate(12 262 86)">
+    <path fill="#FFD98E" stroke="#FFD98E" stroke-width="10" stroke-linejoin="round"
+      d="M222 96 L230 60 L250 82 L262 50 L274 82 L294 60 L302 96 Z"/>
+    <rect x="220" y="98" width="84" height="12" rx="6" fill="#E09C3B"/>
+  </g>
+  <!-- ستاره‌های چشمک -->
+  <path fill="#FFD98E" d="M404 122 C407 138 413 144 429 147 C413 150 407 156 404 172 C401 156 395 150 379 147 C395 144 401 138 404 122 Z"/>
+  <path fill="#C4B0FF" d="M112 300 C114 311 118 315 129 317 C118 319 114 323 112 334 C110 323 106 319 95 317 C106 315 110 311 112 300 Z" opacity="0.9"/>
+  <path fill="#FFFFFF" d="M396 330 C398 340 402 344 412 346 C402 348 398 352 396 362 C394 352 390 348 380 346 C390 344 394 340 396 330 Z" opacity="0.8"/>
+</svg>

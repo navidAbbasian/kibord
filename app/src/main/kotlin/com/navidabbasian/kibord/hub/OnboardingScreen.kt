@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.hub
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -31,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.navidabbasian.kibord.R
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -50,7 +53,7 @@ private val onboardSteps = listOf(
     OnboardStep(
         emoji = "🎉",
         title = "به «کی برد؟» خوش اومدی!",
-        body = "خونه‌ی بازی‌های دورهمیِ ایرانی — یه عالمه بازی برای شب‌نشینی‌ها، مهمونی‌ها و دورهمی‌های خانوادگی!",
+        body = "خونه‌ی بازی‌های دورهمیِ ایرانی — یه عالمه بازی برای شب‌نشینی‌ها، مهمونی‌ها و دورهمی‌های خانوادگی!\n\nاین نسخه‌ی اولیه‌ی بازیه و منتظر انتقادها و پیشنهادهای شما عزیزان هستیم 💜",
     ),
     OnboardStep(
         emoji = "📵",
@@ -92,7 +95,15 @@ fun OnboardingScreen(onDone: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    BobbingEmoji(emoji = step.emoji, fontSize = 76.sp)
+                    if (page == 0) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_kibord),
+                            contentDescription = "مسکات کی برد؟",
+                            modifier = Modifier.size(160.dp)
+                        )
+                    } else {
+                        BobbingEmoji(emoji = step.emoji, fontSize = 76.sp)
+                    }
                     Spacer(modifier = Modifier.height(24.dp))
                     StickerTitle(text = step.title, accent = VioletPrimary, rotation = -2f, fontSize = 24.sp)
                     Spacer(modifier = Modifier.height(18.dp))

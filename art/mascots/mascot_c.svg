@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="mc-pebble" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#C4B0FF"/>
+      <stop offset="0.55" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#8B72E8"/>
+    </linearGradient>
+    <clipPath id="mc-clip">
+      <path d="M262 40 C364 32 474 98 468 222 C463 330 420 442 292 456 C160 470 44 400 46 254 C48 132 154 48 262 40 Z"/>
+    </clipPath>
+  </defs>
+  <path fill="url(#mc-pebble)" d="M262 40 C364 32 474 98 468 222 C463 330 420 442 292 456 C160 470 44 400 46 254 C48 132 154 48 262 40 Z"/>
+  <g clip-path="url(#mc-clip)">
+    <!-- شانه‌ها / پیراهن -->
+    <path fill="#EF6D88" d="M92 470 C104 388 176 352 256 352 C336 352 408 388 420 470 L420 512 L92 512 Z"/>
+    <path fill="#D95672" d="M92 470 C104 388 176 352 256 352 L256 512 L92 512 Z" opacity="0.35"/>
+    <!-- نشان ستاره روی سینه -->
+    <path fill="#FFD98E" d="M180 434 C184 452 192 460 210 464 C192 468 184 476 180 494 C176 476 168 468 150 464 C168 460 176 452 180 434 Z"/>
+    <!-- گردن -->
+    <rect x="230" y="308" width="52" height="56" rx="22" fill="#F3C79B"/>
+    <!-- گوش‌ها -->
+    <circle cx="139" cy="238" r="19" fill="#FFDCB8"/>
+    <circle cx="373" cy="238" r="19" fill="#FFDCB8"/>
+    <!-- صورت -->
+    <ellipse cx="256" cy="236" rx="118" ry="112" fill="#FFDCB8"/>
+    <!-- مو: چتری بامزه -->
+    <path fill="#382E52" d="M140 236 C134 146 192 108 256 108 C320 108 378 146 372 236 C368 208 358 190 342 180 C346 196 344 204 338 212 C326 184 306 168 282 164 C292 176 294 186 292 196 C272 172 240 164 210 172 C218 180 220 188 218 198 C198 196 180 204 172 220 C166 226 158 230 140 236 Z"/>
+    <!-- هدست -->
+    <path fill="none" stroke="#2F2842" stroke-width="14" d="M136 210 C142 128 194 90 256 90 C318 90 370 128 376 210"/>
+    <rect x="118" y="208" width="34" height="62" rx="15" fill="#2F2842"/>
+    <rect x="360" y="208" width="34" height="62" rx="15" fill="#2F2842"/>
+    <path fill="none" stroke="#2F2842" stroke-width="10" stroke-linecap="round" d="M140 268 C146 306 178 330 216 334"/>
+    <circle cx="228" cy="336" r="13" fill="#2F2842"/>
+    <!-- ابروها -->
+    <path fill="none" stroke="#2F2842" stroke-width="9" stroke-linecap="round" d="M196 228 C206 220 222 220 232 226"/>
+    <path fill="none" stroke="#2F2842" stroke-width="9" stroke-linecap="round" d="M280 224 C290 216 306 218 316 226"/>
+    <!-- چشم چپ باز، چشم راست چشمک -->
+    <circle cx="215" cy="254" r="14" fill="#2F2842"/>
+    <circle cx="220" cy="249" r="5" fill="#FFFFFF"/>
+    <path fill="none" stroke="#2F2842" stroke-width="10" stroke-linecap="round" d="M282 254 C292 262 302 262 312 254"/>
+    <!-- لپ‌ها -->
+    <ellipse cx="184" cy="290" rx="17" ry="11" fill="#F99B9B" opacity="0.55"/>
+    <ellipse cx="328" cy="290" rx="17" ry="11" fill="#F99B9B" opacity="0.55"/>
+    <!-- دهان باز خندان -->
+    <path fill="#2F2842" d="M226 296 C240 322 272 322 286 296 C266 302 246 302 226 296 Z"/>
+    <path fill="#F99B9B" d="M242 310 C250 316 262 316 270 310 C262 306 250 306 242 310 Z"/>
+    <!-- بازو و تخته‌شاسی -->
+    <path fill="none" stroke="#EF6D88" stroke-width="42" stroke-linecap="round" d="M398 452 C412 420 408 396 390 376"/>
+    <g transform="rotate(-12 400 330)">
+      <rect x="336" y="242" width="132" height="172" rx="16" fill="#E09C3B"/>
+      <rect x="350" y="270" width="104" height="130" rx="8" fill="#FFFFFF"/>
+      <rect x="376" y="234" width="52" height="26" rx="9" fill="#8A93A8"/>
+      <path stroke="#C9D0F0" stroke-width="9" stroke-linecap="round" d="M364 296 L440 296 M364 322 L440 322"/>
+      <path fill="none" stroke="#EE74B2" stroke-width="10" stroke-linecap="round" d="M364 352 L428 352 M364 378 L404 378"/>
+    </g>
+    <circle cx="352" cy="404" r="21" fill="#FFDCB8"/>
+    <ellipse cx="340" cy="392" rx="9" ry="14" fill="#FFDCB8" transform="rotate(-30 340 392)"/>
+  </g>
+  <!-- ستاره‌ها -->
+  <path fill="#FFD98E" d="M420 96 C423 111 429 117 444 120 C429 123 423 129 420 144 C417 129 411 123 396 120 C411 117 417 111 420 96 Z"/>
+  <path fill="#FFFFFF" d="M92 300 C94 310 98 314 108 316 C98 318 94 322 92 332 C90 322 86 318 76 316 C86 314 90 310 92 300 Z" opacity="0.85"/>
+</svg>

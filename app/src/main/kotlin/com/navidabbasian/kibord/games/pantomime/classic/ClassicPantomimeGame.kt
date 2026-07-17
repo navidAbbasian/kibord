@@ -69,11 +69,10 @@ fun ClassicPantomimeGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            ClassicPhase.TeamNames, ClassicPhase.Rounds -> MusicTrack.HUB
-            else -> MusicTrack.PANTOMIME
+        when (state.phase) {
+            ClassicPhase.TeamNames, ClassicPhase.Rounds -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

@@ -60,12 +60,15 @@ class SoundManager(context: Context) {
         appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
     }
 
+    // ---- افکت‌های مشترک همه‌ی بازی‌ها ----
+    private var idTimerTickNormal = 0
+    private var idTimerTickFast = 0
+    private var idCountdownBeep = 0
+
     // ---- افکت‌های کلمز ----
     private var idKalamzButtonClick = 0
     private var idKalamzCorrectWord = 0
     private var idKalamzWordSkip = 0
-    private var idKalamzTimerTick = 0
-    private var idKalamzTimerWarning = 0
     private var idKalamzTimerEnd = 0
     private var idKalamzTurnStart = 0
     private var idKalamzRoundStart = 0
@@ -73,8 +76,6 @@ class SoundManager(context: Context) {
     private var idKalamzGameOver = 0
 
     // ---- افکت‌های دور ----
-    private var idDorTickNormal = 0
-    private var idDorTickFast = 0
     private var idDorExplosion = 0
     private var idDorWordCorrect = 0
     private var idDorNextTurn = 0
@@ -97,19 +98,19 @@ class SoundManager(context: Context) {
         }
 
     init {
+        idTimerTickNormal = load(R.raw.timer_tick_normal)
+        idTimerTickFast = load(R.raw.timer_tick_fast)
+        idCountdownBeep = load(R.raw.countdown_beep)
+
         idKalamzButtonClick = load(R.raw.kalamz_button_click)
         idKalamzCorrectWord = load(R.raw.kalamz_correct_word)
         idKalamzWordSkip = load(R.raw.kalamz_word_skip)
-        idKalamzTimerTick = load(R.raw.kalamz_timer_tick)
-        idKalamzTimerWarning = load(R.raw.kalamz_timer_warning)
         idKalamzTimerEnd = load(R.raw.kalamz_timer_end)
         idKalamzTurnStart = load(R.raw.kalamz_turn_start)
         idKalamzRoundStart = load(R.raw.kalamz_round_start)
         idKalamzRoundEnd = load(R.raw.kalamz_round_end)
         idKalamzGameOver = load(R.raw.kalamz_game_over)
 
-        idDorTickNormal = load(R.raw.dor_tick_normal)
-        idDorTickFast = load(R.raw.dor_tick_fast)
         idDorExplosion = load(R.raw.dor_explosion)
         idDorWordCorrect = load(R.raw.dor_word_correct)
         idDorNextTurn = load(R.raw.dor_next_turn)
@@ -125,8 +126,12 @@ class SoundManager(context: Context) {
     fun playButtonClick() = play(idKalamzButtonClick, 0.8f)
     fun playCorrectWord() = play(idKalamzCorrectWord, 0.9f, rate = 1.1f)
     fun playWordSkip() = play(idKalamzWordSkip, 0.65f)
-    fun playTimerTick() = play(idKalamzTimerTick, 0.35f)
-    fun playTimerWarning() = play(idKalamzTimerWarning, 1f, rate = 0.95f)
+    // تیک‌تاک مشترک: واحد ۱ ثانیه‌ای ساعت واقعی — هر ثانیه یک‌بار صدا زده می‌شود
+    fun playTimerTick() = play(idTimerTickNormal, 0.5f)
+    fun playTimerWarning() = play(idTimerTickFast, 0.7f)
+
+    /** بوق شمارش معکوس شروع — هر ثانیه یک‌بار */
+    fun playCountdownBeep() = play(idCountdownBeep, 0.85f)
     fun playTimerEnd() = play(idKalamzTimerEnd, 1f)
     fun playTurnStart() = play(idKalamzTurnStart, 0.9f)
     fun playRoundStart() = play(idKalamzRoundStart, 1f)
@@ -134,8 +139,8 @@ class SoundManager(context: Context) {
     fun playGameOver() = play(idKalamzGameOver, 1f)
 
     // ---- دور ----
-    fun playDorTickNormal() = play(idDorTickNormal, 0.5f)
-    fun playDorTickFast() = play(idDorTickFast, 0.7f)
+    fun playDorTickNormal() = play(idTimerTickNormal, 0.5f)
+    fun playDorTickFast() = play(idTimerTickFast, 0.7f)
     fun playDorExplosion() = play(idDorExplosion, 1f)
     fun playDorWordCorrect() = play(idDorWordCorrect, 0.9f)
     fun playDorNextTurn() = play(idDorNextTurn, 0.8f)
@@ -203,6 +208,13 @@ class SoundManager(context: Context) {
                 start()
             }
         } catch (_: Exception) {}
+    }
+
+    /** توقف کامل موسیقی پس‌زمینه — برای بازی‌هایی که حین بازی فقط افکت می‌خواهند */
+    fun stopBackgroundMusic() {
+        currentTrack = null
+        try { mediaPlayer?.release() } catch (_: Exception) {}
+        mediaPlayer = null
     }
 
     fun pauseBackgroundMusic() {

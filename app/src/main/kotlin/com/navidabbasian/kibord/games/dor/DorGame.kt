@@ -65,7 +65,8 @@ fun DorGame(
             when (event) {
                 DorSoundEvent.TICK_NORMAL -> sound?.playDorTickNormal()
                 DorSoundEvent.TICK_FAST -> sound?.playDorTickFast()
-                DorSoundEvent.START_TENSION -> sound?.startBombTension()
+                // به خواست ارباب: ثانیه‌های آخر فقط تیک تند — لوپ تنش حذف شد
+                DorSoundEvent.START_TENSION -> Unit
                 DorSoundEvent.STOP_TENSION -> sound?.stopBombTension()
                 DorSoundEvent.EXPLOSION -> sound?.playDorExplosion()
                 DorSoundEvent.VIBRATE_LONG -> sound?.vibratePattern(longArrayOf(0, 120, 60, 320))
@@ -78,13 +79,13 @@ fun DorGame(
         }
     }
 
-    // موسیقی: منو در مراحل راه‌اندازی، موسیقی دور حین بازی
+    // موسیقی: منو در مراحل راه‌اندازی؛ حین بازی فقط تیک‌تاک و افکت‌ها — بدون موسیقی
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            DorPhase.PlayerCount, DorPhase.PlayerNames, DorPhase.Categories, DorPhase.Mode -> MusicTrack.HUB
-            else -> MusicTrack.DOR
+        when (state.phase) {
+            DorPhase.PlayerCount, DorPhase.PlayerNames, DorPhase.Categories, DorPhase.Mode ->
+                sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     // پاک‌سازی موسیقی تنش هنگام خروج از بازی

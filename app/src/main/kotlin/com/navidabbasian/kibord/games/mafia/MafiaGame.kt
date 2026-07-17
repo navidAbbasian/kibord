@@ -63,12 +63,11 @@ fun MafiaGame(
     val snapshot = state.snapshot
 
     LaunchedEffect(state.localScreen, snapshot.phase) {
-        val track = when {
-            state.localScreen != MfLocalScreen.IN_GAME -> MusicTrack.HUB
-            snapshot.phase == MfPhase.LOBBY -> MusicTrack.HUB
-            else -> MusicTrack.ESM_FAMIL
+        when {
+            state.localScreen != MfLocalScreen.IN_GAME -> sound?.switchMusic(MusicTrack.HUB)
+            snapshot.phase == MfPhase.LOBBY -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     val leaveAndExit = {

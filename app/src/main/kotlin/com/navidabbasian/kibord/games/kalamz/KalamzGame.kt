@@ -48,19 +48,14 @@ fun KalamzGame(
 
     // موسیقی بر اساس فاز/راند جاری
     LaunchedEffect(state.phase, state.currentRound) {
-        val track = when (state.phase) {
+        when (state.phase) {
             is GamePhase.Setup,
             is GamePhase.TeamSetup,
             is GamePhase.CustomSettings,
-            is GamePhase.WordEntry -> MusicTrack.HUB
+            is GamePhase.WordEntry -> sound?.switchMusic(MusicTrack.HUB)
 
-            else -> when (state.currentRound) {
-                RoundType.DESCRIBE -> MusicTrack.KALAMZ_ROUND_1
-                RoundType.ONE_WORD -> MusicTrack.KALAMZ_ROUND_2
-                RoundType.PANTOMIME -> MusicTrack.KALAMZ_ROUND_3
-            }
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

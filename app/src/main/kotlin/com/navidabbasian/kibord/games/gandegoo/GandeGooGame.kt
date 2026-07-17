@@ -67,11 +67,10 @@ fun GandeGooGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            GgPhase.TeamCount, GgPhase.TeamNames, GgPhase.Mode, GgPhase.Setup -> MusicTrack.HUB
-            else -> MusicTrack.GANDEGOO
+        when (state.phase) {
+            GgPhase.TeamCount, GgPhase.TeamNames, GgPhase.Mode, GgPhase.Setup -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

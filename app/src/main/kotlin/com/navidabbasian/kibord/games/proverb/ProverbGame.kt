@@ -461,11 +461,10 @@ fun ProverbGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            PvPhase.TeamNames, PvPhase.Settings -> MusicTrack.HUB
-            else -> MusicTrack.DOR
+        when (state.phase) {
+            PvPhase.TeamNames, PvPhase.Settings -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

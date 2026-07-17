@@ -403,11 +403,10 @@ fun EsmRamzGame(
     }
 
     LaunchedEffect(state.phase::class) {
-        val track = when (state.phase) {
-            ErPhase.TeamNames -> MusicTrack.HUB
-            else -> MusicTrack.DOR
+        when (state.phase) {
+            ErPhase.TeamNames -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

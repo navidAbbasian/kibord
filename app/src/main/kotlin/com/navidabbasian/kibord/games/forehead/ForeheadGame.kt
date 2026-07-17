@@ -537,11 +537,10 @@ fun ForeheadGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            FhPhase.Play -> MusicTrack.KALAMZ_ROUND_3
-            else -> MusicTrack.HUB
+        when (state.phase) {
+            FhPhase.Play -> sound?.stopBackgroundMusic()
+            else -> sound?.switchMusic(MusicTrack.HUB)
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

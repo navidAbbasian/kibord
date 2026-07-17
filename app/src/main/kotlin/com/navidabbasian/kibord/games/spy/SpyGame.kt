@@ -335,11 +335,10 @@ fun SpyGame(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistSession() }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            SpyPhase.PlayerCount, SpyPhase.PlayerNames, SpyPhase.Settings -> MusicTrack.HUB
-            else -> MusicTrack.DOR
+        when (state.phase) {
+            SpyPhase.PlayerCount, SpyPhase.PlayerNames, SpyPhase.Settings -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     // تیک‌تاک دقایق آخر بحث

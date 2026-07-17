@@ -62,12 +62,11 @@ fun NofooziGame(
     val snapshot = state.snapshot
 
     LaunchedEffect(state.localScreen, snapshot.phase) {
-        val track = when {
-            state.localScreen != NfLocalScreen.IN_GAME -> MusicTrack.HUB
-            snapshot.phase == NfPhase.LOBBY -> MusicTrack.HUB
-            else -> MusicTrack.ESM_FAMIL
+        when {
+            state.localScreen != NfLocalScreen.IN_GAME -> sound?.switchMusic(MusicTrack.HUB)
+            snapshot.phase == NfPhase.LOBBY -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     val leaveAndExit = {

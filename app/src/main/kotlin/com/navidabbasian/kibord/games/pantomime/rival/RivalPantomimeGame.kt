@@ -62,11 +62,10 @@ fun RivalPantomimeGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            RivalPhase.TeamCount, RivalPhase.TeamNames -> MusicTrack.HUB
-            else -> MusicTrack.PANTOMIME
+        when (state.phase) {
+            RivalPhase.TeamCount, RivalPhase.TeamNames -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

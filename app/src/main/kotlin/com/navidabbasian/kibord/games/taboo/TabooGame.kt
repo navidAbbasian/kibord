@@ -66,11 +66,10 @@ fun TabooGame(
     }
 
     LaunchedEffect(state.phase) {
-        val track = when (state.phase) {
-            TabooPhase.TeamCount, TabooPhase.TeamNames, TabooPhase.Settings -> MusicTrack.HUB
-            else -> MusicTrack.DOR
+        when (state.phase) {
+            TabooPhase.TeamCount, TabooPhase.TeamNames, TabooPhase.Settings -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     KiBackground {

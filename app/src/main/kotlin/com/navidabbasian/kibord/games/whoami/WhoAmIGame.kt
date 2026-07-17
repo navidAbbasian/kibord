@@ -469,12 +469,11 @@ fun WhoAmIGame(
     val snapshot = state.snapshot
 
     LaunchedEffect(state.localScreen, snapshot.phase) {
-        val track = when {
-            state.localScreen != WaLocalScreen.IN_GAME -> MusicTrack.HUB
-            snapshot.phase == WaPhase.LOBBY -> MusicTrack.HUB
-            else -> MusicTrack.ESM_FAMIL
+        when {
+            state.localScreen != WaLocalScreen.IN_GAME -> sound?.switchMusic(MusicTrack.HUB)
+            snapshot.phase == WaPhase.LOBBY -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     val leaveAndExit = {

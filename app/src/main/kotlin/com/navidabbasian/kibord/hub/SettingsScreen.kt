@@ -204,6 +204,13 @@ fun SettingsScreen() {
 
         // ---- درباره: بلیت ----
         item {
+            // نسخه همیشه از خود بسته خوانده می‌شود تا با هر انتشار خودکار درست باشد
+            val context = LocalContext.current
+            val appVersion = remember {
+                try {
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "؟"
+                } catch (_: Exception) { "؟" }
+            }
             TicketCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -213,7 +220,7 @@ fun SettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                     AboutRow(emoji = "🏆", label = "نام اپ", value = "کی برد؟")
-                    AboutRow(emoji = "🔖", label = "نسخه", value = "۰.۵.۰")
+                    AboutRow(emoji = "🔖", label = "نسخه", value = appVersion.toPersianDigits())
                     AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۱۲ بازی دورهمی")
                 }
             }

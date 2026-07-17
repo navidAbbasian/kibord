@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.net.HostKeepAlive
+import com.navidabbasian.kibord.games.esmfamil.logic.EF_BOT_NAME
+import com.navidabbasian.kibord.games.esmfamil.logic.EfBot
+import com.navidabbasian.kibord.games.esmfamil.logic.EfBotLevel
 import com.navidabbasian.kibord.games.esmfamil.logic.EfScoring
 import com.navidabbasian.kibord.games.esmfamil.model.DEFAULT_TOPICS
 import com.navidabbasian.kibord.games.esmfamil.model.EfAnswer
@@ -54,6 +57,9 @@ data class EsmFamilUiState(
     val hostPort: Int = 0,
     /** ارتباط با میزبان قطع شد */
     val lostConnection: Boolean = false,
+    /** بازی تک‌نفره با ربات — بدون هیچ شبکه‌ای */
+    val botMode: Boolean = false,
+    val botLevel: EfBotLevel = EfBotLevel.NORMAL,
 ) {
     val isHost: Boolean get() = role == EfRole.HOST
     val me: EfPlayer? get() = snapshot.player(myName)
@@ -86,6 +92,11 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     /** جواب‌های رسیده‌ی راند جاری (فقط میزبان) */
     private val collected = mutableMapOf<String, Map<String, String>>()
     private var roundApplied = false
+
+    /** جواب‌های ربات برای راند جاری + کارهای زمان‌دار ربات */
+    private var botAnswers: Map<String, String> = emptyMap()
+    private var botActionJob: Job? = null
+    private var botStopJob: Job? = null
 
     // ================= ورود =================
 
@@ -131,6 +142,88 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             )
         }
         setSnapshot(snapshot)
+    }
+
+    // ================= بازی با ربات =================
+
+    /** شروع بازی تک‌نفره با ربات — همان منطق میزبان، بدون سرور و شبکه */
+    fun startBotGame() {
+        val name = _uiState.value.myName.trim()
+        if (name.isBlank()) return
+        val snapshot = EfSnapshot(
+            phase = EfPhase.LOBBY,
+            players = listOf(
+                EfPlayer(name = name, colorIndex = 0),
+                EfPlayer(name = EF_BOT_NAME, colorIndex = 1),
+            ),
+            hostName = name,
+            settings = EfSettings(),
+        )
+        _uiState.update {
+            it.copy(
+                role = EfRole.HOST,
+                localScreen = EfLocalScreen.IN_GAME,
+                myName = name,
+                botMode = true,
+                connectError = null,
+            )
+        }
+        setSnapshot(snapshot)
+    }
+
+    fun setBotLevel(level: EfBotLevel) = hostOnly {
+        _uiState.update { it.copy(botLevel = level) }
+    }
+
+    /** عوارض جانبی نوبت ربات — بعد از هر گذار وضعیت در حالت ربات صدا زده می‌شود */
+    private fun runBotSideEffects(prev: EfSnapshot, next: EfSnapshot) {
+        val st = _uiState.value
+        if (!st.botMode || st.role != EfRole.HOST) return
+
+        // نوبت انتخاب حرف ربات: با مکثی انسانی یک حرف باقی‌مانده را برمی‌دارد
+        val botTurnStarted = next.phase == EfPhase.LETTER_PICK &&
+            sameName(next.pickerName, EF_BOT_NAME) &&
+            (prev.phase != EfPhase.LETTER_PICK || !sameName(prev.pickerName, EF_BOT_NAME))
+        if (botTurnStarted) {
+            botActionJob?.cancel()
+            botActionJob = viewModelScope.launch {
+                delay(1800)
+                val s = _uiState.value.snapshot
+                if (s.phase == EfPhase.LETTER_PICK && sameName(s.pickerName, EF_BOT_NAME)) {
+                    s.remainingLetters.randomOrNull()?.let { hostPickLetter(EF_BOT_NAME, it) }
+                }
+            }
+        }
+
+        // شروع راند: ربات جواب‌هایش را «می‌نویسد» و شاید برای استپ نقشه بکشد
+        if (next.phase == EfPhase.PLAYING && prev.phase != EfPhase.PLAYING) {
+            botAnswers = EfBot.answersFor(next.settings.topics, next.currentLetter, st.botLevel)
+            botStopJob?.cancel()
+            val fraction = st.botLevel.stopFraction
+            if (next.settings.stopEnabled && fraction != null && EfBot.knowsAll(botAnswers)) {
+                botStopJob = viewModelScope.launch {
+                    delay((next.settings.roundSeconds * fraction * 1000).toLong())
+                    if (_uiState.value.snapshot.phase == EfPhase.PLAYING) {
+                        hostEndRound(stopper = EF_BOT_NAME)
+                    }
+                }
+            }
+        }
+
+        // پایان راند: جواب‌های ربات مثل یک مهمان واقعی تحویل می‌شود
+        if (next.phase == EfPhase.REVIEW && prev.phase == EfPhase.PLAYING) {
+            botStopJob?.cancel()
+            hostReceiveAnswers(EF_BOT_NAME, botAnswers)
+        }
+
+        // جدول اعتراض که آمد، ربات کمی نگاه می‌کند و «اعتراضی ندارم» می‌زند
+        if (next.phase == EfPhase.REVIEW && next.answers.isNotEmpty() && prev.answers.isEmpty()) {
+            botActionJob?.cancel()
+            botActionJob = viewModelScope.launch {
+                delay(1200)
+                hostMarkReviewDone(EF_BOT_NAME)
+            }
+        }
     }
 
     /** بررسی ورود مهمان جدید — تهی یعنی پذیرفته شد */
@@ -421,7 +514,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         startCountdownTicker()
     }
 
-    /** شمارش معکوس اعلام حرف — در صفر، راند واقعی شروع می‌شود */
+    /** شمارش معکوس اعلام حرف — صفر یعنی لحظه‌ی «شروع!»؛ یک ثانیه بعدش راند واقعی آغاز می‌شود */
     private fun startCountdownTicker() {
         tickerJob?.cancel()
         tickerJob = viewModelScope.launch {
@@ -430,7 +523,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
                 val s = _uiState.value.snapshot
                 if (s.phase != EfPhase.COUNTDOWN) break
                 val left = s.secondsLeft - 1
-                if (left <= 0) {
+                if (left < 0) {
                     mutateSnapshot {
                         it.copy(phase = EfPhase.PLAYING, secondsLeft = it.settings.roundSeconds)
                     }
@@ -596,6 +689,8 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             if (st.isHost) hostReceiveAnswers(st.myName, st.myAnswers)
             else client?.send(EfMessage.Submit(st.myAnswers))
         }
+
+        runBotSideEffects(prev, next)
     }
 
     private inline fun hostOnly(block: () -> Unit) {
@@ -607,6 +702,9 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     fun leaveGame() {
         tickerJob?.cancel()
         collectJob?.cancel()
+        botActionJob?.cancel()
+        botStopJob?.cancel()
+        botAnswers = emptyMap()
         nsd.release()
         client?.close()
         client = null

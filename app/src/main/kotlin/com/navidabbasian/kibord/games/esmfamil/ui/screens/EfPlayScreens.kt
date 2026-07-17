@@ -226,8 +226,9 @@ fun EfCountdownScreen(state: EsmFamilUiState) {
     val sound = LocalSoundManager.current
     val snapshot = state.snapshot
 
+    // ۵-۴-۳-۲-۱ با بوق؛ لحظه‌ی «شروع!» بی‌صداست تا نفس‌گیر شود
     LaunchedEffect(snapshot.secondsLeft) {
-        sound?.playTimerWarning()
+        if (snapshot.secondsLeft > 0) sound?.playCountdownBeep()
     }
 
     Column(
@@ -270,11 +271,11 @@ fun EfCountdownScreen(state: EsmFamilUiState) {
         )
         Spacer(modifier = Modifier.height(30.dp))
 
-        // ---- شماره‌ی معکوس با پرش فنری ----
+        // ---- شماره‌ی معکوس با پرش فنری؛ صفر یعنی «شروع!» ----
         PhaseTransition(key = snapshot.secondsLeft) {
             Text(
-                text = snapshot.secondsLeft.toPersianDigits(),
-                fontSize = 96.sp,
+                text = if (snapshot.secondsLeft > 0) snapshot.secondsLeft.toPersianDigits() else "شروع!",
+                fontSize = if (snapshot.secondsLeft > 0) 96.sp else 64.sp,
                 fontWeight = FontWeight.Black,
                 color = accent,
             )
@@ -294,6 +295,14 @@ fun EfPlayScreen(
     val snapshot = state.snapshot
     val seconds = snapshot.secondsLeft
     val urgent = seconds <= 10
+
+    // تیک‌تاک مشترک تایمر: عادی، و در ۱۰ ثانیه‌ی آخر هیجانی (در حالت بدون تایمر ساکت)
+    val sound = LocalSoundManager.current
+    LaunchedEffect(seconds) {
+        if (snapshot.settings.roundSeconds > 0 && seconds > 0) {
+            if (urgent) sound?.playTimerWarning() else sound?.playTimerTick()
+        }
+    }
 
     val view = LocalView.current
     DisposableEffect(Unit) {

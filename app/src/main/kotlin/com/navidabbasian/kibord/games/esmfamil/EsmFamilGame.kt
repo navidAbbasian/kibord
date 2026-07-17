@@ -64,12 +64,11 @@ fun EsmFamilGame(
     val snapshot = state.snapshot
 
     LaunchedEffect(state.localScreen, snapshot.phase) {
-        val track = when {
-            state.localScreen != EfLocalScreen.IN_GAME -> MusicTrack.HUB
-            snapshot.phase == EfPhase.LOBBY -> MusicTrack.HUB
-            else -> MusicTrack.ESM_FAMIL
+        when {
+            state.localScreen != EfLocalScreen.IN_GAME -> sound?.switchMusic(MusicTrack.HUB)
+            snapshot.phase == EfPhase.LOBBY -> sound?.switchMusic(MusicTrack.HUB)
+            else -> sound?.stopBackgroundMusic()
         }
-        sound?.switchMusic(track)
     }
 
     val leaveAndExit = {
@@ -95,6 +94,7 @@ fun EsmFamilGame(
                         onNameChanged = viewModel::setMyName,
                         onHost = viewModel::startHosting,
                         onJoin = viewModel::openJoinScreen,
+                        onBot = viewModel::startBotGame,
                     )
                 }
 
@@ -117,6 +117,7 @@ fun EsmFamilGame(
                             onRoundSeconds = viewModel::setRoundSeconds,
                             onTotalRounds = viewModel::setTotalRounds,
                             onStopEnabled = viewModel::setStopEnabled,
+                            onBotLevel = viewModel::setBotLevel,
                             onStart = viewModel::startGame,
                         )
 

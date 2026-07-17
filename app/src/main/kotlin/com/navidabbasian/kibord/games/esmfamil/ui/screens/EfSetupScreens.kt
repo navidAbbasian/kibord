@@ -54,6 +54,7 @@ import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.games.esmfamil.logic.EfBotLevel
 import com.navidabbasian.kibord.games.esmfamil.model.DEFAULT_TOPICS
 import com.navidabbasian.kibord.games.esmfamil.model.EfPlayer
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
@@ -61,13 +62,14 @@ import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.net.EfDiscoveredGame
 import com.navidabbasian.kibord.games.esmfamil.viewmodel.EsmFamilUiState
 
-/** ورود: اسم خودت را بگو، بعد میزبان شو یا بپیوند */
+/** ورود: اسم خودت را بگو، بعد میزبان شو، بپیوند یا با ربات تمرین کن */
 @Composable
 fun EfEntryScreen(
     state: EsmFamilUiState,
     onNameChanged: (String) -> Unit,
     onHost: () -> Unit,
     onJoin: () -> Unit,
+    onBot: () -> Unit,
 ) {
     // هشدار تم‌دار وقتی بدون نوشتن اسم روی دکمه‌ها بزند
     var showNameError by remember { mutableStateOf(false) }
@@ -133,6 +135,18 @@ fun EfEntryScreen(
                 onClick = { guardName(onJoin) },
             )
         }
+
+        Spacer(modifier = Modifier.height(34.dp))
+        ChoiceBubble(
+            main = "با ربات",
+            sub = "تک‌نفره تمرین کن —\nحریفت عمو رباته!",
+            emoji = "🤖",
+            size = 132.dp,
+            mainFontSize = 20.sp,
+            tilt = -2f,
+            phase = 3f,
+            onClick = { guardName(onBot) },
+        )
 
         if (showNameError && state.myName.isBlank()) {
             Spacer(modifier = Modifier.height(40.dp))
@@ -330,6 +344,7 @@ fun EfLobbyScreen(
     onRoundSeconds: (Int) -> Unit,
     onTotalRounds: (Int) -> Unit,
     onStopEnabled: (Boolean) -> Unit,
+    onBotLevel: (EfBotLevel) -> Unit,
     onStart: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
@@ -377,6 +392,27 @@ fun EfLobbyScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         if (state.isHost) {
+            if (state.botMode) {
+                // ---- سطح ربات ----
+                SettingLabel("🤖 سطح ربات")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    EfBotLevel.entries.forEach { level ->
+                        EfPillChip(
+                            text = level.title,
+                            selected = state.botLevel == level,
+                            onClick = { sound?.playButtonClick(); onBotLevel(level) },
+                        )
+                    }
+                }
+                Text(
+                    text = "ربات موضوع‌های دلخواهِ خودت رو بلد نیست — اون‌ها رو خالی می‌ذاره!",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             // ---- مدت راند ----
             SettingLabel("⏱ مدت هر راند")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

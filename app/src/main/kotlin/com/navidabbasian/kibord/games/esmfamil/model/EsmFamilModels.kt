@@ -17,7 +17,7 @@ val DEFAULT_TOPICS = listOf(
 )
 
 const val MIN_PLAYERS = 2
-const val MAX_PLAYERS = 8
+const val MAX_PLAYERS = 12
 
 /** مهلت فاز اعتراض بعد از امتیازشماری هر راند */
 const val REVIEW_SECONDS = 60

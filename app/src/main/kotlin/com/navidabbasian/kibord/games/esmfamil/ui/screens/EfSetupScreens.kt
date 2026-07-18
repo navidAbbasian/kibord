@@ -57,6 +57,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.logic.EfBotLevel
 import com.navidabbasian.kibord.games.esmfamil.model.DEFAULT_TOPICS
 import com.navidabbasian.kibord.games.esmfamil.model.EfPlayer
+import com.navidabbasian.kibord.games.esmfamil.model.MAX_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.MIN_PLAYERS
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.esmfamil.net.EfDiscoveredGame
@@ -370,7 +371,7 @@ fun EfLobbyScreen(
         GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
             Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
                 Text(
-                    text = "بازیکن‌ها (${snapshot.players.size.toPersianDigits()} از ۸)",
+                    text = "بازیکن‌ها (${snapshot.players.size.toPersianDigits()} از ${MAX_PLAYERS.toPersianDigits()})",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -10,6 +10,7 @@ import com.navidabbasian.kibord.games.esmfamil.model.nameKey
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.nofoozi.model.NF_CITIZEN_SCORE
 import com.navidabbasian.kibord.games.nofoozi.model.NF_MAX_PLAYERS
+import com.navidabbasian.kibord.games.nofoozi.model.undercoverCountFor
 import com.navidabbasian.kibord.games.nofoozi.model.NF_MIN_PLAYERS
 import com.navidabbasian.kibord.games.nofoozi.model.NF_UNDERCOVER_SCORE
 import com.navidabbasian.kibord.games.nofoozi.model.NfPair
@@ -54,7 +55,7 @@ data class NofooziUiState(
     val iHaveSeen: Boolean get() = snapshot.hasSeen(myName)
     val myVote: String? get() = snapshot.voteOf(myName)
     /** من نفوذیِ این راند بودم؟ فقط صفحه‌ی نتیجه از این استفاده می‌کند */
-    val iWasUndercover: Boolean get() = sameName(snapshot.undercoverName, myName)
+    val iWasUndercover: Boolean get() = snapshot.isUndercover(myName)
 }
 
 /**
@@ -182,7 +183,8 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
         val s = _uiState.value.snapshot
         val pair = drawPair() ?: return
         val connected = s.players.filter { it.connected }
-        val undercover = connected.random()
+        val undercovers = connected.shuffled().take(undercoverCountFor(connected.size))
+        val undercoverKeys = undercovers.map { nameKey(it.name) }.toSet()
         // گاهی کلمه‌ها جابه‌جا می‌شوند تا نشود از خودِ کلمه حدس زد کی نفوذی است
         val swap = listOf(true, false).random()
         val citizenWord = if (swap) pair.similar else pair.word
@@ -193,9 +195,9 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
                 roundIndex = roundIndex,
                 players = if (resetScores) snap.players.map { it.copy(totalScore = 0) } else snap.players,
                 words = snap.players.associate { p ->
-                    p.name to if (sameName(p.name, undercover.name)) undercoverWord else citizenWord
+                    p.name to if (nameKey(p.name) in undercoverKeys) undercoverWord else citizenWord
                 },
-                undercoverName = undercover.name,
+                undercoverNames = undercovers.map { it.name },
                 seen = emptyList(),
                 votes = emptyMap(),
                 accusedName = "",
@@ -315,7 +317,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
                 phase = NfPhase.LOBBY,
                 roundIndex = 0,
                 words = emptyMap(),
-                undercoverName = "",
+                undercoverNames = emptyList(),
                 seen = emptyList(),
                 votes = emptyMap(),
                 accusedName = "",
@@ -382,7 +384,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
         val top = tally.maxByOrNull { it.value }
         val accusedKey = top?.takeIf { t -> tally.count { it.value == t.value } == 1 }?.key ?: ""
         val accused = s.players.firstOrNull { nameKey(it.name) == accusedKey }?.name ?: ""
-        val caught = accused.isNotBlank() && sameName(accused, s.undercoverName)
+        val caught = accused.isNotBlank() && s.isUndercover(accused)
 
         mutateSnapshot { snap ->
             snap.copy(
@@ -390,7 +392,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
                 accusedName = accused,
                 caught = caught,
                 players = snap.players.map { p ->
-                    val isUndercover = sameName(p.name, snap.undercoverName)
+                    val isUndercover = snap.isUndercover(p.name)
                     val gain = when {
                         caught && !isUndercover -> NF_CITIZEN_SCORE
                         !caught && isUndercover -> NF_UNDERCOVER_SCORE

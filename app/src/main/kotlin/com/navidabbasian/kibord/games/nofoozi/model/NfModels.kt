@@ -11,7 +11,10 @@ data class NfPair(
 )
 
 const val NF_MIN_PLAYERS = 3
-const val NF_MAX_PLAYERS = 8
+const val NF_MAX_PLAYERS = 12
+
+/** تعداد نفوذی‌ها با تعداد بازیکن مقیاس می‌خورد تا رای‌ها بی‌خاصیت پخش نشوند */
+fun undercoverCountFor(playerCount: Int): Int = if (playerCount >= 9) 2 else 1
 
 /** امتیاز شهروندها وقتی نفوذی لو برود */
 const val NF_CITIZEN_SCORE = 10
@@ -44,8 +47,8 @@ data class NfSnapshot(
     val roundIndex: Int = 0,
     /** کلمه‌ی هر بازیکن در این راند */
     val words: Map<String, String> = emptyMap(),
-    /** نفوذیِ این راند — تا صفحه‌ی نتیجه هیچ‌جا نمایش داده نمی‌شود */
-    val undercoverName: String = "",
+    /** نفوذی‌های این راند (یک یا دو نفر) — تا صفحه‌ی نتیجه هیچ‌جا نمایش داده نمی‌شود */
+    val undercoverNames: List<String> = emptyList(),
     /** چه کسانی کلمه‌شان را دیده‌اند */
     val seen: List<String> = emptyList(),
     /** رای هر بازیکن: رای‌دهنده → متهم */
@@ -61,6 +64,9 @@ data class NfSnapshot(
         words.entries.firstOrNull { sameName(it.key, name) }?.value ?: ""
 
     fun hasSeen(name: String): Boolean = seen.any { sameName(it, name) }
+
+    /** آیا این بازیکن نفوذیِ این راند است؟ */
+    fun isUndercover(name: String): Boolean = undercoverNames.any { sameName(it, name) }
 
     fun voteOf(name: String): String? =
         votes.entries.firstOrNull { sameName(it.key, name) }?.value

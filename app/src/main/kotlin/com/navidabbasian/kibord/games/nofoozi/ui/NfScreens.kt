@@ -59,6 +59,7 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
+import com.navidabbasian.kibord.games.nofoozi.model.NF_MAX_PLAYERS
 import com.navidabbasian.kibord.games.nofoozi.model.NF_MIN_PLAYERS
 import com.navidabbasian.kibord.games.nofoozi.model.NfPlayer
 import com.navidabbasian.kibord.games.nofoozi.net.NfDiscoveredGame
@@ -376,7 +377,7 @@ fun NfLobbyScreen(
         GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
             Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
                 Text(
-                    text = "بازیکن‌ها (${snapshot.players.size.toPersianDigits()} از ۸)",
+                    text = "بازیکن‌ها (${snapshot.players.size.toPersianDigits()} از ${NF_MAX_PLAYERS.toPersianDigits()})",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -677,7 +678,9 @@ fun NfRoundResultScreen(
 ) {
     val extras = kiExtras
     val snapshot = state.snapshot
-    val undercover = snapshot.player(snapshot.undercoverName)
+    val undercovers = snapshot.undercoverNames
+    val firstUndercover = snapshot.player(undercovers.firstOrNull() ?: "")
+    val many = undercovers.size > 1
 
     Column(
         modifier = Modifier
@@ -691,18 +694,24 @@ fun NfRoundResultScreen(
         Text(text = if (snapshot.caught) "🎉" else "😎", fontSize = 60.sp)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (snapshot.caught) "نفوذی گرفتار شد!" else "نفوذی قِسِر در رفت!",
+            text = when {
+                snapshot.caught && many -> "یکی از نفوذی‌ها گرفتار شد!"
+                snapshot.caught -> "نفوذی گرفتار شد!"
+                many -> "نفوذی‌ها قِسِر در رفتن!"
+                else -> "نفوذی قِسِر در رفت!"
+            },
             style = MaterialTheme.typography.displayMedium,
             color = if (snapshot.caught) extras.success else extras.danger,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "نفوذی این راند: ${snapshot.undercoverName}" +
+            text = (if (many) "نفوذی‌های این راند: " else "نفوذی این راند: ") +
+                undercovers.joinToString("، ") +
                 if (state.iWasUndercover) " (خودت! 🥸)" else "",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = kiExtras.teamColors.teamColorFor(undercover?.colorIndex ?: 0),
+            color = kiExtras.teamColors.teamColorFor(firstUndercover?.colorIndex ?: 0),
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -718,9 +727,9 @@ fun NfRoundResultScreen(
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Text(
                     text = "کلمه‌ی جمع: ${
-                        snapshot.players.firstOrNull { !sameName(it.name, snapshot.undercoverName) }
+                        snapshot.players.firstOrNull { !snapshot.isUndercover(it.name) }
                             ?.let { snapshot.wordOf(it.name) } ?: "—"
-                    }   •   کلمه‌ی نفوذی: ${snapshot.wordOf(snapshot.undercoverName)}",
+                    }   •   کلمه‌ی نفوذی: ${snapshot.wordOf(undercovers.firstOrNull() ?: "")}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -746,7 +755,7 @@ fun NfRoundResultScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = (if (sameName(p.name, snapshot.undercoverName)) "🥸 " else "") + p.name,
+                                text = (if (snapshot.isUndercover(p.name)) "🥸 " else "") + p.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = kiExtras.teamColors.teamColorFor(p.colorIndex),

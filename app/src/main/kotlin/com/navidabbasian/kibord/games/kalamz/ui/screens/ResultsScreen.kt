@@ -108,7 +108,7 @@ fun ResultsScreen(teams: List<Team>, onPlayAgain: () -> Unit, onExitToHub: () ->
 
             ShareWinButton(
                 gameId = "kalamz",
-                gameTitle = "کلمز",
+                gameTitle = "کَلَمز",
                 gameEmoji = "🗣",
                 winnerText = sortedTeams.filter { it.totalScore == winnerScore }
                     .joinToString(" و ") { it.name.ifBlank { "${it.player1.name} و ${it.player2.name}" } },

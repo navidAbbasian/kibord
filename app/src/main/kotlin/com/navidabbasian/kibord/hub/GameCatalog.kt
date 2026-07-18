@@ -68,7 +68,7 @@ object Routes {
 val gameCatalog = listOf(
     GameInfo(
         id = "kalamz",
-        title = "کلمز",
+        title = "کَلَمز",
         tagline = "سه راند حدس کلمه: توضیح، یک کلمه، پانتومیم",
         emoji = "🗣️",
         accent = KalamzAccent,
@@ -78,7 +78,7 @@ val gameCatalog = listOf(
     ),
     GameInfo(
         id = "dor",
-        title = "دور",
+        title = "دُور",
         tagline = "بمب داره تیک‌تاک می‌کنه! کلمه رو برسون و رد کن",
         emoji = "💣",
         accent = DorAccent,
@@ -99,11 +99,11 @@ val gameCatalog = listOf(
     GameInfo(
         id = "esm_famil",
         title = "اسم فامیل",
-        tagline = "چندنفره با گوشی‌های خودتون! حرف بیار، بنویس، استپ!",
+        tagline = "هرکی با گوشی خودش، اسم از سین، استپ!",
         emoji = "✍️",
         accent = EsmFamilAccent,
         accentDark = EsmFamilAccentDark,
-        players = "۲ تا ۸ نفر — هر کی با گوشی خودش",
+        players = "۲ تا ۱۲ نفر",
         route = Routes.ESM_FAMIL,
     ),
 )
@@ -187,7 +187,7 @@ val moreGamesCatalog = listOf(
         emoji = "🥸",
         accent = NofooziAccent,
         accentDark = NofooziAccentDark,
-        players = "۳ تا ۸ نفر",
+        players = "۳ تا ۱۲ نفر",
         route = Routes.NOFOOZI,
     ),
     GameInfo(
@@ -207,7 +207,7 @@ val moreGamesCatalog = listOf(
         emoji = "🏷️",
         accent = WhoAmIAccent,
         accentDark = WhoAmIAccentDark,
-        players = "۳ تا ۸ نفر",
+        players = "۲ تا ۸ نفر",
         route = Routes.WHO_AM_I,
     ),
 )

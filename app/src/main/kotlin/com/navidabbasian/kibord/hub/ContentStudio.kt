@@ -95,7 +95,7 @@ fun ContentStudioSection() {
             },
         )
         KButton(
-            text = "💣 محتوای جدید برای دور",
+            text = "💣 محتوای جدید برای دُور",
             style = KButtonStyle.Glass,
             accent = VioletPrimary,
             onClick = { sound?.playButtonClick(); dialog = ContentDialog.DOR },
@@ -146,7 +146,7 @@ private fun DorCategoryDialog(onDismiss: () -> Unit) {
     val words = parseItems(wordsText)
     val valid = name.isNotBlank() && words.size >= 30
 
-    ContentDialogFrame(title = "کتگوری دور", onDismiss = onDismiss) {
+    ContentDialogFrame(title = "کتگوری دُور", onDismiss = onDismiss) {
         BlobTextField(value = name, onValueChange = { name = it }, placeholder = "نام کتگوری", color = VioletPrimary, badge = "🏷️")
         Spacer(modifier = Modifier.height(8.dp))
         BlobTextField(value = emoji, onValueChange = { emoji = it }, placeholder = "ایموجی (اختیاری)", color = VioletPrimary, badge = "😀")
@@ -579,7 +579,7 @@ private fun loadLocalContent(context: Context): List<Pair<String, List<LocalCat>
             )
         }
     }
-    return listOf("💣 دور" to dor, "😏 گنده‌گو" to gandegoo, "🎭 پانتومیم" to pantomime)
+    return listOf("💣 دُور" to dor, "😏 گنده‌گو" to gandegoo, "🎭 پانتومیم" to pantomime)
 }
 
 /** نمایش کتگوری‌ها و آیتم‌های افزوده‌شده به‌صورت محلی — فقط خواندنی */
@@ -658,7 +658,7 @@ private fun sendCustomContentToGitHub(context: Context) {
     val store = CustomContentStore(context)
     val sections = buildString {
         listOf(
-            Triple("دور", CustomContentStore.DOR, "words.json"),
+            Triple("دُور", CustomContentStore.DOR, "words.json"),
             Triple("گنده‌گو", CustomContentStore.GANDEGOO, "gandegoo.json"),
             Triple("پانتومیم", CustomContentStore.PANTOMIME, "pantomime.json"),
         ).forEach { (label, key, file) ->

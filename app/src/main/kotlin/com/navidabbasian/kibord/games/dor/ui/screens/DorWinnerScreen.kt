@@ -105,7 +105,7 @@ fun DorWinnerScreen(
             Spacer(modifier = Modifier.height(28.dp))
             ShareWinButton(
                 gameId = "dor",
-                gameTitle = "دور",
+                gameTitle = "دُور",
                 gameEmoji = "💣",
                 winnerText = winner?.players?.joinToString(" و ") ?: "هیچ‌کس!",
                 scoreLines = winner?.let {

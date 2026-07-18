@@ -1,6 +1,14 @@
 package com.navidabbasian.kibord.games.whoami
 
+import android.app.Activity
 import android.app.Application
+import android.content.Context
+import android.content.pm.ActivityInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,10 +29,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,20 +57,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.net.HostKeepAlive
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
-import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.TicketCard
+import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -67,6 +81,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import com.navidabbasian.kibord.games.whoami.model.WA_MAX_PLAYERS
 import com.navidabbasian.kibord.games.whoami.model.WA_MIN_PLAYERS
+import com.navidabbasian.kibord.games.whoami.model.WA_QUESTION_CHOICES
 import com.navidabbasian.kibord.games.whoami.model.WaPhase
 import com.navidabbasian.kibord.games.whoami.model.WaPlayer
 import com.navidabbasian.kibord.games.whoami.model.WaSnapshot
@@ -75,10 +90,16 @@ import com.navidabbasian.kibord.games.whoami.net.WaDiscoveredGame
 import com.navidabbasian.kibord.games.whoami.net.WaMessage
 import com.navidabbasian.kibord.games.whoami.net.WaNsd
 import com.navidabbasian.kibord.games.whoami.net.WaServer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 // ================= وضعیت محلی =================
 
@@ -88,6 +109,9 @@ enum class WaNetRole { NONE, HOST, CLIENT }
 /** صفحه‌های محلیِ قبل از ورود به جریان مشترک بازی */
 enum class WaLocalScreen { ENTRY, JOIN, IN_GAME }
 
+/** رویدادهای صوتی محلی — فقط روی گوشی خود بازیکن پخش می‌شوند */
+enum class WaSoundEvent { NOD, BEEP, ROUND_START, ROUND_END, OUT }
+
 data class WhoAmIUiState(
     val role: WaNetRole = WaNetRole.NONE,
     val localScreen: WaLocalScreen = WaLocalScreen.ENTRY,
@@ -96,38 +120,72 @@ data class WhoAmIUiState(
     val discovered: List<WaDiscoveredGame> = emptyList(),
     val connecting: Boolean = false,
     val connectError: String? = null,
-    /** اسمی که دارم برای هدفم می‌نویسم */
+    /** اسمی که دارم برای هدف فعلی‌ام می‌نویسم */
     val myDraft: String = "",
     val hostAddress: String = "",
     val hostPort: Int = 0,
     val lostConnection: Boolean = false,
+    /** ثانیه‌ی جاری شمارش معکوس شروع راند */
+    val countdownLeft: Int = 5,
 ) {
     val isHost: Boolean get() = role == WaNetRole.HOST
     val me: WaPlayer? get() = snapshot.player(myName)
-    val myTarget: String get() = snapshot.targetOf(myName)
-    val iHaveSubmitted: Boolean get() = snapshot.hasSubmitted(myName)
+    /** هدف‌هایی که هنوز برایشان ننوشته‌ام — میزبان در تعداد فرد ممکن است دو تا داشته باشد */
+    val myPendingTargets: List<String> get() = snapshot.pendingTargetsOf(myName)
+    val myTargets: List<String> get() = snapshot.targetsOf(myName)
     val iHaveGuessed: Boolean get() = snapshot.hasGuessed(myName)
+    val iAmOut: Boolean get() = snapshot.isOut(myName)
+    val iAmStillPlaying: Boolean get() = snapshot.stillPlaying(myName)
     /** اسمِ روی پیشانی من — نباید بخوانمش! */
     val myForeheadName: String get() = snapshot.assignmentOf(myName)
+    val myQuestionsLeft: Int get() = snapshot.questionsLeftOf(myName)
+    val myQuestionsUsed: Int get() = snapshot.questionsUsedOf(myName)
 }
 
 // ================= موتور =================
 
 /**
- * من کی‌ام؟ — چندگوشی: هر کس مخفیانه برای نفر دیگری اسم می‌نویسد،
- * همه گوشی را روی پیشانی می‌گذارند و با سوال بله/نه حدس می‌زنند.
- * زمان ندارد؛ هر که زودتر «حدس زدم» بزند امتیاز بیشتری می‌گیرد و
- * پایان بازی هم دست خود جمع است.
+ * من کی‌ام؟ — چندگوشی: هر کس مخفیانه برای جفتش کلمه می‌نویسد،
+ * همه گوشی را روی پیشانی می‌گذارند؛ بعد از شمارش معکوس کلمه‌ها ظاهر می‌شوند.
+ * هر تکان سر به جلو یک سوال است؛ سوال‌ها که تمام شود می‌بازی و
+ * هر که با سوال کمتر جواب بدهد امتیاز بیشتری می‌گیرد.
  */
 class WhoAmIViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(WhoAmIUiState())
     val uiState: StateFlow<WhoAmIUiState> = _uiState.asStateFlow()
 
+    private val _soundEvents = MutableSharedFlow<WaSoundEvent>(extraBufferCapacity = 16)
+    val soundEvents: SharedFlow<WaSoundEvent> = _soundEvents.asSharedFlow()
+
     private val nsd = WaNsd(application)
     private val keepAlive = HostKeepAlive(application)
     private var server: WaServer? = null
     private var client: WaClient? = null
+
+    // ---- حسگر تکان سر: گوشی افقی روی پیشانی، صفحه رو به جمع ----
+    // خم شدن سر به جلو → صفحه رو به زمین → محور z منفی = یک سوال
+    private val sensorManager =
+        application.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    private var sensorActive = false
+    private var lastNodAt = 0L
+    private var neutral = false
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            val z = event.values.getOrNull(2) ?: return
+            val now = SystemClock.elapsedRealtime()
+            when {
+                neutral && z < -7f && now - lastNodAt > 900 -> {
+                    lastNodAt = now; neutral = false
+                    onNodDetected()
+                }
+
+                kotlin.math.abs(z) < 4f -> neutral = true
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
 
     // ================= ورود =================
 
@@ -154,10 +212,14 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         server = srv
         keepAlive.acquire()
         nsd.register(name, srv.port)
+        val app = getApplication<Application>()
         val snapshot = WaSnapshot(
             phase = WaPhase.LOBBY,
             players = listOf(WaPlayer(name = name, colorIndex = 0)),
             hostName = name,
+            totalRounds = GamePrefs.getInt(app, "whoami_rounds", 3).coerceIn(1, 10),
+            questionsTotal = GamePrefs.getInt(app, "whoami_questions", 10)
+                .let { if (it in WA_QUESTION_CHOICES) it else 10 },
         )
         _uiState.update {
             it.copy(
@@ -262,6 +324,23 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // ================= تنظیمات میزبان در لابی =================
+
+    /** بازی ۱۰ سوالی یا ۲۰ سوالی — فقط میزبان و فقط در لابی */
+    fun setQuestionsTotal(count: Int) = hostOnly {
+        if (count !in WA_QUESTION_CHOICES) return@hostOnly
+        if (_uiState.value.snapshot.phase != WaPhase.LOBBY) return@hostOnly
+        GamePrefs.setInt(getApplication(), "whoami_questions", count)
+        mutateSnapshot { it.copy(questionsTotal = count) }
+    }
+
+    fun setTotalRounds(rounds: Int) = hostOnly {
+        if (_uiState.value.snapshot.phase != WaPhase.LOBBY) return@hostOnly
+        val r = rounds.coerceIn(1, 10)
+        GamePrefs.setInt(getApplication(), "whoami_rounds", r)
+        mutateSnapshot { it.copy(totalRounds = r) }
+    }
+
     // ================= فرمان‌های داخل بازی =================
 
     fun startGame() = hostOnly {
@@ -270,15 +349,34 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         dealRound(roundIndex = 1, resetScores = true)
     }
 
-    /** قرعه‌ی راند: هر نویسنده برای نفرِ چندخانه‌بعدی می‌نویسد تا هر راند عوض شود */
+    /**
+     * قرعه‌ی راند: بازیکن‌ها دوبه‌دو برای هم می‌نویسند.
+     * اگر تعداد فرد باشد، میزبان برای دو نفر می‌نویسد و یک نفر این راند نمی‌نویسد.
+     */
+    private fun buildTargets(names: List<String>, host: String): Map<String, List<String>> {
+        if (names.size < 2) return emptyMap()
+        val others = names.filterNot { sameName(it, host) }.shuffled()
+        val result = mutableMapOf<String, MutableList<String>>()
+        var leftover: String? = null
+        val paired = if (names.size % 2 == 0) {
+            (others + host).shuffled()
+        } else {
+            leftover = others.first()
+            (others.drop(1) + host).shuffled()
+        }
+        paired.chunked(2).forEach { (a, b) ->
+            result.getOrPut(a) { mutableListOf() }.add(b)
+            result.getOrPut(b) { mutableListOf() }.add(a)
+        }
+        leftover?.let { result.getOrPut(host) { mutableListOf() }.add(it) }
+        return result
+    }
+
     private fun dealRound(roundIndex: Int, resetScores: Boolean = false) {
         val s = _uiState.value.snapshot
-        val connected = s.players.filter { it.connected }
+        val connected = s.connectedPlayers
         if (connected.size < WA_MIN_PLAYERS) return
-        val shift = ((roundIndex - 1) % (connected.size - 1)) + 1
-        val targets = connected.mapIndexed { i, writer ->
-            writer.name to connected[(i + shift) % connected.size].name
-        }.toMap()
+        val targets = buildTargets(connected.map { it.name }, s.hostName)
         mutateSnapshot { snap ->
             snap.copy(
                 phase = WaPhase.WRITE,
@@ -286,42 +384,71 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
                 players = if (resetScores) snap.players.map { it.copy(totalScore = 0) } else snap.players,
                 targets = targets,
                 assignments = emptyMap(),
-                submitted = emptyList(),
+                questionsUsed = emptyMap(),
                 guessedOrder = emptyList(),
+                outPlayers = emptyList(),
             )
         }
     }
 
     fun updateDraft(text: String) = _uiState.update { it.copy(myDraft = text.take(30)) }
 
-    /** اسم مخفی را برای هدفم می‌فرستم */
+    /** کلمه‌ی مخفی را برای هدفِ فعلی‌ام می‌فرستم */
     fun submitName() {
         val st = _uiState.value
         val text = st.myDraft.trim()
-        if (st.snapshot.phase != WaPhase.WRITE || st.iHaveSubmitted || text.isBlank()) return
-        if (st.isHost) hostReceiveName(st.myName, text) else client?.send(WaMessage.SubmitName(text))
+        val target = st.myPendingTargets.firstOrNull() ?: return
+        if (st.snapshot.phase != WaPhase.WRITE || text.isBlank()) return
+        if (st.isHost) hostReceiveName(st.myName, target, text) else client?.send(WaMessage.SubmitName(target, text))
         _uiState.update { it.copy(myDraft = "") }
     }
 
-    /** «حدس زدم!» — فقط لمسی، بدون حسگر و بدون زمان */
+    /**
+     * شمارش معکوس ۵ ثانیه‌ای در موتور اجرا می‌شود تا با چرخیدن صفحه از نو شروع نشود؛
+     * میزبان در پایان همه را وارد بازی می‌کند.
+     */
+    private var countdownJob: Job? = null
+
+    private fun startCountdown() {
+        countdownJob?.cancel()
+        countdownJob = viewModelScope.launch {
+            for (s in 5 downTo 1) {
+                _uiState.update { it.copy(countdownLeft = s) }
+                _soundEvents.tryEmit(WaSoundEvent.BEEP)
+                delay(1000)
+            }
+            hostOnly {
+                if (_uiState.value.snapshot.phase == WaPhase.COUNTDOWN) {
+                    mutateSnapshot { it.copy(phase = WaPhase.PLAY) }
+                }
+            }
+        }
+    }
+
+    /** تکان سر تشخیص داده شد — یک سوال از سهم من کم شود */
+    private fun onNodDetected() {
+        val st = _uiState.value
+        if (st.snapshot.phase != WaPhase.PLAY || !st.iAmStillPlaying) return
+        _soundEvents.tryEmit(WaSoundEvent.NOD)
+        if (st.isHost) hostQuestionUsed(st.myName) else client?.send(WaMessage.QuestionUsed)
+    }
+
+    /** «جواب دادم!» — گوشی از روی پیشانی برداشته شده و دکمه لمس شده */
     fun markGuessed() {
         val st = _uiState.value
-        if (st.snapshot.phase != WaPhase.PLAY || st.iHaveGuessed) return
+        if (st.snapshot.phase != WaPhase.PLAY || !st.iAmStillPlaying) return
         if (st.isHost) hostMarkGuessed(st.myName) else client?.send(WaMessage.Guessed)
     }
 
-    /** میزبان: راند بعد */
+    /** میزبان: راند بعد؛ بعد از راند آخر اعلام برنده */
     fun nextRound() = hostOnly {
         val s = _uiState.value.snapshot
         if (s.phase != WaPhase.ROUND_RESULT) return@hostOnly
-        dealRound(roundIndex = s.roundIndex + 1)
-    }
-
-    /** میزبان: پایان بازی و اعلام برنده — پایان دست خود جمع است */
-    fun finishGame() = hostOnly {
-        val s = _uiState.value.snapshot
-        if (s.phase != WaPhase.ROUND_RESULT) return@hostOnly
-        mutateSnapshot { it.copy(phase = WaPhase.GAME_OVER) }
+        if (s.roundIndex >= s.totalRounds) {
+            mutateSnapshot { it.copy(phase = WaPhase.GAME_OVER) }
+        } else {
+            dealRound(roundIndex = s.roundIndex + 1)
+        }
     }
 
     fun playAgain() = hostOnly {
@@ -331,8 +458,9 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
                 roundIndex = 0,
                 targets = emptyMap(),
                 assignments = emptyMap(),
-                submitted = emptyList(),
+                questionsUsed = emptyMap(),
                 guessedOrder = emptyList(),
+                outPlayers = emptyList(),
                 players = s.players.map { it.copy(totalScore = 0) },
             )
         }
@@ -348,22 +476,19 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun handleCommand(playerName: String, msg: WaMessage) {
         when (msg) {
-            is WaMessage.SubmitName -> hostReceiveName(playerName, msg.text.trim())
+            is WaMessage.SubmitName -> hostReceiveName(playerName, msg.target, msg.text.trim())
+            is WaMessage.QuestionUsed -> hostQuestionUsed(playerName)
             is WaMessage.Guessed -> hostMarkGuessed(playerName)
             else -> Unit
         }
     }
 
-    private fun hostReceiveName(writer: String, text: String) {
+    private fun hostReceiveName(writer: String, target: String, text: String) {
         val s = _uiState.value.snapshot
         if (s.phase != WaPhase.WRITE || text.isBlank()) return
-        val target = s.targetOf(writer)
-        if (target.isBlank() || s.hasSubmitted(writer)) return
+        if (s.pendingTargetsOf(writer).none { sameName(it, target) }) return
         mutateSnapshot { snap ->
-            snap.copy(
-                assignments = snap.assignments + (target to text),
-                submitted = snap.submitted + writer,
-            )
+            snap.copy(assignments = snap.assignments + (target to text))
         }
         maybeFinishWrite()
     }
@@ -372,27 +497,39 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         if (_uiState.value.role != WaNetRole.HOST) return
         val s = _uiState.value.snapshot
         if (s.phase != WaPhase.WRITE) return
-        val waiting = s.players.filter {
-            it.connected && s.targets.containsKey(it.name) && !s.hasSubmitted(it.name)
+        // نویسنده‌های وصل که هنوز برای هدفِ وصلی ننوشته‌اند
+        val waiting = s.connectedPlayers.filter { w ->
+            s.pendingTargetsOf(w.name).any { t -> s.player(t)?.connected == true }
         }
-        if (waiting.isEmpty() && s.submitted.isNotEmpty()) {
-            mutateSnapshot { it.copy(phase = WaPhase.PLAY) }
+        if (waiting.isEmpty() && s.assignments.isNotEmpty()) {
+            mutateSnapshot { it.copy(phase = WaPhase.COUNTDOWN) }
         }
     }
 
-    private fun hostMarkGuessed(playerName: String) {
+    private fun hostQuestionUsed(name: String) {
         val s = _uiState.value.snapshot
-        if (s.phase != WaPhase.PLAY || s.hasGuessed(playerName)) return
-        // هر چه زودتر حدس بزنی، امتیاز بیشتر: نفر اول بیشترین را می‌گیرد
-        val playing = s.players.count { p ->
-            p.connected && s.assignments.keys.any { k -> sameName(k, p.name) }
-        }
-        val gained = (playing - s.guessedOrder.size).coerceAtLeast(1)
+        if (s.phase != WaPhase.PLAY || !s.stillPlaying(name)) return
+        val used = s.questionsUsedOf(name) + 1
         mutateSnapshot { snap ->
             snap.copy(
-                guessedOrder = snap.guessedOrder + playerName,
+                questionsUsed = snap.questionsUsed.filterKeys { !sameName(it, name) } + (name to used),
+                // سوال‌ها تمام شد و جواب نداد — این راند را باخت
+                outPlayers = if (used >= snap.questionsTotal) snap.outPlayers + name else snap.outPlayers,
+            )
+        }
+        maybeFinishRound()
+    }
+
+    private fun hostMarkGuessed(name: String) {
+        val s = _uiState.value.snapshot
+        if (s.phase != WaPhase.PLAY || !s.stillPlaying(name)) return
+        // سوال کمتر = امتیاز بیشتر: هر سوالِ نپرسیده یک امتیاز است
+        val gained = s.questionsLeftOf(name).coerceAtLeast(1)
+        mutateSnapshot { snap ->
+            snap.copy(
+                guessedOrder = snap.guessedOrder + name,
                 players = snap.players.map { p ->
-                    if (sameName(p.name, playerName)) p.copy(totalScore = p.totalScore + gained) else p
+                    if (sameName(p.name, name)) p.copy(totalScore = p.totalScore + gained) else p
                 },
             )
         }
@@ -403,11 +540,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         if (_uiState.value.role != WaNetRole.HOST) return
         val s = _uiState.value.snapshot
         if (s.phase != WaPhase.PLAY) return
-        val waiting = s.players.filter {
-            it.connected &&
-                s.assignments.keys.any { k -> sameName(k, it.name) } &&
-                !s.hasGuessed(it.name)
-        }
+        val waiting = s.connectedPlayers.filter { s.stillPlaying(it.name) }
         if (waiting.isEmpty()) {
             mutateSnapshot { it.copy(phase = WaPhase.ROUND_RESULT) }
         }
@@ -422,7 +555,45 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun setSnapshot(next: WaSnapshot) {
+        val prev = _uiState.value.snapshot
+        val myName = _uiState.value.myName
         _uiState.update { it.copy(snapshot = next) }
+        // رویدادهای صوتی فقط روی گذارِ واقعی وضعیت — نه بازساخت صفحه بعد از چرخش
+        if (prev.phase != next.phase) {
+            when (next.phase) {
+                WaPhase.COUNTDOWN -> startCountdown()
+                WaPhase.PLAY -> _soundEvents.tryEmit(WaSoundEvent.ROUND_START)
+                WaPhase.ROUND_RESULT -> _soundEvents.tryEmit(WaSoundEvent.ROUND_END)
+                else -> Unit
+            }
+            if (prev.phase == WaPhase.COUNTDOWN && next.phase != WaPhase.COUNTDOWN) {
+                countdownJob?.cancel()
+                countdownJob = null
+            }
+        }
+        if (myName.isNotBlank() && !prev.isOut(myName) && next.isOut(myName)) {
+            _soundEvents.tryEmit(WaSoundEvent.OUT)
+        }
+        updateNodSensor()
+    }
+
+    /** حسگر فقط وقتی فعال است که وسط راند باشم: کلمه دارم، نه جواب داده‌ام نه سوخته‌ام */
+    private fun updateNodSensor() {
+        val st = _uiState.value
+        val shouldListen = st.localScreen == WaLocalScreen.IN_GAME &&
+            st.snapshot.phase == WaPhase.PLAY &&
+            st.iAmStillPlaying
+        if (shouldListen == sensorActive) return
+        sensorActive = shouldListen
+        if (shouldListen) {
+            // تا وقتی گوشی صاف روی پیشانی ننشسته، تکان‌های جابه‌جایی سوال حساب نشود
+            neutral = false
+            sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensor ->
+                sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+        } else {
+            sensorManager?.unregisterListener(sensorListener)
+        }
     }
 
     private inline fun hostOnly(block: () -> Unit) {
@@ -438,6 +609,10 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         server?.stop()
         server = null
         keepAlive.release()
+        countdownJob?.cancel()
+        countdownJob = null
+        sensorManager?.unregisterListener(sensorListener)
+        sensorActive = false
         val name = _uiState.value.myName
         _uiState.value = WhoAmIUiState(myName = name)
     }
@@ -466,6 +641,7 @@ fun WhoAmIGame(
     // خروج با دکمه‌ی برگشت سیستم فقط با تاییدِ کاربر
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sound = LocalSoundManager.current
+    val context = LocalContext.current
     val snapshot = state.snapshot
 
     LaunchedEffect(state.localScreen, snapshot.phase) {
@@ -473,6 +649,42 @@ fun WhoAmIGame(
             state.localScreen != WaLocalScreen.IN_GAME -> sound?.switchMusic(MusicTrack.HUB)
             snapshot.phase == WaPhase.LOBBY -> sound?.switchMusic(MusicTrack.HUB)
             else -> sound?.stopBackgroundMusic()
+        }
+    }
+
+    // شمارش معکوس و بازی روی پیشانی: گوشی افقی می‌شود تا صاف روی پیشانی بنشیند
+    val landscape = state.localScreen == WaLocalScreen.IN_GAME && (
+        snapshot.phase == WaPhase.COUNTDOWN ||
+            (snapshot.phase == WaPhase.PLAY && state.iAmStillPlaying)
+        )
+    LaunchedEffect(landscape) {
+        (context as? Activity)?.requestedOrientation =
+            if (landscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    // رویدادهای صوتی موتور — بازیکن صفحه را نمی‌بیند، صدا و لرزش خبرش می‌کنند
+    LaunchedEffect(Unit) {
+        viewModel.soundEvents.collect { event ->
+            when (event) {
+                WaSoundEvent.NOD -> {
+                    sound?.playWordSkip()
+                    sound?.vibrate(60)
+                }
+
+                WaSoundEvent.BEEP -> sound?.playCountdownBeep()
+                WaSoundEvent.ROUND_START -> sound?.playRoundStart()
+                WaSoundEvent.ROUND_END -> sound?.playRoundEnd()
+                WaSoundEvent.OUT -> {
+                    sound?.playTimerEnd()
+                    sound?.vibrate(400)
+                }
+            }
         }
     }
 
@@ -514,7 +726,12 @@ fun WhoAmIGame(
                 WaLocalScreen.IN_GAME -> {
                     BackHandler { pendingExit = { leaveAndExit() } }
                     when (snapshot.phase) {
-                        WaPhase.LOBBY -> WaLobbyScreen(state = state, onStart = viewModel::startGame)
+                        WaPhase.LOBBY -> WaLobbyScreen(
+                            state = state,
+                            onStart = viewModel::startGame,
+                            onQuestions = viewModel::setQuestionsTotal,
+                            onRounds = viewModel::setTotalRounds,
+                        )
 
                         WaPhase.WRITE -> WaWriteScreen(
                             state = state,
@@ -522,12 +739,19 @@ fun WhoAmIGame(
                             onSubmit = viewModel::submitName,
                         )
 
-                        WaPhase.PLAY -> WaPlayScreen(state = state, onGuessed = viewModel::markGuessed)
+                        WaPhase.COUNTDOWN -> WaCountdownScreen(state = state)
+
+                        WaPhase.PLAY -> WaPlayScreen(
+                            state = state,
+                            onGuessed = {
+                                sound?.playCorrectWord()
+                                viewModel.markGuessed()
+                            },
+                        )
 
                         WaPhase.ROUND_RESULT -> WaRoundResultScreen(
                             state = state,
                             onNextRound = viewModel::nextRound,
-                            onFinish = viewModel::finishGame,
                         )
 
                         WaPhase.GAME_OVER -> {
@@ -620,7 +844,7 @@ private fun WaEntryScreen(
         StickerTitle(text = "من کی‌ام؟", rotation = -2f)
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            text = "هر کی برای یکی دیگه اسم می‌نویسه؛ گوشی می‌ره رو پیشونی و با سوال بله/نه باید بفهمی کی هستی! همه روی یک وای‌فای یا هات‌اسپات باشید",
+            text = "کلمه می‌ره رو پیشونیت؛ با تکون سر سوال بپرس و قبل از تموم‌شدن سوال‌هات بفهم کی هستی! همه روی یک وای‌فای یا هات‌اسپات باشید",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -808,11 +1032,36 @@ private fun WaJoinScreen(
     }
 }
 
+/** تراشه‌ی قرصی کوچک برای تنظیمات میزبان */
+@Composable
+private fun WaPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    val interaction = remember { MutableInteractionSource() }
+    Text(
+        text = text,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .background(if (selected) accent else extras.glassStrong, RoundedCornerShape(50))
+            .clickable(interactionSource = interaction, indication = null) {
+                sound?.playButtonClick()
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+    )
+}
+
 @Composable
 private fun WaLobbyScreen(
     state: WhoAmIUiState,
     onStart: () -> Unit,
+    onQuestions: (Int) -> Unit,
+    onRounds: (Int) -> Unit,
 ) {
+    val accent = LocalGameAccent.current
     val snapshot = state.snapshot
     val connected = snapshot.players.count { it.connected }
 
@@ -860,8 +1109,66 @@ private fun WaLobbyScreen(
         }
 
         Spacer(modifier = Modifier.height(14.dp))
+
+        // ---- تنظیمات بازی: میزبان انتخاب می‌کند، بقیه می‌بینند ----
+        if (state.isHost) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "❓ هر بازیکن چند تا سوال داشته باشه؟",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        WA_QUESTION_CHOICES.forEach { q ->
+                            WaPill(
+                                text = "${q.toPersianDigits()} سوالی",
+                                selected = snapshot.questionsTotal == q,
+                                onClick = { onQuestions(q) },
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "🔁 چند راند بازی کنیم؟",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        WaPill(text = "−", selected = false, onClick = { onRounds(snapshot.totalRounds - 1) })
+                        Text(
+                            text = snapshot.totalRounds.toPersianDigits(),
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Black,
+                            color = accent,
+                        )
+                        WaPill(text = "+", selected = false, onClick = { onRounds(snapshot.totalRounds + 1) })
+                    }
+                }
+            }
+        } else {
+            Text(
+                text = "بازی ${snapshot.questionsTotal.toPersianDigits()} سوالیه و ${snapshot.totalRounds.toPersianDigits()} راند داره",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = accent,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "هر راند، هر کی برای یکی دیگه اسم می‌نویسه. زمان نداره — هر کی زودتر حدس بزنه امتیاز بیشتری می‌گیره و پایان بازی هم دست خودتونه!",
+            text = "هر راند دوبه‌دو برای هم کلمه می‌نویسید (اگه فرد باشید میزبان برای دو نفر می‌نویسه). کلمه می‌ره رو پیشونی؛ هر تکون سر یه سوال — سوال کمتر، امتیاز بیشتر!",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -904,9 +1211,9 @@ private fun WaWriteScreen(
     onSubmit: () -> Unit,
 ) {
     val snapshot = state.snapshot
-    val target = state.myTarget
+    val pendingTarget = state.myPendingTargets.firstOrNull()
     val waitingCount = snapshot.connectedPlayers.count {
-        snapshot.targets.containsKey(it.name) && !snapshot.hasSubmitted(it.name)
+        snapshot.pendingTargetsOf(it.name).isNotEmpty()
     }
 
     Column(
@@ -919,7 +1226,7 @@ private fun WaWriteScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "راند ${snapshot.roundIndex.toPersianDigits()}",
+            text = "راند ${snapshot.roundIndex.toPersianDigits()} از ${snapshot.totalRounds.toPersianDigits()}",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -927,43 +1234,118 @@ private fun WaWriteScreen(
         BobbingEmoji(emoji = "🤫", fontSize = 48.sp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (!state.iHaveSubmitted) {
+        when {
+            // این راند نوبت نوشتنِ من نیست (تعداد فرد بود و قرعه به من نیفتاد)
+            state.myTargets.isEmpty() -> {
+                Text(
+                    text = "این راند تو نمی‌نویسی — قرعه‌ی نوشتن به بقیه افتاد!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "نگران نباش، برای تو هم دارن کلمه می‌نویسن 😏 منتظر ${waitingCount.toPersianDigits()} نویسنده…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            pendingTarget != null -> {
+                if (state.myTargets.size > 1) {
+                    Text(
+                        text = "تعداد فرده — تو برای ${state.myTargets.size.toPersianDigits()} نفر می‌نویسی 👑",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = kiExtras.gold,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+                Text(
+                    text = "یواشکی برای $pendingTarget یه کلمه بنویس!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = kiExtras.teamColors.teamColorFor(snapshot.player(pendingTarget)?.colorIndex ?: 0),
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "آدم معروف، شخصیت کارتونی یا حتی یکی از همین جمع — فقط خودش نفهمه!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+                BlobTextField(
+                    value = state.myDraft,
+                    onValueChange = onDraftChanged,
+                    placeholder = "مثلاً: فردوسی، باب اسفنجی…",
+                    badge = "🏷️",
+                    tilt = -1f,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                KButton(
+                    text = "فرستادم 🤐",
+                    enabled = state.myDraft.isNotBlank(),
+                    onClick = onSubmit,
+                )
+            }
+
+            else -> {
+                BobbingEmoji(emoji = "⏳", fontSize = 36.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "کلمه‌هات رسید! منتظر ${waitingCount.toPersianDigits()} نویسنده‌ی دیگه…",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+/** شمارش معکوس ۵ ثانیه‌ای با صدا — گوشی‌ها می‌روند روی پیشانی */
+@Composable
+private fun WaCountdownScreen(state: WhoAmIUiState) {
+    val accent = LocalGameAccent.current
+
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "📱 گوشی رو بذار رو پیشونیت — صفحه رو به جمع!",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "بعد از شمارش، کلمه‌ت ظاهر می‌شه؛ با تکون دادن سر به جلو سوال بپرس!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Box(modifier = Modifier.breathing(intensity = 0.08f, periodMs = 1000)) {
             Text(
-                text = "یواشکی برای ${target.ifBlank { "…" }} یه اسم بنویس!",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = kiExtras.teamColors.teamColorFor(snapshot.player(target)?.colorIndex ?: 0),
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "آدم معروف، شخصیت کارتونی یا حتی یکی از همین جمع — فقط خودش نفهمه!",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-            BlobTextField(
-                value = state.myDraft,
-                onValueChange = onDraftChanged,
-                placeholder = "مثلاً: فردوسی، باب اسفنجی…",
-                badge = "🏷️",
-                tilt = -1f,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            KButton(
-                text = "فرستادم 🤐",
-                enabled = state.myDraft.isNotBlank(),
-                onClick = onSubmit,
-            )
-        } else {
-            BobbingEmoji(emoji = "⏳", fontSize = 36.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "اسمت رسید! منتظر ${waitingCount.toPersianDigits()} نویسنده‌ی دیگه…",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                text = state.countdownLeft.toPersianDigits(),
+                fontSize = 96.sp,
+                fontWeight = FontWeight.Black,
+                color = accent,
             )
         }
     }
@@ -977,130 +1359,225 @@ private fun WaPlayScreen(
     val accent = LocalGameAccent.current
     val extras = kiExtras
     val snapshot = state.snapshot
-    val stillPlaying = snapshot.connectedPlayers.filter {
-        snapshot.assignments.keys.any { k -> sameName(k, it.name) } && !snapshot.hasGuessed(it.name)
+    val stillPlaying = snapshot.connectedPlayers.filter { snapshot.stillPlaying(it.name) }
+
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "راند ${snapshot.roundIndex.toPersianDigits()} — بدون زمان، با خیال راحت!",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (!state.iHaveGuessed) {
-            TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1.5f) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 26.dp, horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "نخونش! 🙈 بگیرش بالا رو پیشونیت تا بقیه ببینن",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = extras.danger,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Box(modifier = Modifier.breathing(intensity = 0.03f, periodMs = 1800)) {
+    when {
+        // ---- روی پیشانی: کلمه + شمارنده‌ی سوال، افقی ----
+        state.iAmStillPlaying -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.statusBarsPadding().height(6.dp))
+                Text(
+                    text = "نخونش! 🙈 راند ${snapshot.roundIndex.toPersianDigits()} — هر تکون سر به جلو = یه سوال",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.danger,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // ---- کلمه‌ی روی پیشانی — بقیه می‌خوانند ----
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .breathing(intensity = 0.03f, periodMs = 1800),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = state.myForeheadName.ifBlank { "…" },
-                            fontSize = 46.sp,
+                            fontSize = 56.sp,
                             fontWeight = FontWeight.Black,
                             color = accent,
                             textAlign = TextAlign.Center,
-                            lineHeight = 58.sp,
+                            lineHeight = 68.sp,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    // ---- عدد سوال‌های باقی‌مانده کنار کلمه ----
+                    Column(
+                        modifier = Modifier
+                            .background(extras.glassStrong, blobShape(seed = 3))
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = state.myQuestionsLeft.toPersianDigits(),
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (state.myQuestionsLeft <= 3) extras.danger else extras.success,
+                        )
+                        Text(
+                            text = "سوال مونده",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "با سوال‌های بله/نه بفهم کی هستی: «زنده‌ام؟»، «ایرانی‌ام؟»، «ورزشکارم؟»",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        } else {
-            Spacer(modifier = Modifier.height(16.dp))
-            BobbingEmoji(emoji = "😎", fontSize = 52.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "آفرین! تو لیست انتظارِ راند بعدی",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = extras.success,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "به بقیه کمک بده — فقط لو نده! 🤐",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // ---- لیست انتظار ----
-        if (snapshot.guessedOrder.isNotEmpty()) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "🏁 حدس زدن (به ترتیب):",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = snapshot.guessedOrder.joinToString("  ←  "),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "فهمیدی کی هستی؟ گوشی رو بردار و دکمه رو بزن!",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                KButton(
+                    text = "جواب دادم! ✅",
+                    onClick = onGuessed,
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .padding(bottom = 10.dp),
+                )
             }
         }
-        Text(
-            text = "هنوز دارن فکر می‌کنن: ${stillPlaying.joinToString("، ") { it.name }.ifBlank { "—" }}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp),
-        )
 
-        Spacer(modifier = Modifier.weight(1f))
-        if (!state.iHaveGuessed) {
-            KButton(
-                text = "حدس زدم! ✅",
-                onClick = onGuessed,
+        // ---- جواب دادم: توی لیست راند بعد ----
+        state.iHaveGuessed -> {
+            Column(
                 modifier = Modifier
-                    .navigationBarsPadding()
-                    .padding(bottom = 12.dp),
-            )
-        } else {
-            Spacer(modifier = Modifier.navigationBarsPadding().height(12.dp))
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+                BobbingEmoji(emoji = "😎", fontSize = 52.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "آفرین! تو «${state.myForeheadName}» بودی",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.success,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "با ${state.myQuestionsUsed.toPersianDigits()} سوال جواب دادی — +${state.myQuestionsLeft.coerceAtLeast(1).toPersianDigits()} امتیاز! رفتی لیست راند بعد 🏁",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                WaWaitingList(snapshot = snapshot, stillPlaying = stillPlaying)
+            }
+        }
+
+        // ---- سوال‌ها تمام شد: باخت این راند ----
+        state.iAmOut -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+                BobbingEmoji(emoji = "😵", fontSize = 52.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "سوال‌هات تموم شد — این راند رو باختی!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extras.danger,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "تو «${state.myForeheadName}» بودی! غصه نخور، راند بعد جبران کن 💪",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                WaWaitingList(snapshot = snapshot, stillPlaying = stillPlaying)
+            }
+        }
+
+        // ---- کلمه‌ای برای من نرسید (نویسنده‌ام قطع شد) ----
+        else -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                BobbingEmoji(emoji = "🫥", fontSize = 48.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "این راند کلمه‌ای بهت نرسید — راند بعد حتماً بازی می‌کنی!",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
+}
+
+/** لیست کسانی که جواب دادند و کسانی که هنوز روی پیشانی‌اند */
+@Composable
+private fun WaWaitingList(snapshot: WaSnapshot, stillPlaying: List<WaPlayer>) {
+    Spacer(modifier = Modifier.height(14.dp))
+    if (snapshot.guessedOrder.isNotEmpty()) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "🏁 لیست راند بعد (به ترتیب جواب):",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = snapshot.guessedOrder.joinToString("  ←  "),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+    Text(
+        text = "هنوز رو پیشونی: ${stillPlaying.joinToString("، ") { it.name }.ifBlank { "—" }}",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = "به بقیه کمک بده — فقط لو نده! 🤐",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
 private fun WaRoundResultScreen(
     state: WhoAmIUiState,
     onNextRound: () -> Unit,
-    onFinish: () -> Unit,
 ) {
+    val extras = kiExtras
     val snapshot = state.snapshot
+    val isLastRound = snapshot.roundIndex >= snapshot.totalRounds
+    // مرتب بر اساس سوال کمتر؛ بازنده‌ها ته لیست
+    val played = snapshot.players
+        .filter { snapshot.assignmentOf(it.name).isNotBlank() }
+        .sortedWith(
+            compareBy(
+                { snapshot.isOut(it.name) },
+                { snapshot.questionsUsedOf(it.name) },
+            )
+        )
 
     Column(
         modifier = Modifier
@@ -1113,19 +1590,26 @@ private fun WaRoundResultScreen(
         Spacer(modifier = Modifier.height(12.dp))
         BobbingEmoji(emoji = "🎉", fontSize = 48.sp)
         Spacer(modifier = Modifier.height(6.dp))
-        StickerTitle(text = "راند ${snapshot.roundIndex.toPersianDigits()} تموم شد!", rotation = -2f, fontSize = 24.sp)
+        StickerTitle(
+            text = "راند ${snapshot.roundIndex.toPersianDigits()} از ${snapshot.totalRounds.toPersianDigits()} تموم شد!",
+            rotation = -2f,
+            fontSize = 24.sp,
+        )
         Spacer(modifier = Modifier.height(14.dp))
 
-        // ---- رو شدن اسم‌ها ----
+        // ---- رو شدن کلمه‌ها و امتیاز راند ----
         GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
-                    text = "🏷️ کی، کی بود؟",
+                    text = "🏷️ کی، کی بود؟ (سوال کمتر = امتیاز بیشتر)",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                snapshot.players.filter { snapshot.assignmentOf(it.name).isNotBlank() }.forEach { p ->
+                played.forEach { p ->
+                    val out = snapshot.isOut(p.name)
+                    val used = snapshot.questionsUsedOf(p.name)
+                    val gained = snapshot.questionsLeftOf(p.name).coerceAtLeast(1)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1133,17 +1617,24 @@ private fun WaRoundResultScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${p.name} ← ${snapshot.assignmentOf(p.name)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = kiExtras.teamColors.teamColorFor(p.colorIndex),
+                            )
+                            Text(
+                                text = if (out) "سوال‌هاش تموم شد 😵" else "با ${used.toPersianDigits()} سوال جواب داد",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
-                            text = p.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = kiExtras.teamColors.teamColorFor(p.colorIndex),
-                        )
-                        Text(
-                            text = snapshot.assignmentOf(p.name),
+                            text = if (out) "باخت!" else "+${gained.toPersianDigits()}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (out) extras.danger else extras.success,
                         )
                     }
                 }
@@ -1151,11 +1642,11 @@ private fun WaRoundResultScreen(
         }
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ---- جدول امتیازها ----
+        // ---- جدول امتیازهای کل ----
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
-                    text = "💯 امتیازها",
+                    text = "💯 مجموع امتیازها",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1186,17 +1677,15 @@ private fun WaRoundResultScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
         if (state.isHost) {
-            KButton(text = "راند بعد! 🔁", onClick = onNextRound)
-            Spacer(modifier = Modifier.height(8.dp))
             KButton(
-                text = "بسه دیگه — کی برد؟ 🏆",
-                style = KButtonStyle.Glass,
-                onClick = onFinish,
+                text = if (isLastRound) "کی برد؟ 🏆" else "راند بعد! 🔁",
+                onClick = onNextRound,
                 modifier = Modifier.navigationBarsPadding(),
             )
         } else {
             Text(
-                text = "${snapshot.hostName} تصمیم می‌گیره: راند بعد یا اعلام برنده…",
+                text = if (isLastRound) "الان ${snapshot.hostName} برنده رو اعلام می‌کنه…"
+                else "منتظریم ${snapshot.hostName} راند بعد رو شروع کنه…",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

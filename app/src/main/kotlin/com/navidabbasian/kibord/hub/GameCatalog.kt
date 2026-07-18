@@ -203,7 +203,7 @@ val moreGamesCatalog = listOf(
     GameInfo(
         id = "who_am_i",
         title = "من کی‌ام؟",
-        tagline = "شبکه‌ای! اسم رو پیشونیت، با سوال بله/نه بفهم کی هستی",
+        tagline = "شبکه‌ای! کلمه رو پیشونیت، با تکون سر سوال بپرس",
         emoji = "🏷️",
         accent = WhoAmIAccent,
         accentDark = WhoAmIAccentDark,

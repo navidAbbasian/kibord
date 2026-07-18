@@ -27,12 +27,17 @@ sealed class WaMessage {
     @SerialName("state")
     data class State(val snapshot: WaSnapshot) : WaMessage()
 
-    /** اسم مخفی‌ای که برای هدفم نوشتم */
+    /** اسم مخفی‌ای که برای این هدف نوشتم */
     @Serializable
     @SerialName("submit")
-    data class SubmitName(val text: String) : WaMessage()
+    data class SubmitName(val target: String, val text: String) : WaMessage()
 
-    /** «حدس زدم!» — می‌روم توی لیست انتظار */
+    /** یک تکان سر = یک سوال از سهم من کم شود */
+    @Serializable
+    @SerialName("question")
+    data object QuestionUsed : WaMessage()
+
+    /** «جواب دادم!» — می‌روم توی لیست راند بعد */
     @Serializable
     @SerialName("guessed")
     data object Guessed : WaMessage()

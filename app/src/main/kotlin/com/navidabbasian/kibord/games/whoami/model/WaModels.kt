@@ -3,7 +3,7 @@ package com.navidabbasian.kibord.games.whoami.model
 import com.navidabbasian.kibord.games.esmfamil.model.sameName
 import kotlinx.serialization.Serializable
 
-const val WA_MIN_PLAYERS = 3
+const val WA_MIN_PLAYERS = 2
 const val WA_MAX_PLAYERS = 8
 
 @Serializable

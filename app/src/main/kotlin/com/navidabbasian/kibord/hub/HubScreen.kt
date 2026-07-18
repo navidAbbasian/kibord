@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -53,6 +54,7 @@ import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.components.shineSweep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
 
 /**
@@ -79,7 +81,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
                 BobbingEmoji(emoji = "🏆", fontSize = 32.sp)
                 Spacer(modifier = Modifier.width(8.dp))
-                StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 22.sp)
+                StickerTitle(text = "کی برد؟", accent = VioletPrimary, rotation = -2.5f, fontSize = 23.1.sp)
                 Spacer(modifier = Modifier.width(8.dp))
                 BobbingEmoji(emoji = "✨", fontSize = 15.sp, phase = 4.4f)
             }
@@ -92,6 +94,7 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
         Text(
             text = "امشب کدومو بازی کنیم؟",
             style = MaterialTheme.typography.labelMedium,
+            fontSize = 12.6.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
@@ -120,40 +123,41 @@ fun HubScreen(onOpenGame: (String) -> Unit) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // دو ستونِ هم‌عرض — عرض کارت‌ها مثل قبل، فقط ارتفاع‌ها پلکانی می‌شود
             Row(
                 modifier = Modifier
                     .fillMaxWidth(0.93f)
-                    .weight(0.36f)
+                    .weight(0.72f)
             ) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AppearWrap(index = 1) {
-                        GameTile(game = gameCatalog[1], index = 1, onOpenGame = onOpenGame)
+                // ستون راست: دُور + اسم‌فامیل (هم‌ارتفاع)
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        AppearWrap(index = 1) {
+                            GameTile(game = gameCatalog[1], index = 1, onOpenGame = onOpenGame)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        AppearWrap(index = 3) {
+                            GameTile(game = gameCatalog[3], index = 3, onOpenGame = onOpenGame)
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AppearWrap(index = 2) {
-                        GameTile(game = gameCatalog[2], index = 2, onOpenGame = onOpenGame)
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(0.93f)
-                    .weight(0.36f)
-            ) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AppearWrap(index = 3) {
-                        GameTile(game = gameCatalog[3], index = 3, onOpenGame = onOpenGame)
-                    }
-                }
                 Spacer(modifier = Modifier.width(10.dp))
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AppearWrap(index = 4) {
-                        MoreGamesTile(index = 4, onOpenGame = onOpenGame)
+
+                // ستون چپ: گنده‌گوی بلند + مربعِ گنجه که کفش با کفِ اسم‌فامیل یکی می‌شود
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        AppearWrap(index = 2) {
+                            GameTile(game = gameCatalog[2], index = 2, onOpenGame = onOpenGame)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+                        AppearWrap(index = 4) {
+                            MoreGamesTile(index = 4, onOpenGame = onOpenGame)
+                        }
                     }
                 }
             }
@@ -229,7 +233,7 @@ private fun GameTile(
     index: Int,
     onOpenGame: (String) -> Unit,
     emojiSize: androidx.compose.ui.unit.TextUnit = 26.sp,
-    taglineMaxLines: Int = 2,
+    taglineMaxLines: Int = 3,
 ) {
     val sound = LocalSoundManager.current
     val interaction = remember { MutableInteractionSource() }
@@ -295,6 +299,7 @@ private fun GameTile(
             Text(
                 text = game.title,
                 style = MaterialTheme.typography.titleLarge,
+                fontSize = 25.2.sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White,
                 textAlign = TextAlign.Center,
@@ -304,16 +309,16 @@ private fun GameTile(
             Text(
                 text = game.tagline,
                 style = MaterialTheme.typography.labelMedium,
-                fontSize = 10.sp,
+                fontSize = 14.7.sp,
                 color = Color.White.copy(alpha = 0.92f),
                 textAlign = TextAlign.Center,
-                lineHeight = 13.sp,
+                lineHeight = 18.9.sp,
                 maxLines = taglineMaxLines
             )
             Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "👥 ${game.players}",
-                fontSize = 10.sp,
+                fontSize = 12.6.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
@@ -354,33 +359,36 @@ private fun MoreGamesTile(
             }
             .clip(shape)
             .background(
+                // گرادیانِ مورب بنفش: هم‌خانواده‌ی کارت بازی‌ها ولی سرزنده‌تر
                 Brush.linearGradient(
                     listOf(
-                        lerp(VioletPrimary, Color.White, 0.12f),
+                        lerp(VioletPrimary, Color.White, 0.24f),
                         VioletPrimary,
-                        lerp(VioletPrimary, Color.Black, 0.18f),
+                        lerp(VioletPrimary, Color.Black, 0.22f),
                     )
                 )
             )
-            .border(2.5.dp, Color.White.copy(alpha = 0.4f), shape)
-            .shineSweep(periodMs = 3600 + index * 500, phase = index * 0.45f)
+            .border(2.5.dp, Color.White.copy(alpha = 0.45f), shape)
+            .shineSweep(periodMs = 3400, phase = 0.7f)
             .clickable(interactionSource = interaction, indication = null) {
                 sound?.playButtonClick()
                 onOpenGame(Routes.MORE_GAMES)
             }
     ) {
+        // حباب‌های تزئینی — همان امضای بصریِ کاشی‌های بازی
         Box(
             modifier = Modifier
-                .size(96.dp)
-                .offset(x = (-18).dp, y = 120.dp)
-                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+                .size(92.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (-22).dp, y = 24.dp)
+                .background(Color.White.copy(alpha = 0.12f), CircleShape)
         )
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(52.dp)
                 .align(Alignment.TopEnd)
-                .offset(x = 12.dp, y = (-12).dp)
-                .background(Color.White.copy(alpha = 0.12f), CircleShape)
+                .offset(x = 14.dp, y = (-14).dp)
+                .background(Color.White.copy(alpha = 0.14f), CircleShape)
         )
 
         Column(
@@ -390,37 +398,28 @@ private fun MoreGamesTile(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            BobbingEmoji(emoji = "🎲", fontSize = 26.sp, phase = index * 1.1f)
-            Spacer(modifier = Modifier.height(3.dp))
+            BobbingEmoji(emoji = "🎲", fontSize = 40.sp, phase = index * 1.1f)
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "بازی‌های بیشتر",
                 style = MaterialTheme.typography.titleLarge,
+                fontSize = 19.95.sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
+                maxLines = 2,
             )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = "پانتومیم و بازی‌های تازه اینجان!",
-                style = MaterialTheme.typography.labelMedium,
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.92f),
-                textAlign = TextAlign.Center,
-                lineHeight = 13.sp,
-                maxLines = 2
-            )
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "🎁 ${moreGamesCatalog.size.toPersianDigits()} بازی",
-                fontSize = 10.sp,
+                fontSize = 12.6.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
                 modifier = Modifier
                     .graphicsLayer { rotationZ = -tilt * 1.5f }
-                    .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 2.dp)
+                    .background(Color.White.copy(alpha = 0.24f), RoundedCornerShape(50))
+                    .padding(horizontal = 12.dp, vertical = 3.dp)
             )
         }
     }

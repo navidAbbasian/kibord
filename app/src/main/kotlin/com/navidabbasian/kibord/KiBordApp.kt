@@ -33,6 +33,7 @@ import com.navidabbasian.kibord.core.ui.theme.KalamzAccent
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.PantomimeClassicAccent
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccent
+import com.navidabbasian.kibord.core.ui.theme.SedaAccent
 import com.navidabbasian.kibord.core.ui.theme.ForeheadAccent
 import com.navidabbasian.kibord.core.ui.theme.MafiaAccent
 import com.navidabbasian.kibord.core.ui.theme.NofooziAccent
@@ -47,6 +48,7 @@ import com.navidabbasian.kibord.games.gandegoo.GandeGooGame
 import com.navidabbasian.kibord.games.kalamz.KalamzGame
 import com.navidabbasian.kibord.games.pantomime.classic.ClassicPantomimeGame
 import com.navidabbasian.kibord.games.pantomime.rival.RivalPantomimeGame
+import com.navidabbasian.kibord.games.sedasazi.SedaGame
 import com.navidabbasian.kibord.games.forehead.ForeheadGame
 import com.navidabbasian.kibord.games.mafia.MafiaGame
 import com.navidabbasian.kibord.games.nofoozi.NofooziGame
@@ -168,6 +170,11 @@ fun KiBordApp() {
         composable(Routes.PANTOMIME_RIVAL) {
             CompositionLocalProvider(LocalGameAccent provides PantomimeRivalAccent) {
                 RivalPantomimeGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.SEDASAZI) {
+            CompositionLocalProvider(LocalGameAccent provides SedaAccent) {
+                SedaGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
         composable(Routes.TABOO) {

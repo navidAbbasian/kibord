@@ -30,6 +30,8 @@ import com.navidabbasian.kibord.core.ui.theme.SpyAccentDark
 import com.navidabbasian.kibord.core.ui.theme.TabooAccent
 import com.navidabbasian.kibord.core.ui.theme.TabooAccentDark
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccentDark
+import com.navidabbasian.kibord.core.ui.theme.SedaAccent
+import com.navidabbasian.kibord.core.ui.theme.SedaAccentDark
 
 @Immutable
 data class GameInfo(
@@ -51,6 +53,7 @@ object Routes {
     const val GANDEGOO = "game/gandegoo"
     const val PANTOMIME_CLASSIC = "game/pantomime_classic"
     const val PANTOMIME_RIVAL = "game/pantomime_rival"
+    const val SEDASAZI = "game/sedasazi"
     const val ESM_FAMIL = "game/esm_famil"
     const val MORE_GAMES = "more_games"
     const val TEAM_PICKER = "team_picker"
@@ -129,6 +132,16 @@ val moreGamesCatalog = listOf(
         accentDark = PantomimeRivalAccentDark,
         players = "۴ یا ۶ نفر",
         route = Routes.PANTOMIME_RIVAL,
+    ),
+    GameInfo(
+        id = "sedasazi",
+        title = "صداشو درار",
+        tagline = "پانتومیمِ برعکس: حرف نزن، صداشو دربیار!",
+        emoji = "🔊",
+        accent = SedaAccent,
+        accentDark = SedaAccentDark,
+        players = "۴+ نفر — ۲ تیم",
+        route = Routes.SEDASAZI,
     ),
     GameInfo(
         id = "taboo",

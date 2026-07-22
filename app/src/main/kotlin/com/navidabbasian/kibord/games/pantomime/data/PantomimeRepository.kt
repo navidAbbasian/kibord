@@ -15,8 +15,17 @@ import kotlinx.serialization.json.Json
  *   خالی‌شدنِ یک رده همان «خانه‌ی سوخته»ی قبلی می‌ماند.
  * - سابقه‌ی دیسکی: بین بازی‌ها اول کلماتی می‌آیند که هنوز هیچ‌وقت بازی
  *   نشده‌اند؛ وقتی همه‌ی کلمات یک رده یک دور کامل آمدند، سابقه‌شان ریست می‌شود.
+ *
+ * با پارامترهای سازنده، بازی‌های هم‌خانواده (مثل «صداشو درار») همین مخزن را
+ * با بانک و سابقه‌ی جداگانه‌ی خودشان به کار می‌برند.
  */
-class PantomimeRepository(private val context: Context) {
+class PantomimeRepository(
+    private val context: Context,
+    private val assetName: String = "pantomime.json",
+    private val customKey: String? = CustomContentStore.PANTOMIME,
+    private val playedWordsKey: String = PlayedContentStore.GAME_PANTOMIME,
+    private val playedCategoriesKey: String = PlayedContentStore.GAME_PANTOMIME_CATEGORIES,
+) {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val usedWords = mutableSetOf<String>()
@@ -32,12 +41,12 @@ class PantomimeRepository(private val context: Context) {
     fun load() {
         if (categories.isNotEmpty()) return
         val base = try {
-            json.decodeFromString<List<PCategory>>(ContentBank.open(context, "pantomime.json"))
+            json.decodeFromString<List<PCategory>>(ContentBank.open(context, assetName))
         } catch (_: Exception) {
             fallback
         }
         val custom = try {
-            val text = CustomContentStore(context).getJson(CustomContentStore.PANTOMIME)
+            val text = customKey?.let { CustomContentStore(context).getJson(it) }.orEmpty()
             if (text.isBlank()) emptyList()
             else json.decodeFromString<List<PCategory>>(text)
         } catch (_: Exception) {
@@ -55,38 +64,38 @@ class PantomimeRepository(private val context: Context) {
         val candidates = category.wordsFor(points).filter { it !in usedWords }
         if (candidates.isEmpty()) return null
 
-        val played = playedStore.played(PlayedContentStore.GAME_PANTOMIME)
+        val played = playedStore.played(playedWordsKey)
         val fresh = candidates.filter { wordKey(category, it) !in played }
         val word = if (fresh.isNotEmpty()) {
             fresh.random()
         } else {
             // همه‌ی گزینه‌های این رده قبلاً بازی شده‌اند — دور تازه برای این رده
             playedStore.forget(
-                PlayedContentStore.GAME_PANTOMIME,
+                playedWordsKey,
                 category.wordsFor(points).map { wordKey(category, it) },
             )
             candidates.random()
         }
         usedWords.add(word)
-        playedStore.markPlayed(PlayedContentStore.GAME_PANTOMIME, wordKey(category, word))
+        playedStore.markPlayed(playedWordsKey, wordKey(category, word))
         return word
     }
 
     /** کتگوری‌های جدول رقابتی — اول بازی‌نشده‌ها، با ریست سابقه پس از یک دور کامل */
     fun pickCategories(count: Int): List<PCategory> {
         val n = count.coerceAtMost(categories.size)
-        val played = playedStore.played(PlayedContentStore.GAME_PANTOMIME_CATEGORIES)
+        val played = playedStore.played(playedCategoriesKey)
         val fresh = categories.filter { it.id !in played }.shuffled()
 
         val picked = fresh.take(n).toMutableList()
         if (picked.size < n) {
-            playedStore.clear(PlayedContentStore.GAME_PANTOMIME_CATEGORIES)
+            playedStore.clear(playedCategoriesKey)
             val rest = categories
                 .filter { cat -> picked.none { it.id == cat.id } }
                 .shuffled()
             picked += rest.take(n - picked.size)
         }
-        playedStore.markPlayed(PlayedContentStore.GAME_PANTOMIME_CATEGORIES, picked.map { it.id })
+        playedStore.markPlayed(playedCategoriesKey, picked.map { it.id })
         return picked.shuffled()
     }
 
@@ -95,16 +104,16 @@ class PantomimeRepository(private val context: Context) {
         val candidates = goldenBank.filter { it !in usedWords }
         if (candidates.isEmpty()) return null
 
-        val played = playedStore.played(PlayedContentStore.GAME_PANTOMIME)
+        val played = playedStore.played(playedWordsKey)
         val fresh = candidates.filter { goldenKey(it) !in played }
         val word = if (fresh.isNotEmpty()) {
             fresh.random()
         } else {
-            playedStore.forget(PlayedContentStore.GAME_PANTOMIME, goldenBank.map(::goldenKey))
+            playedStore.forget(playedWordsKey, goldenBank.map(::goldenKey))
             candidates.random()
         }
         usedWords.add(word)
-        playedStore.markPlayed(PlayedContentStore.GAME_PANTOMIME, goldenKey(word))
+        playedStore.markPlayed(playedWordsKey, goldenKey(word))
         return word
     }
 

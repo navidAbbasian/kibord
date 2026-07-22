@@ -174,6 +174,8 @@ fun ClassicPickScreen(
     hasGolden: () -> Boolean,
     onPickWord: (PCategory, Int) -> Unit,
     onPickGolden: () -> Unit,
+    goldenName: String = "موضوع طلایی",
+    goldenHint: String = "ریسک بزرگ: ۳ دقیقه، شکست = باخت کل بازی",
 ) {
     val sound = LocalSoundManager.current
     val accent = LocalGameAccent.current
@@ -225,7 +227,7 @@ fun ClassicPickScreen(
                     ) {
                         ChoiceBubble(
                             main = 30.toPersianDigits(),
-                            sub = "موضوع طلایی",
+                            sub = goldenName,
                             accent = extras.gold,
                             size = 94.dp,
                             tilt = -2.5f,
@@ -234,7 +236,7 @@ fun ClassicPickScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "ریسک بزرگ: ۳ دقیقه، شکست = باخت کل بازی",
+                            text = goldenHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -291,6 +293,7 @@ fun ClassicPickScreen(
 fun ClassicGoldenLossScreen(
     state: ClassicUiState,
     loserTeam: Int,
+    spec: ClassicSpec = ClassicSpec.PANTOMIME,
     onPlayAgain: () -> Unit,
     onExitToHub: () -> Unit,
 ) {
@@ -342,9 +345,9 @@ fun ClassicGoldenLossScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
         ShareWinButton(
-            gameId = "pantomime_classic",
-            gameTitle = "پانتومیم کلاسیک",
-            gameEmoji = "🤫",
+            gameId = spec.helpGameId,
+            gameTitle = spec.shareTitle,
+            gameEmoji = spec.shareEmoji,
             winnerText = state.teamDisplayName(winnerTeam),
             scoreLines = listOf(
                 state.teamDisplayName(0) to state.scores[0].toPersianDigits(),
@@ -364,6 +367,7 @@ fun ClassicGoldenLossScreen(
 fun ClassicWinnerScreen(
     state: ClassicUiState,
     winners: List<Int>,
+    spec: ClassicSpec = ClassicSpec.PANTOMIME,
     onPlayAgain: () -> Unit,
     onExitToHub: () -> Unit,
 ) {
@@ -427,9 +431,9 @@ fun ClassicWinnerScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
             ShareWinButton(
-                gameId = "pantomime_classic",
-                gameTitle = "پانتومیم کلاسیک",
-                gameEmoji = "🤫",
+                gameId = spec.helpGameId,
+                gameTitle = spec.shareTitle,
+                gameEmoji = spec.shareEmoji,
                 winnerText = if (winners.size > 1) "مساوی!" else state.teamDisplayName(winners.firstOrNull() ?: 0),
                 scoreLines = listOf(
                     state.teamDisplayName(0) to state.scores[0].toPersianDigits(),

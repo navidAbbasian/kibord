@@ -48,6 +48,8 @@ data class ClassicUiState(
     val currentRound: Int = 1,
     val performingTeam: Int = 0,
     val goldenUsed: List<Boolean> = List(2) { false },
+    /** خانه‌های «کتگوری:امتیاز» که هر تیم بازی کرده — برای قاعده‌ی قفل خانه */
+    val playedCells: List<Set<String>> = List(2) { emptySet() },
     val categories: List<PCategory> = emptyList(),
     val attempt: PantoAttempt? = null,
     val timeLeftMillis: Long = 0,
@@ -59,7 +61,10 @@ data class ClassicUiState(
 }
 
 /** موتور پانتومیم کلاسیک: ۲ تیم، راندهای انتخابی، موضوع طلایی با ریسک حذف */
-class ClassicViewModel(application: Application) : AndroidViewModel(application) {
+open class ClassicViewModel @JvmOverloads constructor(
+    application: Application,
+    val spec: ClassicSpec = ClassicSpec.PANTOMIME,
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ClassicUiState())
     val uiState: StateFlow<ClassicUiState> = _uiState.asStateFlow()
@@ -67,7 +72,13 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
     private val _soundEvents = MutableSharedFlow<PantoSoundEvent>(extraBufferCapacity = 16)
     val soundEvents: SharedFlow<PantoSoundEvent> = _soundEvents.asSharedFlow()
 
-    private val repository = PantomimeRepository(application)
+    private val repository = PantomimeRepository(
+        context = application,
+        assetName = spec.assetName,
+        customKey = spec.customKey,
+        playedWordsKey = spec.playedWordsKey,
+        playedCategoriesKey = spec.playedCategoriesKey,
+    )
     private var tickerJob: Job? = null
     private var lastWholeSecond = -1
     private val json = Json { ignoreUnknownKeys = true }
@@ -95,24 +106,24 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
         val s = _uiState.value
         if (s.isResumable()) {
             try {
-                SessionStore.save(getApplication(), KEY, json.encodeToString(ClassicUiState.serializer(), s))
+                SessionStore.save(getApplication(), spec.sessionKey, json.encodeToString(ClassicUiState.serializer(), s))
             } catch (_: Exception) {
             }
         } else {
-            SessionStore.clear(getApplication(), KEY)
+            SessionStore.clear(getApplication(), spec.sessionKey)
         }
     }
 
     private fun restoreSession(): Boolean {
-        val raw = SessionStore.load(getApplication(), KEY) ?: return false
+        val raw = SessionStore.load(getApplication(), spec.sessionKey) ?: return false
         val saved = try {
             json.decodeFromString(ClassicUiState.serializer(), raw)
         } catch (_: Exception) {
-            SessionStore.clear(getApplication(), KEY)
+            SessionStore.clear(getApplication(), spec.sessionKey)
             return false
         }
         if (!saved.isResumable()) {
-            SessionStore.clear(getApplication(), KEY)
+            SessionStore.clear(getApplication(), spec.sessionKey)
             return false
         }
         _uiState.value = saved
@@ -124,7 +135,7 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
         return true
     }
 
-    private fun clearSession() = SessionStore.clear(getApplication(), KEY)
+    private fun clearSession() = SessionStore.clear(getApplication(), spec.sessionKey)
 
     private fun emitSound(event: PantoSoundEvent) {
         _soundEvents.tryEmit(event)
@@ -155,14 +166,32 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
 
     // ---- انتخاب کلمه ----
 
-    fun hasWords(category: PCategory, points: Int): Boolean = repository.hasWords(category, points)
+    fun hasWords(category: PCategory, points: Int): Boolean {
+        val state = _uiState.value
+        if (spec.lockPlayedCells &&
+            cellKey(category, points) in state.playedCells.getOrElse(state.performingTeam) { emptySet() }
+        ) {
+            return false
+        }
+        return repository.hasWords(category, points)
+    }
+
+    private fun cellKey(category: PCategory, points: Int): String = "${category.id}:$points"
 
     fun hasGolden(): Boolean = repository.hasGoldenWord()
 
     fun pickWord(category: PCategory, points: Int) {
+        if (!hasWords(category, points)) return
         val word = repository.drawWord(category, points) ?: return
         _uiState.update {
             it.copy(
+                playedCells = if (spec.lockPlayedCells) {
+                    it.playedCells.mapIndexed { i, cells ->
+                        if (i == it.performingTeam) cells + cellKey(category, points) else cells
+                    }
+                } else {
+                    it.playedCells
+                },
                 attempt = PantoAttempt(
                     word = word,
                     points = points,
@@ -187,8 +216,8 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
                     word = word,
                     points = PantoRules.GOLDEN_POINTS,
                     isGolden = true,
-                    categoryName = "موضوع طلایی",
-                    categoryEmoji = "⭐",
+                    categoryName = spec.goldenName,
+                    categoryEmoji = spec.goldenEmoji,
                     durationMillis = PantoRules.durationFor(0, isGolden = true),
                 ),
                 phase = ClassicPhase.Reveal,
@@ -334,9 +363,5 @@ class ClassicViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()
-    }
-
-    companion object {
-        private const val KEY = "session_pantomime_classic"
     }
 }

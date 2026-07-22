@@ -40,6 +40,8 @@ class PlayedContentStore(context: Context) {
         const val GAME_DOR = "dor"
         const val GAME_PANTOMIME = "pantomime"
         const val GAME_PANTOMIME_CATEGORIES = "pantomime_categories"
+        const val GAME_SEDASAZI = "sedasazi"
+        const val GAME_SEDASAZI_CATEGORIES = "sedasazi_categories"
         const val GAME_GANDEGOO = "gandegoo"
         const val GAME_GANDEGOO_QUESTIONS = "gandegoo_questions"
     }

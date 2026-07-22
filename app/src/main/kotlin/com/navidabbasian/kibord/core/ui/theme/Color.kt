@@ -54,6 +54,8 @@ val ProverbAccent = Color(0xFF56B98C)
 val ProverbAccentDark = Color(0xFF3EA274)
 val NofooziAccent = Color(0xFF8A93A8)
 val NofooziAccentDark = Color(0xFF707A92)
+val SedaAccent = Color(0xFFB48BEA)
+val SedaAccentDark = Color(0xFF9A6CD8)
 val MafiaAccent = Color(0xFFA85E6E)
 val MafiaAccentDark = Color(0xFF8F4756)
 

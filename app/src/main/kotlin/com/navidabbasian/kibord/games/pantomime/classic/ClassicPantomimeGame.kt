@@ -82,7 +82,7 @@ fun ClassicPantomimeGame(
             onDismiss = { pendingExit = null },
         )
         if (state.phase == ClassicPhase.TeamNames || state.phase == ClassicPhase.Rounds) {
-            GameHelpButton(gameId = "pantomime_classic", modifier = Modifier.align(Alignment.TopStart))
+            GameHelpButton(gameId = viewModel.spec.helpGameId, modifier = Modifier.align(Alignment.TopStart))
         }
         PhaseTransition(key = state.phase::class) {
             when (val phase = state.phase) {
@@ -108,7 +108,9 @@ fun ClassicPantomimeGame(
                         hasWords = viewModel::hasWords,
                         hasGolden = viewModel::hasGolden,
                         onPickWord = viewModel::pickWord,
-                        onPickGolden = viewModel::pickGolden
+                        onPickGolden = viewModel::pickGolden,
+                        goldenName = viewModel.spec.goldenName,
+                        goldenHint = viewModel.spec.goldenHint,
                     )
                 }
     
@@ -162,6 +164,7 @@ fun ClassicPantomimeGame(
                     BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     ClassicGoldenLossScreen(
                         state = state,
+                        spec = viewModel.spec,
                         loserTeam = phase.loserTeam,
                         onPlayAgain = viewModel::playAgain,
                         onExitToHub = {
@@ -175,6 +178,7 @@ fun ClassicPantomimeGame(
                     BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     ClassicWinnerScreen(
                         state = state,
+                        spec = viewModel.spec,
                         winners = viewModel.winners(),
                         onPlayAgain = viewModel::playAgain,
                         onExitToHub = {

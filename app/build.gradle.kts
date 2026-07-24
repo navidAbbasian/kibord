@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,22 +16,33 @@ android {
         applicationId = "com.navidabbasian.kibord"
         minSdk = 21
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.8.0"
+        versionCode = 19
+        versionName = "1.0.0"
         vectorDrawables {
             useSupportLibrary = true
         }
     }
 
+    // امضای ریلیز: اول متغیرهای محیطی (CI)، بعد فایل keystore.properties در ریشه پروژه (بیلد محلی)
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties().apply {
+        if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+    }
+    val hasReleaseKey = System.getenv("KIBORD_KEYSTORE_PATH") != null || keystorePropsFile.exists()
+
     signingConfigs {
-        // امضای ریلیز از متغیرهای محیطی (CI)؛ در نبودشان بیلد ریلیز محلی با کلید دیباگ امضا می‌شود
         create("release") {
-            val keystorePath = System.getenv("KIBORD_KEYSTORE_PATH")
-            if (keystorePath != null) {
-                storeFile = file(keystorePath)
+            val envPath = System.getenv("KIBORD_KEYSTORE_PATH")
+            if (envPath != null) {
+                storeFile = file(envPath)
                 storePassword = System.getenv("KIBORD_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KIBORD_KEY_ALIAS")
                 keyPassword = System.getenv("KIBORD_KEY_PASSWORD")
+            } else if (keystorePropsFile.exists()) {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
             }
         }
     }
@@ -43,7 +55,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (System.getenv("KIBORD_KEYSTORE_PATH") != null) {
+            signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")

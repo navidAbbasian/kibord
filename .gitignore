@@ -12,4 +12,6 @@ app/build
 *.apk
 *.aab
 *.keystore
+*.jks
+keystore.properties
 .kotlin/

@@ -1,4 +1,4 @@
-package com.navidabbasian.kibord.games.dor.ui.components
+package com.navidabbasian.kibord.core.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing

@@ -51,8 +51,8 @@ import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.formatMillisAsClock
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.dor.model.DorUiState
-import com.navidabbasian.kibord.games.dor.ui.components.CircularPlayerRing
-import com.navidabbasian.kibord.games.dor.ui.components.animateRingRotation
+import com.navidabbasian.kibord.core.ui.components.CircularPlayerRing
+import com.navidabbasian.kibord.core.ui.components.animateRingRotation
 
 /**
  * صفحه‌ی اصلی بازی دور: حلقه‌ی بازیکنان، کارت مرکزی (شروع/کلمه)،

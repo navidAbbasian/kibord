@@ -32,6 +32,8 @@ import com.navidabbasian.kibord.core.ui.theme.TabooAccentDark
 import com.navidabbasian.kibord.core.ui.theme.PantomimeRivalAccentDark
 import com.navidabbasian.kibord.core.ui.theme.SedaAccent
 import com.navidabbasian.kibord.core.ui.theme.SedaAccentDark
+import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccent
+import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccentDark
 
 @Immutable
 data class GameInfo(
@@ -65,6 +67,7 @@ object Routes {
     const val NOFOOZI = "game/nofoozi"
     const val MAFIA = "game/mafia"
     const val WHO_AM_I = "game/who_am_i"
+    const val ESM_FAMIL_SORATI = "game/esm_famil_sorati"
 }
 
 /** چهار بازی اصلی صفحه‌ی خانه — بقیه در «بازی‌های بیشتر» زندگی می‌کنند */
@@ -132,6 +135,16 @@ val moreGamesCatalog = listOf(
         accentDark = PantomimeRivalAccentDark,
         players = "۴ یا ۶ نفر",
         route = Routes.PANTOMIME_RIVAL,
+    ),
+    GameInfo(
+        id = "esm_famil_sorati",
+        title = "اسم فامیل سرعتی",
+        tagline = "حرف رو ببین، تو موضوع بگو، رد کن — ساعتت داره می‌سوزه!",
+        emoji = "⚡",
+        accent = EsmFamilSoratiAccent,
+        accentDark = EsmFamilSoratiAccentDark,
+        players = "۲ تا ۸ نفر",
+        route = Routes.ESM_FAMIL_SORATI,
     ),
     GameInfo(
         id = "sedasazi",

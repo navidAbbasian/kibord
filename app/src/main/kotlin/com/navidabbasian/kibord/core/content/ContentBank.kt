@@ -25,7 +25,7 @@ object ContentBank {
     private val FILES = listOf(
         "words.json", "pantomime.json", "gandegoo.json",
         "taboo.json", "forehead.json", "spy.json", "proverbs.json", "nofoozi.json", "esmramz.json",
-        "sedasazi.json",
+        "sedasazi.json", "esmfamilsorati.json",
     )
 
     private const val PREFS = "kibord_content_bank"

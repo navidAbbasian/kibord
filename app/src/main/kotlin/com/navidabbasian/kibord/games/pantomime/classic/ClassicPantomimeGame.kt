@@ -122,7 +122,12 @@ fun ClassicPantomimeGame(
                             attempt = attempt,
                             performerTeamName = state.teamDisplayName(state.performingTeam),
                             teamColor = teamColors.getOrElse(state.performingTeam) { teamColors[0] },
-                            onStartPerform = viewModel::startPerform
+                            onStartPerform = viewModel::startPerform,
+                            swapsLeft = viewModel.swapsLeft(),
+                            canSwap = viewModel.canSwapWord(),
+                            onSwapWord = if (viewModel.spec.wordSwapsPerTeam > 0) {
+                                { sound?.playWordSkip(); viewModel.swapWord() }
+                            } else null,
                         )
                     }
                 }

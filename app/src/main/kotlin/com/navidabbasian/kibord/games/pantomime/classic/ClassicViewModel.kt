@@ -50,6 +50,8 @@ data class ClassicUiState(
     val goldenUsed: List<Boolean> = List(2) { false },
     /** خانه‌های «کتگوری:امتیاز» که هر تیم بازی کرده — برای قاعده‌ی قفل خانه */
     val playedCells: List<Set<String>> = List(2) { emptySet() },
+    /** شمار تعویض کلمه‌هایی که هر تیم در این بازی خرج کرده */
+    val swapsUsed: List<Int> = List(2) { 0 },
     val categories: List<PCategory> = emptyList(),
     val attempt: PantoAttempt? = null,
     val timeLeftMillis: Long = 0,
@@ -221,6 +223,42 @@ open class ClassicViewModel @JvmOverloads constructor(
                     durationMillis = PantoRules.durationFor(0, isGolden = true),
                 ),
                 phase = ClassicPhase.Reveal,
+            )
+        }
+    }
+
+    // ---- تعویض کلمه ----
+
+    /** چند تعویض برای تیم اجراکننده مانده؟ */
+    fun swapsLeft(): Int {
+        val state = _uiState.value
+        return (spec.wordSwapsPerTeam - state.swapsUsed.getOrElse(state.performingTeam) { 0 })
+            .coerceAtLeast(0)
+    }
+
+    /** آیا الان می‌شود کلمه را عوض کرد؟ فقط در صفحه‌ی نمایش کلمه و نه برای طلایی */
+    fun canSwapWord(): Boolean {
+        val state = _uiState.value
+        val attempt = state.attempt ?: return false
+        if (state.phase != ClassicPhase.Reveal || attempt.isGolden) return false
+        if (swapsLeft() <= 0) return false
+        val category = state.categories.firstOrNull { it.name == attempt.categoryName } ?: return false
+        return repository.hasWords(category, attempt.points)
+    }
+
+    /** کلمه‌ی صداناپذیر/اجرانشدنی را با کلمه‌ی تازه از همان خانه عوض می‌کند */
+    fun swapWord() {
+        if (!canSwapWord()) return
+        val state = _uiState.value
+        val attempt = state.attempt ?: return
+        val category = state.categories.firstOrNull { it.name == attempt.categoryName } ?: return
+        val word = repository.drawWord(category, attempt.points) ?: return
+        _uiState.update {
+            it.copy(
+                attempt = attempt.copy(word = word),
+                swapsUsed = it.swapsUsed.mapIndexed { i, used ->
+                    if (i == it.performingTeam) used + 1 else used
+                },
             )
         }
     }

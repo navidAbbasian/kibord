@@ -24,6 +24,8 @@ val SedaSpec = ClassicSpec(
     goldenEmoji = "⭐",
     goldenHint = "ریسک بزرگ: صدای چیزِ بی‌صدا رو دربیار! شکست = باخت کل بازی",
     lockPlayedCells = true,
+    // اگر کلمه‌ای صداپذیر نبود، هر تیم تا ۲ بار در کل بازی می‌تواند عوضش کند
+    wordSwapsPerTeam = 2,
     helpGameId = "sedasazi",
     shareTitle = "صداشو درار",
     shareEmoji = "🔊",

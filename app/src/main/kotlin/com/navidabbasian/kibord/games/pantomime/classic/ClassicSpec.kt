@@ -26,6 +26,8 @@ data class ClassicSpec(
     val goldenHint: String,
     /** هر تیم هر خانه‌ی «کتگوری+امتیاز» را فقط یک بار بتواند بازی کند */
     val lockPlayedCells: Boolean = false,
+    /** سهم تعویض کلمه‌ی هر تیم در کل بازی — ۰ یعنی این بازی تعویض ندارد */
+    val wordSwapsPerTeam: Int = 0,
     /** شناسه‌ی راهنما و مشخسات کارت اشتراک برد */
     val helpGameId: String,
     val shareTitle: String,

@@ -53,6 +53,10 @@ fun PantoWordRevealScreen(
     performerTeamName: String,
     teamColor: androidx.compose.ui.graphics.Color,
     onStartPerform: () -> Unit,
+    /** سهم تعویض باقی‌مانده‌ی تیم — صفر یعنی دکمه‌ی تعویض نمایش داده نشود */
+    swapsLeft: Int = 0,
+    canSwap: Boolean = false,
+    onSwapWord: (() -> Unit)? = null,
 ) {
     var revealed by rememberSaveable { mutableStateOf(false) }
     val extras = kiExtras
@@ -129,6 +133,16 @@ fun PantoWordRevealScreen(
                     }
                 }
             }
+        }
+
+        if (onSwapWord != null && swapsLeft > 0 && !attempt.isGolden) {
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(
+                text = "کلمه سخته، عوضش کن! 🔄 (${swapsLeft.toPersianDigits()} بار مونده)",
+                style = KButtonStyle.Glass,
+                enabled = revealed && canSwap,
+                onClick = onSwapWord,
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))

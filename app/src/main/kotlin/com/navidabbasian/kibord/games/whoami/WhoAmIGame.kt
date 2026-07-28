@@ -130,7 +130,7 @@ data class WhoAmIUiState(
 ) {
     val isHost: Boolean get() = role == WaNetRole.HOST
     val me: WaPlayer? get() = snapshot.player(myName)
-    /** هدف‌هایی که هنوز برایشان ننوشته‌ام — میزبان در تعداد فرد ممکن است دو تا داشته باشد */
+    /** هدف‌هایی که هنوز برایشان ننوشته‌ام */
     val myPendingTargets: List<String> get() = snapshot.pendingTargetsOf(myName)
     val myTargets: List<String> get() = snapshot.targetsOf(myName)
     val iHaveGuessed: Boolean get() = snapshot.hasGuessed(myName)
@@ -350,25 +350,17 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * قرعه‌ی راند: بازیکن‌ها دوبه‌دو برای هم می‌نویسند.
-     * اگر تعداد فرد باشد، میزبان برای دو نفر می‌نویسد و یک نفر این راند نمی‌نویسد.
+     * قرعه‌ی راند: بازیکن‌ها روی یک حلقه‌ی بُرخورده می‌نشینند و هر کس
+     * برای نفرِ بعدیِ حلقه می‌نویسد — هر نفر دقیقاً یک بار می‌نویسد و
+     * دقیقاً یک کلمه می‌گیرد؛ فرد و زوج بودنِ تعداد هیچ فرقی ندارد.
      */
-    private fun buildTargets(names: List<String>, host: String): Map<String, List<String>> {
+    private fun buildTargets(names: List<String>): Map<String, List<String>> {
         if (names.size < 2) return emptyMap()
-        val others = names.filterNot { sameName(it, host) }.shuffled()
+        val ring = names.shuffled()
         val result = mutableMapOf<String, MutableList<String>>()
-        var leftover: String? = null
-        val paired = if (names.size % 2 == 0) {
-            (others + host).shuffled()
-        } else {
-            leftover = others.first()
-            (others.drop(1) + host).shuffled()
+        ring.forEachIndexed { i, writer ->
+            result.getOrPut(writer) { mutableListOf() }.add(ring[(i + 1) % ring.size])
         }
-        paired.chunked(2).forEach { (a, b) ->
-            result.getOrPut(a) { mutableListOf() }.add(b)
-            result.getOrPut(b) { mutableListOf() }.add(a)
-        }
-        leftover?.let { result.getOrPut(host) { mutableListOf() }.add(it) }
         return result
     }
 
@@ -376,7 +368,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
         val s = _uiState.value.snapshot
         val connected = s.connectedPlayers
         if (connected.size < WA_MIN_PLAYERS) return
-        val targets = buildTargets(connected.map { it.name }, s.hostName)
+        val targets = buildTargets(connected.map { it.name })
         mutateSnapshot { snap ->
             snap.copy(
                 phase = WaPhase.WRITE,
@@ -1168,7 +1160,7 @@ private fun WaLobbyScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "هر راند دوبه‌دو برای هم کلمه می‌نویسید (اگه فرد باشید میزبان برای دو نفر می‌نویسه). کلمه می‌ره رو پیشونی؛ هر تکون سر یه سوال — سوال کمتر، امتیاز بیشتر!",
+            text = "هر راند قرعه می‌خوره و هر کس یواشکی برای یه نفر کلمه می‌نویسه. کلمه می‌ره رو پیشونی؛ هر تکون سر یه سوال — سوال کمتر، امتیاز بیشتر!",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -1235,7 +1227,7 @@ private fun WaWriteScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         when {
-            // این راند نوبت نوشتنِ من نیست (تعداد فرد بود و قرعه به من نیفتاد)
+            // پشتیبان: اگر به هر دلیلی هدفی برای من قرعه نخورده باشد
             state.myTargets.isEmpty() -> {
                 Text(
                     text = "این راند تو نمی‌نویسی — قرعه‌ی نوشتن به بقیه افتاد!",
@@ -1254,15 +1246,6 @@ private fun WaWriteScreen(
             }
 
             pendingTarget != null -> {
-                if (state.myTargets.size > 1) {
-                    Text(
-                        text = "تعداد فرده — تو برای ${state.myTargets.size.toPersianDigits()} نفر می‌نویسی 👑",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = kiExtras.gold,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
                 Text(
                     text = "یواشکی برای $pendingTarget یه کلمه بنویس!",
                     style = MaterialTheme.typography.headlineMedium,

@@ -35,7 +35,7 @@ data class WaSnapshot(
     val totalRounds: Int = 3,
     /** سقف سوال هر بازیکن در هر راند: ۱۰ یا ۲۰ */
     val questionsTotal: Int = 10,
-    /** نویسنده → کسانی که برایشان می‌نویسد (میزبان در تعداد فرد دو هدف دارد) */
+    /** نویسنده → کسی که برایش می‌نویسد (حلقه‌ی بُرخورده: هر نفر یک هدف) */
     val targets: Map<String, List<String>> = emptyMap(),
     /** صاحب پیشانی → اسم مخفی نوشته‌شده برایش */
     val assignments: Map<String, String> = emptyMap(),

@@ -166,6 +166,8 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
                 isPlaying = true,
                 isPaused = false,
                 phase = EfsPhase.Playing,
+                passCounts = emptyMap(),
+                removedCardKeys = emptySet(),
             )
         }
         startTicker()
@@ -177,11 +179,14 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
      * کشیدن کارت بعدی از دسته؛ دسته که خالی شد بُر مجدد کامل —
      * اگر کارت اولِ دسته‌ی تازه همان کارت نمایش‌داده‌شده باشد، جای آن عوض می‌شود
      * تا در مرز بُر تکرار پشت‌سرهم پیش نیاید.
+     * کارت‌های ۲ بار پاس‌شده از چرخه‌ی این دست حذف‌اند و دیگر برنمی‌گردند.
      */
     private fun drawCard(state: EfsUiState): Pair<EfsLetterCard, List<EfsLetterCard>> {
-        var deck = state.deck
+        var deck = state.deck.filterNot { it.key in state.removedCardKeys }
         if (deck.isEmpty()) {
-            deck = EFS_LETTER_CARDS.shuffled()
+            deck = EFS_LETTER_CARDS.filterNot { it.key in state.removedCardKeys }
+                .ifEmpty { EFS_LETTER_CARDS }
+                .shuffled()
             if (deck.size > 1 && deck.first() == state.currentCard) {
                 deck = deck.drop(1) + deck.first()
             }
@@ -223,7 +228,8 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** پاس حرف: ۱ ثانیه جریمه از ذخیره‌ی شخصی و کارت تازه — بمب دست نمی‌خورد */
+    /** پاس حرف: ۱ ثانیه جریمه از ذخیره‌ی شخصی و کارت تازه — بمب دست نمی‌خورد.
+     *  حرفی که در یک دست ۲ بار پاس شود از چرخه حذف می‌شود: یعنی دسته آن حرف را ندارد. */
     fun passLetter() {
         val state = _uiState.value
         if (state.phase != EfsPhase.Playing || !state.isPlaying || state.isPaused || !state.canPass) return
@@ -235,14 +241,24 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
         }
         emitSound(EfsSoundEvent.PASS_LETTER)
 
+        // شمارش پاس‌های این کارت؛ با پاس دوم از چرخه‌ی این دست حذف می‌شود
+        val passedKey = state.currentCard?.key
+        val passCounts = if (passedKey != null) {
+            state.passCounts + (passedKey to (state.passCounts[passedKey] ?: 0) + 1)
+        } else state.passCounts
+        val removedCardKeys = if (passedKey != null && (passCounts[passedKey] ?: 0) >= 2) {
+            state.removedCardKeys + passedKey
+        } else state.removedCardKeys
+
         if (players[state.currentPlayerIndex].remainingTimeMillis <= 0) {
             // خودحذفی با پاس — همان مسیر اتمام وقت
-            _uiState.update { it.copy(players = players) }
+            _uiState.update { it.copy(players = players, passCounts = passCounts, removedCardKeys = removedCardKeys) }
             onPlayerTimeExpired()
             return
         }
 
-        val (card, deck) = drawCard(state)
+        val stateForDraw = state.copy(removedCardKeys = removedCardKeys)
+        val (card, deck) = drawCard(stateForDraw)
         _uiState.update {
             it.copy(
                 players = players,
@@ -250,6 +266,8 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
                 deck = deck,
                 passCooldownLeftMillis = EfsConstants.PASS_COOLDOWN_MILLIS,
                 canPass = false,
+                passCounts = passCounts,
+                removedCardKeys = removedCardKeys,
             )
         }
     }
@@ -450,6 +468,8 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
                 showExplosion = false,
                 showPauseDialog = false,
                 phase = EfsPhase.TopicSelect,
+                passCounts = emptyMap(),
+                removedCardKeys = emptySet(),
             )
         }
     }

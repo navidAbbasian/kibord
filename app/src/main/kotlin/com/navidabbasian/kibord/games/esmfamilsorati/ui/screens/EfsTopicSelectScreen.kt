@@ -60,7 +60,7 @@ fun EfsTopicSelectScreen(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "⏱️ نفری ۹۰ ثانیه — 💣 انفجار بمب یعنی ۵ ثانیه جریمه",
+                text = "⏱️ نفری ۶۰ ثانیه — 💣 انفجار بمب یعنی ۵ ثانیه جریمه",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

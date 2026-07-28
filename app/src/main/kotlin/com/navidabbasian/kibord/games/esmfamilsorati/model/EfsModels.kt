@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /** ثابت‌های زمانی اسم فامیل سرعتی — همه به میلی‌ثانیه */
 object EfsConstants {
-    const val PLAYER_BANK_MILLIS = 90_000L
+    const val PLAYER_BANK_MILLIS = 60_000L
     const val BOMB_MILLIS = 30_000L
     const val BOMB_PENALTY_MILLIS = 5_000L
     const val PASS_PENALTY_MILLIS = 1_000L
@@ -21,6 +21,8 @@ object EfsConstants {
 data class EfsLetterCard(val spellings: List<String>) {
     val display: String get() = spellings.joinToString("  ")
     val isGroup: Boolean get() = spellings.size > 1
+    /** شناسه‌ی پایدار کارت برای شمارش پاس‌ها و حذف از چرخه */
+    val key: String get() = spellings.joinToString("")
 }
 
 /**
@@ -86,6 +88,10 @@ data class EfsUiState(
     val canPass: Boolean = true,
     val showExplosion: Boolean = false,
     val showPauseDialog: Boolean = false,
+    /** شمار پاس‌های هر کارت در این دست — کلید همان EfsLetterCard.key است */
+    val passCounts: Map<String, Int> = emptyMap(),
+    /** کارت‌هایی که ۲ بار پاس شدند و از چرخه‌ی این دست حذف‌اند (دسته آن حرف را ندارد) */
+    val removedCardKeys: Set<String> = emptySet(),
 ) {
     val currentPlayer: EfsPlayer? get() = players.getOrNull(currentPlayerIndex)
 }

@@ -46,13 +46,18 @@ import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
+import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.components.rememberMorphingBlobShape
+import kotlinx.coroutines.delay
 import com.navidabbasian.kibord.core.ui.theme.VioletDeep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -64,6 +69,24 @@ enum class HubTab { SETTINGS, HOME, HOW_TO_PLAY }
 fun HubShell(onOpenGame: (String) -> Unit) {
     var tab by rememberSaveable { mutableStateOf(HubTab.HOME) }
 
+    // راهنمای یک‌باره بعد از خوش‌آمدگویی: چند ثانیه تب آموزش را نشانه می‌گیرد
+    val context = LocalContext.current
+    var showHowToHint by rememberSaveable {
+        mutableStateOf(GamePrefs.getBool(context, "show_howto_hint", false))
+    }
+    val dismissHint: () -> Unit = {
+        if (showHowToHint) {
+            GamePrefs.setBool(context, "show_howto_hint", false)
+            showHowToHint = false
+        }
+    }
+    if (showHowToHint) {
+        LaunchedEffect(Unit) {
+            delay(8_000)
+            dismissHint()
+        }
+    }
+
     KiBackground {
         PhaseTransition(key = tab) {
             when (tab) {
@@ -74,12 +97,36 @@ fun HubShell(onOpenGame: (String) -> Unit) {
         }
         KiBordBottomNav(
             currentTab = tab,
-            onTabSelected = { tab = it },
+            onTabSelected = {
+                if (it == HubTab.HOW_TO_PLAY) dismissHint()
+                tab = it
+            },
+            highlightHowToPlay = showHowToHint,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 12.dp)
         )
+        // حباب راهنما بالای تب آموزش (در چیدمان راست‌به‌چپ، سمت چپِ نوار)
+        if (showHowToHint) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(bottom = 88.dp, end = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1400)) {
+                    StickerTitle(
+                        text = "آموزش همه‌ی بازی‌ها اینجاست!",
+                        accent = VioletPrimary,
+                        rotation = -3f,
+                        fontSize = 16.sp,
+                    )
+                }
+                BobbingEmoji(emoji = "👇", fontSize = 28.sp)
+            }
+        }
     }
 }
 
@@ -87,7 +134,9 @@ fun HubShell(onOpenGame: (String) -> Unit) {
 fun KiBordBottomNav(
     currentTab: HubTab,
     onTabSelected: (HubTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** تب آموزش با تپش برجسته شود — راهنمای بعد از خوش‌آمدگویی */
+    highlightHowToPlay: Boolean = false,
 ) {
     val extras = kiExtras
     val barShape = rememberMorphingBlobShape(phase = 0.7f, periodMs = 7200)
@@ -134,6 +183,7 @@ fun KiBordBottomNav(
             pebbleSize = 44.dp,
             iconSize = 21.dp,
             phase = 3.7f,
+            highlighted = highlightHowToPlay,
             onClick = { onTabSelected(HubTab.HOW_TO_PLAY) }
         )
     }
@@ -148,7 +198,8 @@ private fun RowScope.NavPebbleItem(
     pebbleSize: androidx.compose.ui.unit.Dp,
     iconSize: androidx.compose.ui.unit.Dp,
     phase: Float,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    highlighted: Boolean = false,
 ) {
     val sound = LocalSoundManager.current
     val extras = kiExtras
@@ -175,8 +226,11 @@ private fun RowScope.NavPebbleItem(
             modifier = Modifier
                 .size(pebbleSize)
                 .then(
-                    if (selected) Modifier.breathing(intensity = 0.025f, periodMs = 2000, phase = phase)
-                    else Modifier
+                    when {
+                        highlighted -> Modifier.breathing(intensity = 0.10f, periodMs = 900, phase = phase)
+                        selected -> Modifier.breathing(intensity = 0.025f, periodMs = 2000, phase = phase)
+                        else -> Modifier
+                    }
                 )
                 .graphicsLayer {
                     scaleX = bounce
@@ -201,7 +255,11 @@ private fun RowScope.NavPebbleItem(
                 )
                 .border(
                     2.dp,
-                    if (selected) Color.White.copy(alpha = 0.55f) else extras.glassBorder,
+                    when {
+                        highlighted -> VioletPrimary
+                        selected -> Color.White.copy(alpha = 0.55f)
+                        else -> extras.glassBorder
+                    },
                     pebble
                 ),
             contentAlignment = Alignment.Center

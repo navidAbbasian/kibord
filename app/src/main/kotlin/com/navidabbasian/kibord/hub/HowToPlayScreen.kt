@@ -361,10 +361,13 @@ private fun GuideCard(game: GameInfo, guide: GameGuide?, index: Int) {
     val tilt = if (index % 2 == 0) -1.2f else 1.2f
     val headerShape = blobShape(seed = index * 3 + 1)
 
+    // کارت چند درصد از کانتینر کوچک‌تر است تا با کجی و آفست، گوشه‌هایش
+    // به لبه‌ی صفحه نچسبد
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .offset(x = if (index % 2 == 0) (-4).dp else 4.dp)
+            .fillMaxWidth(0.93f)
+            .offset(x = if (index % 2 == 0) (-3).dp else 3.dp)
             .graphicsLayer { rotationZ = tilt }
             .animateContentSize()
     ) {
@@ -504,5 +507,6 @@ private fun GuideCard(game: GameInfo, guide: GameGuide?, index: Int) {
                 }
             }
         }
+    }
     }
 }

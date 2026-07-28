@@ -83,6 +83,8 @@ fun KiBordApp() {
     if (showOnboarding) {
         OnboardingScreen(onDone = {
             GamePrefs.setBool(context, "onboarding_done", true)
+            // بعد از خوش‌آمدگویی، هاب چند ثانیه تبِ آموزش را نشان کاربر می‌دهد
+            GamePrefs.setBool(context, "show_howto_hint", true)
             showOnboarding = false
         })
         return

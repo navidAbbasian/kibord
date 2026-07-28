@@ -13,13 +13,34 @@ object GameStats {
     private const val KEY_NAME_WINS = "namewins_"
     private const val KEY_GAME_IDS = "played_game_ids"
     private const val KEY_WINNER_NAMES = "winner_names"
+    private const val KEY_RECORDED_TOKENS = "recorded_tokens"
+    private const val MAX_REMEMBERED_TOKENS = 64
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** ثبت یک بازیِ تمام‌شده به همراه برنده‌هایش */
-    fun recordGameFinished(context: Context, gameId: String, winnerNames: List<String> = emptyList()) {
+    /**
+     * ثبت یک بازیِ تمام‌شده به همراه برنده‌هایش.
+     *
+     * token شناسه‌ی یکتای همان «دستِ» تمام‌شده است: اگر صفحه‌ی برنده دوباره
+     * ساخته شود (چرخش، بازساخت اکتیویتی، انیمیشن گذار…) همان token می‌آید و
+     * ثبت تکراری نمی‌شود — ریشه‌ی باگِ «۱ دست بازی، ۲-۳ برد ثبت‌شده».
+     */
+    fun recordGameFinished(
+        context: Context,
+        gameId: String,
+        winnerNames: List<String> = emptyList(),
+        token: String? = null,
+    ) {
         val p = prefs(context)
+        if (token != null) {
+            val seen = p.getString(KEY_RECORDED_TOKENS, "").orEmpty().split('\n')
+            if (token in seen) return
+            p.edit().putString(
+                KEY_RECORDED_TOKENS,
+                (seen + token).takeLast(MAX_REMEMBERED_TOKENS).joinToString("\n"),
+            ).apply()
+        }
         val e = p.edit()
         e.putInt(KEY_PLAYS + gameId, p.getInt(KEY_PLAYS + gameId, 0) + 1)
         e.putStringSet(KEY_GAME_IDS, (p.getStringSet(KEY_GAME_IDS, emptySet()) ?: emptySet()) + gameId)

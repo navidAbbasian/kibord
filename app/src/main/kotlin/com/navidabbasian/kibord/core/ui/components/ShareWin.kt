@@ -2,11 +2,13 @@ package com.navidabbasian.kibord.core.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.share.WinnerCard
 import com.navidabbasian.kibord.core.stats.GameStats
+import java.util.UUID
 
 /**
  * دکمه‌ی «پز بده»: با اولین نمایش، برد را در دفترچه‌ی آمار ثبت می‌کند و
@@ -25,8 +27,11 @@ fun ShareWinButton(
     val context = LocalContext.current
     val sound = LocalSoundManager.current
 
-    LaunchedEffect(Unit) {
-        GameStats.recordGameFinished(context, gameId, winnerNames)
+    // شناسه‌ی یکتای این دستِ تمام‌شده: با چرخش صفحه و بازساخت اکتیویتی حفظ
+    // می‌شود تا هر دست فقط یک بار در آمار ثبت شود
+    val recordToken = rememberSaveable { UUID.randomUUID().toString() }
+    LaunchedEffect(recordToken) {
+        GameStats.recordGameFinished(context, gameId, winnerNames, token = recordToken)
     }
 
     KButton(

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
+import kotlin.math.cos
 import kotlin.math.sin
 
 /**
@@ -137,7 +138,8 @@ fun BobbingEmoji(
         fontSize = fontSize,
         modifier = modifier.graphicsLayer {
             translationY = 10f * sin(t + phase)
-            rotationZ = 5f * sin(t * 0.8f + phase)
+            // کسینوس هم‌تناوب با سینوس است ولی هم‌فاز نیست — لوپ بی‌پرش می‌ماند
+            rotationZ = 5f * cos(t + phase)
         }
     )
 }

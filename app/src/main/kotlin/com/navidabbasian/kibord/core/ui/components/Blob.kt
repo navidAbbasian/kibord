@@ -73,10 +73,12 @@ fun rememberMorphingBlobShape(
         animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing)),
         label = "blob_t"
     )
+    // فقط ضریب‌های صحیحِ t مجازند: تناوبِ کامل در 2π حفظ می‌شود و لوپ
+    // بدون پرش تکرار می‌شود؛ ضریب اعشاری (مثل 0.8) سرِ ریستِ لوپ می‌پرید
     val a = (48 + 13 * sin(t + phase)).toInt()
-    val b = (48 - 12 * sin(t * 0.8f + phase + 1.3f)).toInt()
-    val c = (48 + 11 * sin(t * 1.15f + phase + 2.7f)).toInt()
-    val d = (48 - 13 * sin(t * 0.9f + phase + 4.2f)).toInt()
+    val b = (48 - 12 * sin(t + phase + 1.3f)).toInt()
+    val c = (48 + 11 * sin(2f * t + phase + 2.7f)).toInt()
+    val d = (48 - 13 * sin(t + phase + 4.2f)).toInt()
     return RoundedCornerShape(
         topStartPercent = a.coerceIn(30, 62),
         topEndPercent = b.coerceIn(30, 62),

@@ -78,10 +78,11 @@ fun KiBackground(
         animationSpec = infiniteRepeatable(tween(24_000, easing = LinearEasing)),
         label = "drift"
     )
+    // ۲۸۰۰ = همان آهنگِ چشمک قبلی (۴۰۰۰÷۱٫۵) بعد از حذف ضریب اعشاری لوپ‌شکن
     val twinkle by transition.animateFloat(
         initialValue = 0f,
         targetValue = (2f * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(4_000, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(2_800, easing = LinearEasing)),
         label = "twinkle"
     )
 
@@ -102,10 +103,11 @@ fun KiBackground(
             val h = size.height
 
             // ---- گوی‌های شناور ----
+            // فقط ضریب‌های صحیحِ drift مجازند تا لوپ ۲۴ ثانیه‌ای بدون پرش تکرار شود
             ORBS.forEach { orb ->
                 val wobbleX = sin(drift + orb.phase) * w * 0.03f
-                val wobbleY = cos(drift * 0.7f + orb.phase) * h * 0.02f
-                val breathe = 1f + 0.08f * sin(drift * 1.3f + orb.phase)
+                val wobbleY = cos(drift + orb.phase * 1.7f) * h * 0.02f
+                val breathe = 1f + 0.08f * sin(2f * drift + orb.phase)
                 val color = orbColors[orb.colorIndex % orbColors.size]
                 drawCircle(
                     brush = Brush.radialGradient(
@@ -120,7 +122,7 @@ fun KiBackground(
 
             // ---- ستاره‌های چهارپر چشمک‌زن ----
             SPARKLES.forEach { s ->
-                val a = (0.5f + 0.5f * sin(twinkle * 1.5f + s.phase)).coerceIn(0f, 1f)
+                val a = (0.5f + 0.5f * sin(twinkle + s.phase)).coerceIn(0f, 1f)
                 if (a > 0.15f) {
                     val cx = s.x * w
                     val cy = s.y * h

@@ -221,7 +221,13 @@ fun SettingsScreen() {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                     AboutRow(emoji = "🏆", label = "نام اپ", value = "کی برد؟")
                     AboutRow(emoji = "🔖", label = "نسخه", value = appVersion.toPersianDigits())
-                    AboutRow(emoji = "🎲", label = "بازی‌ها", value = "۱۲ بازی دورهمی")
+                    // از خود فهرست شمرده می‌شود تا با اضافه‌شدن بازی کهنه نشود
+                    val gameCount = gameCatalog.size + moreGamesCatalog.size
+                    AboutRow(
+                        emoji = "🎲",
+                        label = "بازی‌ها",
+                        value = "${gameCount.toPersianDigits()} بازی دورهمی",
+                    )
                 }
             }
         }

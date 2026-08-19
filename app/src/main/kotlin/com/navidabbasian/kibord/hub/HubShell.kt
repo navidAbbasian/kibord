@@ -107,16 +107,21 @@ fun HubShell(onOpenGame: (String) -> Unit) {
                 .navigationBarsPadding()
                 .padding(bottom = 12.dp)
         )
-        // حباب راهنما بالای تب آموزش (در چیدمان راست‌به‌چپ، سمت چپِ نوار)
+        // حباب راهنما و انگشتی که به تب آموزش اشاره می‌کند
         if (showHowToHint) {
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(bottom = 88.dp, end = 18.dp),
+                    .padding(bottom = 84.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(modifier = Modifier.breathing(intensity = 0.04f, periodMs = 1400)) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .breathing(intensity = 0.04f, periodMs = 1400)
+                ) {
                     StickerTitle(
                         text = "آموزش همه‌ی بازی‌ها اینجاست!",
                         accent = VioletPrimary,
@@ -124,7 +129,22 @@ fun HubShell(onOpenGame: (String) -> Unit) {
                         fontSize = 16.sp,
                     )
                 }
-                BobbingEmoji(emoji = "👇", fontSize = 28.sp)
+                // انگشت با همان چیدمانِ سه‌ستونیِ نوار ناوبری چیده می‌شود تا
+                // در هر عرض صفحه دقیقاً وسط تب آموزش بایستد — نه وسط حباب
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                ) {
+                    Spacer(modifier = Modifier.weight(1f)) // جای تب تنظیمات
+                    Spacer(modifier = Modifier.weight(1f)) // جای تب خانه
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BobbingEmoji(emoji = "👇", fontSize = 28.sp)
+                    }
+                }
             }
         }
     }

@@ -16,8 +16,8 @@ android {
         applicationId = "com.navidabbasian.kibord"
         minSdk = 21
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.1.1"
+        versionCode = 22
+        versionName = "1.2.0"
         vectorDrawables {
             useSupportLibrary = true
         }

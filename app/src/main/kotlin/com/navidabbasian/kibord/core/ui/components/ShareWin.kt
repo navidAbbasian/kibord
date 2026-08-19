@@ -13,6 +13,9 @@ import java.util.UUID
 /**
  * دکمه‌ی «پز بده»: با اولین نمایش، برد را در دفترچه‌ی آمار ثبت می‌کند و
  * با لمس، کارت بردِ قابل اشتراک را می‌سازد و پنجره‌ی اشتراک را باز می‌کند.
+ *
+ * چون این دکمه روی صفحه‌ی برنده‌ی همه‌ی بازی‌هاست، درخواست امتیازِ مایکت
+ * هم از همین‌جا بالا می‌آید — درست بعد از ثبتِ بازیِ تمام‌شده.
  */
 @Composable
 fun ShareWinButton(
@@ -33,6 +36,9 @@ fun ShareWinButton(
     LaunchedEffect(recordToken) {
         GameStats.recordGameFinished(context, gameId, winnerNames, token = recordToken)
     }
+
+    // بعد از اولین بازیِ تمام‌شده، درخواست امتیاز در مایکت
+    RatePromptDialog()
 
     KButton(
         text = "پز بده! 📤",

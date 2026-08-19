@@ -1,6 +1,7 @@
 package com.navidabbasian.kibord.core.stats
 
 import android.content.Context
+import android.os.SystemClock
 
 /**
  * دفترچه‌ی آمار محلی: شمار بازی‌های انجام‌شده و بردهای هر اسم.
@@ -15,6 +16,14 @@ object GameStats {
     private const val KEY_WINNER_NAMES = "winner_names"
     private const val KEY_RECORDED_TOKENS = "recorded_tokens"
     private const val MAX_REMEMBERED_TOKENS = 64
+    private const val KEY_LAST_RECORD = "lastrecord_"
+
+    /**
+     * دو ثبتِ یکسان که فاصله‌شان از این کمتر باشد، یک دستِ واحد شمرده می‌شود.
+     * گذارِ صفحه‌ها محتوای تازه را چند صد میلی‌ثانیه دوبار می‌سازد؛ هیچ دستِ
+     * واقعی‌ای هم در این بازه دو بار تمام نمی‌شود.
+     */
+    private const val DUPLICATE_WINDOW_MILLIS = 15_000L
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -41,7 +50,18 @@ object GameStats {
                 (seen + token).takeLast(MAX_REMEMBERED_TOKENS).joinToString("\n"),
             ).apply()
         }
+
+        // شناسه‌ی خودِ دستِ تمام‌شده — مستقل از اینکه رابط کاربری چند بار
+        // ساخته شود. اگر همین دست همین الان ثبت شده، دوباره ثبت نمی‌شود.
+        val names = winnerNames.map { it.trim() }.filter { it.isNotBlank() }.sorted()
+        val identity = KEY_LAST_RECORD + gameId + "|" + names.joinToString(",")
+        val now = SystemClock.elapsedRealtime()
+        val last = p.getLong(identity, Long.MIN_VALUE)
+        // now < last یعنی گوشی بین دو ثبت ری‌استارت شده؛ آن ثبت کهنه است
+        if (last != Long.MIN_VALUE && now >= last && now - last < DUPLICATE_WINDOW_MILLIS) return
+
         val e = p.edit()
+        e.putLong(identity, now)
         e.putInt(KEY_PLAYS + gameId, p.getInt(KEY_PLAYS + gameId, 0) + 1)
         e.putStringSet(KEY_GAME_IDS, (p.getStringSet(KEY_GAME_IDS, emptySet()) ?: emptySet()) + gameId)
         val knownNames = (p.getStringSet(KEY_WINNER_NAMES, emptySet()) ?: emptySet()).toMutableSet()

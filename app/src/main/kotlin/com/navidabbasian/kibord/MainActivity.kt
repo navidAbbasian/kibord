@@ -20,6 +20,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.analytics.Analytics
+import com.navidabbasian.kibord.core.cloud.AccountRepository
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.audio.SoundManager
 import com.navidabbasian.kibord.core.content.ContentBank
@@ -39,6 +41,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         soundManager = SoundManager(this)
         settingsRepository = SettingsRepository(this)
+        Analytics.init(this)
+        AccountRepository.init(this)
 
         // به‌روزرسانی دوره‌ای بانک کلمات و سوالات از مخزن گیت‌هاب (حداکثر روزی یک بار)
         lifecycleScope.launch {
@@ -94,11 +98,13 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         soundManager.resumeBackgroundMusic()
+        Analytics.onForeground()
     }
 
     override fun onPause() {
         super.onPause()
         soundManager.pauseBackgroundMusic()
+        Analytics.onBackground()
     }
 
     override fun onDestroy() {

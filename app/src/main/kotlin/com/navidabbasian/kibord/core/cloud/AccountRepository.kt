@@ -1,6 +1,9 @@
 package com.navidabbasian.kibord.core.cloud
 
 import io.github.jan.supabase.auth.auth
+import android.content.Context
+import com.navidabbasian.kibord.core.settings.GamePrefs
+import com.navidabbasian.kibord.core.analytics.Analytics
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
@@ -28,6 +31,31 @@ object AccountRepository {
     private const val INTERNAL_DOMAIN = "id.kibord.ir"
 
     private val client get() = Cloud.client
+
+    private var appContext: Context? = null
+    private const val KEY_USERNAME = "cloud_username"
+
+    /** پیامِ بازی‌ها وقتی کسی بدون حساب می‌خواهد اینترنتی بازی کند */
+    const val NEED_ACCOUNT_MESSAGE =
+        "برای بازی اینترنتی اول باید وارد حسابت بشی — تنظیمات ← حساب کاربری"
+
+    /** یک بار از اکتیویتی صدا زده می‌شود تا یوزرنیم روی دیسک کش شود */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    private fun cacheUsername(username: String?) {
+        appContext?.let { GamePrefs.setString(it, KEY_USERNAME, username.orEmpty()) }
+    }
+
+    /**
+     * هویت بازیکن برای بازی اینترنتی: یوزرنیمِ حسابِ لاگین‌شده، یا null اگر
+     * وارد نشده. بدون شبکه هم جواب می‌دهد چون یوزرنیم کش شده است.
+     */
+    fun onlineIdentity(): String? {
+        if (currentUserId() == null) return null
+        return appContext?.let { GamePrefs.getString(it, KEY_USERNAME, null) }?.takeIf { it.isNotBlank() }
+    }
 
     /** یوزرنیم را به شکل استانداردِ جدول درمی‌آورد */
     fun normalizeUsername(raw: String): String = raw.trim().lowercase()
@@ -104,6 +132,8 @@ object AccountRepository {
                 ?: return CloudResult.Failed("حساب ساخته شد ولی ورود انجام نشد")
 
             c.from("profiles").insert(CloudProfile(id = id, username = user))
+            cacheUsername(user)
+            Analytics.track("account_register", "with_email" to (email != null))
             CloudResult.Ok(Unit)
         } catch (e: Exception) {
             CloudResult.Failed(humanize(e))
@@ -123,6 +153,9 @@ object AccountRepository {
                 this.email = email?.trim()?.takeIf { it.isNotBlank() } ?: "$user@$INTERNAL_DOMAIN"
                 this.password = password
             }
+            Analytics.track("account_sign_in")
+            // یوزرنیم واقعی از پروفایل خوانده و کش می‌شود (ورود با ایمیل هم ممکن است)
+            myProfile()
             CloudResult.Ok(Unit)
         } catch (e: Exception) {
             CloudResult.Failed(humanize(e))
@@ -133,6 +166,7 @@ object AccountRepository {
         val c = client ?: return CloudResult.Failed(OFFLINE)
         return try {
             c.auth.signOut()
+            cacheUsername(null)
             CloudResult.Ok(Unit)
         } catch (e: Exception) {
             CloudResult.Failed(humanize(e))
@@ -147,6 +181,7 @@ object AccountRepository {
             val row = c.from("profiles")
                 .select { filter { eq("id", id) } }
                 .decodeSingleOrNull<CloudProfile>()
+            row?.let { cacheUsername(it.username) }
             CloudResult.Ok(row)
         } catch (e: Exception) {
             CloudResult.Failed(humanize(e))

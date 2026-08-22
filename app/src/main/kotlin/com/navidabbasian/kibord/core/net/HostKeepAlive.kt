@@ -1,6 +1,7 @@
 package com.navidabbasian.kibord.core.net
 
 import android.content.Context
+import com.navidabbasian.kibord.core.analytics.Analytics
 import android.net.wifi.WifiManager
 import android.os.PowerManager
 
@@ -18,6 +19,7 @@ class HostKeepAlive(context: Context) {
     private var wakeLock: PowerManager.WakeLock? = null
 
     fun acquire() {
+        Analytics.lanHosted()
         if (wifiLock != null || wakeLock != null) return
         try {
             val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager

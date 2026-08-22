@@ -28,6 +28,13 @@ object GamePrefs {
         prefs(context).edit().putInt(key, value).apply()
     }
 
+    fun getString(context: Context, key: String, default: String? = null): String? =
+        prefs(context).getString(key, default)
+
+    fun setString(context: Context, key: String, value: String) {
+        prefs(context).edit().putString(key, value).apply()
+    }
+
     fun getNames(context: Context, key: String): List<String> =
         prefs(context).getString(key, null)
             ?.split(NAME_SEPARATOR)

@@ -1,6 +1,7 @@
 package com.navidabbasian.kibord.core.net.online
 
 import com.navidabbasian.kibord.core.cloud.Cloud
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.net.ClientLink
 import com.navidabbasian.kibord.core.net.HostLink
 import io.github.jan.supabase.realtime.PresenceAction
@@ -41,6 +42,14 @@ object OnlineRooms {
     /** بدون حروف گیج‌کننده مثل O/0 و I/1 تا گفتنِ شفاهیِ کد راحت باشد */
     private const val ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
     const val CODE_LENGTH = 6
+
+    /**
+     * آیا همین الان اتاق اینترنتیِ زنده‌ای داریم؟ صفحه‌ی برنده از روی همین
+     * می‌فهمد نتیجه‌ی بازی باید در آمار آنلاین بازیکن ثبت شود یا نه.
+     */
+    @Volatile
+    var active: Boolean = false
+        internal set
 
     fun newCode(): String =
         (1..CODE_LENGTH).map { ALPHABET[Random.nextInt(ALPHABET.length)] }.joinToString("")
@@ -125,6 +134,8 @@ class OnlineHost<T>(
 
                 ch.subscribe(blockUntilSubscribed = true)
                 ch.track(buildJsonObject { put("role", "host") })
+                OnlineRooms.active = true
+                Analytics.onlineEntered("host")
                 onReady(true)
             } catch (_: Exception) {
                 stop()
@@ -145,6 +156,8 @@ class OnlineHost<T>(
     }
 
     override fun stop() {
+        OnlineRooms.active = false
+        Analytics.onlineLeft()
         jobs.forEach { it.cancel() }
         jobs.clear()
         joined.clear()
@@ -197,9 +210,12 @@ class OnlineClient<T>(
                     handshakeDone = true
                     val ok = p["ok"]?.jsonPrimitive?.content == "true"
                     if (ok) {
+                        OnlineRooms.active = true
+                        Analytics.onlineEntered("guest")
                         onResult(null)
                     } else {
                         val err = p["error"]?.jsonPrimitive?.content.orEmpty()
+                        Analytics.onlineJoinFailed(err.ifBlank { "rejected" })
                         close()
                         onResult(err.ifBlank { "اتصال برقرار نشد" })
                     }
@@ -230,6 +246,7 @@ class OnlineClient<T>(
                 kotlinx.coroutines.delay(JOIN_TIMEOUT_MS)
                 if (!handshakeDone) {
                     handshakeDone = true
+                    Analytics.onlineJoinFailed("timeout")
                     close()
                     onResult("اتاقی با این کد پیدا نشد — کد و اینترنت رو چک کن")
                 }
@@ -255,6 +272,8 @@ class OnlineClient<T>(
     }
 
     override fun close() {
+        OnlineRooms.active = false
+        Analytics.onlineLeft()
         jobs.forEach { it.cancel() }
         jobs.clear()
         val ch = channel ?: return

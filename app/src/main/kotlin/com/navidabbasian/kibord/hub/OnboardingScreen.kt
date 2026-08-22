@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.R
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KButton
 import com.navidabbasian.kibord.core.ui.components.KButtonStyle
@@ -58,7 +59,7 @@ private val onboardSteps = listOf(
     OnboardStep(
         emoji = "📵",
         title = "آفلاین، بدون اجبار به اکانت",
-        body = "همه‌ی بازی‌ها بدون اینترنت و بدون ثبت‌نام کار می‌کنن؛ بازی‌های چندگوشی هم با وای‌فای یا هات‌اسپاتِ خودتون.\n\nاگه دلت خواست، می‌تونی حساب بسازی تا آمار و بردهات آنلاین ذخیره بشن و با بقیه رقابت کنی.",
+        body = "همه‌ی بازی‌ها بدون اینترنت و بدون ثبت‌نام کار می‌کنن؛ بازی‌های چندگوشی هم با وای‌فای یا هات‌اسپاتِ خودتون.\n\nبرای بازی اینترنتی یه حساب می‌سازی؛ اسمت همون یوزرنیمته و بردهات توی رتبه‌بندی می‌ره. یه آمار ناشناس هم از اینکه کدوم بازی‌ها بیشتر بازی می‌شن جمع می‌کنیم تا اپ بهتر شه — بدون اطلاعات شخصی، و از تنظیمات خاموش می‌شه.",
     ),
     OnboardStep(
         emoji = "👨‍👩‍👧‍👦",
@@ -154,7 +155,10 @@ fun OnboardingScreen(onDone: () -> Unit) {
                     text = if (isLast) "بریم بازی! 🎮" else "بعدی",
                     onClick = {
                         sound?.playButtonClick()
-                        if (isLast) onDone()
+                        if (isLast) {
+                            Analytics.track("onboarding_done", "skipped" to false)
+                            onDone()
+                        }
                         else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
                     },
                 )
@@ -170,7 +174,11 @@ fun OnboardingScreen(onDone: () -> Unit) {
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                        ) { sound?.playButtonClick(); onDone() }
+                        ) {
+                            sound?.playButtonClick()
+                            Analytics.track("onboarding_done", "skipped" to true)
+                            onDone()
+                        }
                         .padding(6.dp),
                 )
             } else {

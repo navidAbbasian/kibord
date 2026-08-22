@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.rate.RateApp
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import kotlinx.coroutines.delay
@@ -51,7 +52,10 @@ fun RatePromptDialog(delayMillis: Long = 1400) {
     LaunchedEffect(handled) {
         if (handled) return@LaunchedEffect
         delay(delayMillis)
-        if (RateApp.shouldPrompt(context)) visible = true
+        if (RateApp.shouldPrompt(context)) {
+            visible = true
+            Analytics.track("rate_prompt", "result" to "shown")
+        }
     }
 
     if (!visible) return
@@ -63,6 +67,7 @@ fun RatePromptDialog(delayMillis: Long = 1400) {
 
     Dialog(onDismissRequest = {
         // بستن با لمس بیرون = «بعداً»
+        Analytics.track("rate_prompt", "result" to "dismissed")
         RateApp.postpone(context)
         close()
     }) {
@@ -94,6 +99,7 @@ fun RatePromptDialog(delayMillis: Long = 1400) {
                 text = "امتیاز می‌دم ⭐",
                 onClick = {
                     sound?.playButtonClick()
+                    Analytics.track("rate_prompt", "result" to "rated")
                     RateApp.openRating(context)
                     close()
                 },
@@ -104,6 +110,7 @@ fun RatePromptDialog(delayMillis: Long = 1400) {
                 style = KButtonStyle.Glass,
                 onClick = {
                     sound?.playButtonClick()
+                    Analytics.track("rate_prompt", "result" to "later")
                     RateApp.postpone(context)
                     close()
                 },
@@ -119,6 +126,7 @@ fun RatePromptDialog(delayMillis: Long = 1400) {
                         indication = null,
                     ) {
                         sound?.playButtonClick()
+                        Analytics.track("rate_prompt", "result" to "never")
                         RateApp.stopAsking(context)
                         close()
                     }

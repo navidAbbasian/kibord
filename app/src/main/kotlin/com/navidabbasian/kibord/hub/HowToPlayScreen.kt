@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ComingSoonBadge
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
@@ -406,6 +407,7 @@ private fun GuideCard(game: GameInfo, guide: GameGuide?, index: Int) {
                     enabled = available
                 ) {
                     sound?.playButtonClick()
+                    if (!expanded) Analytics.track("guide_open", "game_id" to game.id)
                     expanded = !expanded
                 }
                 .padding(horizontal = 16.dp, vertical = 14.dp),

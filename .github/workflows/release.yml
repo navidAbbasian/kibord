@@ -58,6 +58,11 @@ jobs:
           echo "KIBORD_KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
 
       - name: Build release APK
+        # کلیدهای سوپابیس از سیکرت‌های مخزن می‌آیند؛ اگر تعریف نشده باشند
+        # رشته‌ی خالی می‌رسد و اپ فقط آفلاین کار می‌کند (بدون خطا)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon

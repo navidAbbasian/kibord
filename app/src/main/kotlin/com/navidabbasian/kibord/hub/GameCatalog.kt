@@ -34,6 +34,8 @@ import com.navidabbasian.kibord.core.ui.theme.SedaAccent
 import com.navidabbasian.kibord.core.ui.theme.SedaAccentDark
 import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccent
 import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccentDark
+import com.navidabbasian.kibord.core.ui.theme.BackgammonAccent
+import com.navidabbasian.kibord.core.ui.theme.BackgammonAccentDark
 
 @Immutable
 data class GameInfo(
@@ -69,6 +71,7 @@ object Routes {
     const val MAFIA = "game/mafia"
     const val WHO_AM_I = "game/who_am_i"
     const val ESM_FAMIL_SORATI = "game/esm_famil_sorati"
+    const val BACKGAMMON = "game/backgammon"
 }
 
 /** چهار بازی اصلی صفحه‌ی خانه — بقیه در «بازی‌های بیشتر» زندگی می‌کنند */
@@ -226,6 +229,16 @@ val moreGamesCatalog = listOf(
         accentDark = MafiaAccentDark,
         players = "۵ تا ۸ نفر",
         route = Routes.MAFIA,
+    ),
+    GameInfo(
+        id = "backgammon",
+        title = "تخته‌نرد",
+        tagline = "کلاسیک، هلندی و هایپرگامون — سه روش در یک تخته",
+        emoji = "🎲",
+        accent = BackgammonAccent,
+        accentDark = BackgammonAccentDark,
+        players = "۲ نفر",
+        route = Routes.BACKGAMMON,
     ),
     GameInfo(
         id = "who_am_i",

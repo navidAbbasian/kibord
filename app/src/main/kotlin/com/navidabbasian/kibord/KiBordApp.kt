@@ -43,6 +43,8 @@ import com.navidabbasian.kibord.core.ui.theme.SpyAccent
 import com.navidabbasian.kibord.core.ui.theme.WhoAmIAccent
 import com.navidabbasian.kibord.core.ui.theme.TabooAccent
 import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccent
+import com.navidabbasian.kibord.core.ui.theme.BackgammonAccent
+import com.navidabbasian.kibord.games.backgammon.BackgammonGame
 import com.navidabbasian.kibord.games.dor.DorGame
 import com.navidabbasian.kibord.games.esmfamil.EsmFamilGame
 import com.navidabbasian.kibord.games.esmfamilsorati.EfsGame
@@ -234,6 +236,11 @@ fun KiBordApp() {
         composable(Routes.ESM_FAMIL_SORATI) {
             CompositionLocalProvider(LocalGameAccent provides EsmFamilSoratiAccent) {
                 EfsGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.BACKGAMMON) {
+            CompositionLocalProvider(LocalGameAccent provides BackgammonAccent) {
+                BackgammonGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
     }

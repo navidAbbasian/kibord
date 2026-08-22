@@ -60,6 +60,8 @@ val MafiaAccent = Color(0xFFA85E6E)
 val MafiaAccentDark = Color(0xFF8F4756)
 val EsmFamilSoratiAccent = Color(0xFFB9CF4A)
 val EsmFamilSoratiAccentDark = Color(0xFF9DB335)
+val BackgammonAccent = Color(0xFFC98B4A)
+val BackgammonAccentDark = Color(0xFFA96F33)
 
 // ---- رنگ تیم‌ها — پاستلی ----
 // روشن‌تر و لطیف: مناسب پس‌زمینه‌ی تیره

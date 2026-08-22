@@ -237,7 +237,7 @@ val moreGamesCatalog = listOf(
         emoji = "🎲",
         accent = BackgammonAccent,
         accentDark = BackgammonAccentDark,
-        players = "۲ نفر",
+        players = "۲ نفر — حضوری یا آنلاین",
         route = Routes.BACKGAMMON,
     ),
     GameInfo(

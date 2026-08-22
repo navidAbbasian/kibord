@@ -16,8 +16,8 @@ android {
         applicationId = "com.navidabbasian.kibord"
         minSdk = 21
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.2.0"
+        versionCode = 23
+        versionName = "1.2.1-beta"
 
         // کلیدهای Supabase از local.properties خوانده می‌شوند تا در گیت نروند.
         // اگر نبودند، رشته‌ی خالی می‌ماند و اپ فقط آفلاین کار می‌کند.

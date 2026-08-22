@@ -11,6 +11,8 @@ import com.navidabbasian.kibord.core.net.HostLink
 import com.navidabbasian.kibord.core.net.online.OnlineClient
 import com.navidabbasian.kibord.core.net.online.OnlineHost
 import com.navidabbasian.kibord.core.net.online.OnlineRooms
+import com.navidabbasian.kibord.core.net.online.OnlineSessionStore
+import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.games.mafia.net.decodeMfMessage
 import com.navidabbasian.kibord.games.mafia.net.encode
 import com.navidabbasian.kibord.games.esmfamil.model.nameKey
@@ -55,8 +57,14 @@ data class MafiaUiState(
     val lostConnection: Boolean = false,
     /** بازی اینترنتی با کد اتاق، به‌جای وای‌فای محلی */
     val onlineMode: Boolean = false,
-    /** کد اتاقِ ساخته‌شده — فقط برای میزبان اینترنتی */
+    /** کد اتاق اینترنتی — میزبان: کدِ ساخته‌شده؛ مهمان: کدی که باهاش وصل شده */
     val roomCode: String = "",
+    /** بازی اینترنتیِ نیمه‌کاره‌ای که روی گوشی مانده و می‌شود ادامه‌اش داد */
+    val resumable: StoredOnlineRoom? = null,
+    /** مهمان: میزبان لحظه‌ای غایب شده و منتظر برگشتش هستیم */
+    val hostAway: Boolean = false,
+    /** مهمان: در حال وصل‌شدن دوباره به همان اتاق */
+    val reconnecting: Boolean = false,
 ) {
     val isHost: Boolean get() = role == MfNetRole.HOST
     val me: MfPlayer? get() = snapshot.player(myName)
@@ -90,6 +98,17 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
     private val keepAlive = HostKeepAlive(application)
     private var server: HostLink<MfMessage>? = null
     private var client: ClientLink<MfMessage>? = null
+
+    /** آخرین آدرس محلی‌ای که مهمان بهش وصل شد — برای «دوباره وصل شو» در وای‌فای */
+    private var lastLanAddress: String = ""
+    private var lastLanPort: Int = MfServer.BASE_PORT
+
+    private val ctx: Application get() = getApplication()
+
+    init {
+        // اگر بازی اینترنتیِ نیمه‌کاره‌ای روی گوشی مانده، در صفحه‌ی ورود پیشنهادش بده
+        _uiState.update { it.copy(resumable = OnlineSessionStore.load(ctx, GAME_ID)) }
+    }
 
     // ================= ورود =================
 
@@ -163,7 +182,20 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
             return
         }
-        _uiState.update { it.copy(myName = name) }
+        _uiState.update { it.copy(myName = name, onlineMode = true) }
+        val snapshot = MfSnapshot(
+            phase = MfPhase.LOBBY,
+            players = listOf(MfPlayer(name = name, colorIndex = 0)),
+            hostName = name,
+        )
+        hostOnline(name = name, snapshot = snapshot, roomCode = null)
+    }
+
+    /**
+     * برپایی اتاق اینترنتی با وضعیت داده‌شده. [roomCode] تهی یعنی اتاق تازه؛
+     * وگرنه همان اتاق قبلی دوباره ساخته می‌شود تا مهمان‌های منتظر برگردند.
+     */
+    private fun hostOnline(name: String, snapshot: MfSnapshot, roomCode: String?) {
         _uiState.update { it.copy(connecting = true, connectError = null) }
         val host = OnlineHost<MfMessage>(
             scope = viewModelScope,
@@ -173,6 +205,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
             onClientDisconnected = ::handleDisconnect,
             latestState = { MfMessage.State(_uiState.value.snapshot) },
             decode = ::decodeMfMessage,
+            roomCode = roomCode ?: OnlineRooms.newCode(),
         )
         host.start { ok ->
             if (!ok) {
@@ -182,11 +215,8 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
                 return@start
             }
             server = host
-            val snapshot = MfSnapshot(
-                phase = MfPhase.LOBBY,
-                players = listOf(MfPlayer(name = name, colorIndex = 0)),
-                hostName = name,
-            )
+            // زیر قفل گوشی هم اتاق زنده بماند
+            keepAlive.acquire(lan = false)
             _uiState.update {
                 it.copy(
                     role = MfNetRole.HOST,
@@ -197,9 +227,24 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
                     hostPort = 0,
                     connecting = false,
                     connectError = null,
+                    resumable = null,
+                    lostConnection = false,
+                    hostAway = false,
                 )
             }
             setSnapshot(snapshot)
+            // اتاق روی دیسک می‌ماند تا با بسته‌شدن اپ یا قفل گوشی نپرد
+            OnlineSessionStore.save(
+                ctx,
+                StoredOnlineRoom(
+                    gameId = GAME_ID,
+                    role = "host",
+                    code = host.roomCode,
+                    name = name,
+                    savedAt = System.currentTimeMillis(),
+                    hostState = MfMessage.State(snapshot).encode(),
+                ),
+            )
         }
     }
 
@@ -209,8 +254,21 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
             return
         }
-        val clean = OnlineRooms.normalizeCode(code)
-        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
+        _uiState.update { it.copy(myName = name, onlineMode = true) }
+        connectOnline(OnlineRooms.normalizeCode(code), name) { error ->
+            if (error != null) {
+                _uiState.update { it.copy(connecting = false, connectError = error) }
+            }
+        }
+    }
+
+    /**
+     * اتصال مهمان اینترنتی به اتاق. اگر وصل شد خودش وارد بازی می‌شود و اتاق را
+     * ذخیره می‌کند؛ نتیجه (تهی = موفق) به [onDone] هم می‌رسد تا هر مسیر
+     * خطایش را جای خودش نشان دهد.
+     */
+    private fun connectOnline(code: String, name: String, onDone: (String?) -> Unit) {
+        _uiState.update { it.copy(connecting = true, connectError = null) }
         val c = OnlineClient<MfMessage>(
             scope = viewModelScope,
             encode = { m: MfMessage -> m.encode() },
@@ -218,24 +276,118 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
             onMessage = ::handleServerMessage,
             onDisconnected = {
                 if (_uiState.value.role == MfNetRole.CLIENT) {
-                    _uiState.update { it.copy(lostConnection = true) }
+                    _uiState.update { it.copy(lostConnection = true, hostAway = false) }
+                }
+            },
+            onHostAway = { away ->
+                if (_uiState.value.role == MfNetRole.CLIENT) {
+                    _uiState.update { it.copy(hostAway = away) }
                 }
             },
         )
         client = c
-        c.connect(clean, name) { error ->
+        c.connect(code, name) { error ->
             if (error != null) {
-                client = null
-                _uiState.update { it.copy(connecting = false, connectError = error) }
+                if (client === c) client = null
+                _uiState.update { it.copy(connecting = false, reconnecting = false) }
+                onDone(error)
             } else {
                 _uiState.update {
                     it.copy(
                         role = MfNetRole.CLIENT,
                         localScreen = MfLocalScreen.IN_GAME,
+                        roomCode = code,
                         connecting = false,
+                        reconnecting = false,
                         connectError = null,
+                        resumable = null,
+                        lostConnection = false,
+                        hostAway = false,
                     )
                 }
+                OnlineSessionStore.save(
+                    ctx,
+                    StoredOnlineRoom(
+                        gameId = GAME_ID,
+                        role = "guest",
+                        code = code,
+                        name = name,
+                        savedAt = System.currentTimeMillis(),
+                    ),
+                )
+                onDone(null)
+            }
+        }
+    }
+
+    // ================= ادامه‌ی بازی نیمه‌کاره =================
+
+    /** ادامه‌ی بازی اینترنتی‌ای که روی گوشی مانده — میزبان یا مهمان */
+    fun resumeOnline() {
+        val room = _uiState.value.resumable ?: return
+        if (_uiState.value.connecting) return
+        if (!Cloud.isConfigured) {
+            _uiState.update { it.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست") }
+            return
+        }
+        // اسم همان اسمِ ذخیره‌شده است؛ اگر حساب عوض شده باشد، میزبان ما را نمی‌شناسد
+        val name = room.name
+        _uiState.update { it.copy(myName = name, onlineMode = true, connectError = null) }
+        if (room.isHost) {
+            // وضعیت کامل از روی دیسک؛ اگر خراب بود، لابی تازه با همان کد
+            val saved = room.hostState
+                ?.let { decodeMfMessage(it) as? MfMessage.State }
+                ?.snapshot
+                ?.takeIf { it.players.any { p -> sameName(p.name, name) } }
+            val fresh = MfSnapshot(
+                phase = MfPhase.LOBBY,
+                players = listOf(MfPlayer(name = name, colorIndex = 0)),
+                hostName = name,
+            )
+            // بقیه را «قطع» علامت می‌زنیم تا با join دوباره‌شان وصل شوند
+            val snapshot = (saved ?: fresh).let { s ->
+                s.copy(
+                    hostName = name,
+                    players = s.players.map { p -> p.copy(connected = sameName(p.name, name)) },
+                )
+            }
+            hostOnline(name = name, snapshot = snapshot, roomCode = room.code)
+        } else {
+            connectOnline(room.code, name) { error ->
+                // خطا را همان‌جا نشان می‌دهیم و کارت «ادامه» می‌ماند تا دوباره بزند یا بی‌خیال شود
+                if (error != null) _uiState.update { it.copy(connectError = error) }
+            }
+        }
+    }
+
+    /** بی‌خیالِ بازی نیمه‌کاره — اتاق از روی گوشی پاک می‌شود */
+    fun discardResume() {
+        OnlineSessionStore.clear(ctx)
+        _uiState.update { it.copy(resumable = null, connectError = null) }
+    }
+
+    /** مهمان: بعد از «ارتباط قطع شد»، با همان اسم به همان اتاق/میزبان برگرد */
+    fun reconnect() {
+        val st = _uiState.value
+        if (st.role != MfNetRole.CLIENT || st.reconnecting) return
+        client?.close()
+        client = null
+        _uiState.update { it.copy(lostConnection = false, reconnecting = true, connectError = null) }
+        if (st.onlineMode) {
+            if (st.roomCode.isBlank()) {
+                _uiState.update { it.copy(lostConnection = true, reconnecting = false) }
+                return
+            }
+            connectOnline(st.roomCode, st.myName) { error ->
+                if (error != null) _uiState.update { it.copy(lostConnection = true, connectError = error) }
+            }
+        } else {
+            if (lastLanAddress.isBlank()) {
+                _uiState.update { it.copy(lostConnection = true, reconnecting = false) }
+                return
+            }
+            connectLan(lastLanAddress, lastLanPort, st.myName) { error ->
+                if (error != null) _uiState.update { it.copy(lostConnection = true, connectError = error) }
             }
         }
     }
@@ -336,7 +488,15 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
         val name = _uiState.value.myName.trim()
         if (name.isBlank() || address.isBlank()) return
         // اسم محلی از همین‌جا با اسمِ ارسالی به میزبان یکسان می‌شود (بدون فاصله‌های سر و ته)
-        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
+        _uiState.update { it.copy(myName = name) }
+        connectLan(address, port, name) { error ->
+            if (error != null) _uiState.update { it.copy(connectError = error) }
+        }
+    }
+
+    /** اتصال سوکتی به میزبان محلی؛ نتیجه (تهی = موفق) به [onDone] می‌رسد */
+    private fun connectLan(address: String, port: Int, name: String, onDone: (String?) -> Unit) {
+        _uiState.update { it.copy(connecting = true, connectError = null) }
         val c = MfClient(
             scope = viewModelScope,
             onMessage = ::handleServerMessage,
@@ -349,18 +509,24 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
         client = c
         c.connect(address, port, name) { error ->
             if (error != null) {
-                client = null
-                _uiState.update { it.copy(connecting = false, connectError = error) }
+                if (client === c) client = null
+                _uiState.update { it.copy(connecting = false, reconnecting = false) }
+                onDone(error)
             } else {
                 nsd.stopDiscovery()
+                lastLanAddress = address
+                lastLanPort = port
                 _uiState.update {
                     it.copy(
                         role = MfNetRole.CLIENT,
                         localScreen = MfLocalScreen.IN_GAME,
                         connecting = false,
+                        reconnecting = false,
                         connectError = null,
+                        lostConnection = false,
                     )
                 }
+                onDone(null)
             }
         }
     }
@@ -595,7 +761,10 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
     private fun mutateSnapshot(transform: (MfSnapshot) -> MfSnapshot) {
         val next = transform(_uiState.value.snapshot)
         setSnapshot(next)
-        server?.broadcast(MfMessage.State(next))
+        val msg = MfMessage.State(next)
+        server?.broadcast(msg)
+        // میزبان اینترنتی: هر وضعیت تازه روی دیسک هم می‌ماند تا بازی با بسته‌شدن اپ نپرد
+        if (server is OnlineHost<*>) OnlineSessionStore.saveHostState(ctx, GAME_ID, msg.encode())
     }
 
     private fun setSnapshot(next: MfSnapshot) {
@@ -608,15 +777,22 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
 
     // ================= خروج و پاک‌سازی =================
 
+    /** خروجِ خواسته‌ی بازیکن: شبکه بسته و اتاق اینترنتیِ ذخیره‌شده هم پاک می‌شود */
     fun leaveGame() {
+        shutdownNetworking()
+        OnlineSessionStore.clear(ctx)
+        val name = _uiState.value.myName
+        _uiState.value = MafiaUiState(myName = name)
+    }
+
+    /** فقط بستن شبکه — اتاق ذخیره‌شده می‌ماند تا بعداً ادامه داده شود */
+    private fun shutdownNetworking() {
         nsd.release()
         client?.close()
         client = null
         server?.stop()
         server = null
         keepAlive.release()
-        val name = _uiState.value.myName
-        _uiState.value = MafiaUiState(myName = name)
     }
 
     fun backToEntryFromJoin() {
@@ -626,6 +802,11 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        leaveGame()
+        // بسته‌شدن صفحه/کشته‌شدن اپ خروجِ خواسته نیست: اتاق روی دیسک می‌ماند
+        shutdownNetworking()
+    }
+
+    private companion object {
+        const val GAME_ID = "mafia"
     }
 }

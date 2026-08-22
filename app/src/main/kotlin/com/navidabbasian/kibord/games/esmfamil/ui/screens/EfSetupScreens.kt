@@ -51,7 +51,9 @@ import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
+import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.core.ui.components.blobShape
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
@@ -76,6 +78,8 @@ fun EfEntryScreen(
     onHost: () -> Unit,
     onJoin: () -> Unit,
     onBot: () -> Unit,
+    onResume: () -> Unit = {},
+    onDiscardResume: () -> Unit = {},
 ) {
     // هشدار تم‌دار وقتی بدون نوشتن اسم روی دکمه‌ها بزند
     var showNameError by remember { mutableStateOf(false) }
@@ -103,6 +107,18 @@ fun EfEntryScreen(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
+
+        // ---- بازی اینترنتیِ نیمه‌کاره: پیشنهادِ ادامه، بالای اسم ----
+        state.resumable?.let { room ->
+            EfResumeCard(
+                code = room.code,
+                wasHost = room.isHost,
+                busy = state.connecting,
+                onResume = onResume,
+                onDiscard = onDiscardResume,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+        }
 
         if (state.onlineMode) {
             OnlineIdentityField(username = state.myName)
@@ -220,6 +236,59 @@ fun EfEntryScreen(
         state.connectError?.let {
             Spacer(modifier = Modifier.height(14.dp))
             Text(text = it, style = MaterialTheme.typography.labelLarge, color = kiExtras.danger)
+        }
+    }
+}
+
+/** کارتِ «بازی اینترنتی نیمه‌کاره داری» — ادامه بده یا بی‌خیالش شو */
+@Composable
+private fun EfResumeCard(
+    code: String,
+    wasHost: Boolean,
+    busy: Boolean,
+    onResume: () -> Unit,
+    onDiscard: () -> Unit,
+) {
+    TicketCard(modifier = Modifier.fillMaxWidth(), tilt = 1.2f) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "🔁 بازی اینترنتی نیمه‌کاره داری",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "اتاق $code — ${if (wasHost) "میزبان بودی" else "مهمان بودی"}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                KButton(
+                    text = if (busy) "یه لحظه…" else "ادامه بده",
+                    enabled = !busy,
+                    onClick = onResume,
+                    modifier = Modifier.weight(1f),
+                )
+                KButton(
+                    text = "بی‌خیال",
+                    style = KButtonStyle.Glass,
+                    enabled = !busy,
+                    onClick = onDiscard,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

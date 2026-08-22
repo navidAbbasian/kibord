@@ -11,6 +11,8 @@ import com.navidabbasian.kibord.core.net.HostLink
 import com.navidabbasian.kibord.core.net.online.OnlineClient
 import com.navidabbasian.kibord.core.net.online.OnlineHost
 import com.navidabbasian.kibord.core.net.online.OnlineRooms
+import com.navidabbasian.kibord.core.net.online.OnlineSessionStore
+import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.games.esmfamil.net.decodeEfMessage
 import com.navidabbasian.kibord.games.esmfamil.net.encode
 import com.navidabbasian.kibord.games.esmfamil.logic.EF_BOT_NAME
@@ -68,11 +70,17 @@ data class EsmFamilUiState(
     val lostConnection: Boolean = false,
     /** بازی اینترنتی با کد اتاق، به‌جای وای‌فای محلی */
     val onlineMode: Boolean = false,
-    /** کد اتاقِ ساخته‌شده — فقط برای میزبان اینترنتی */
+    /** کد اتاق اینترنتی — میزبان آن را ساخته، مهمان با آن وصل شده */
     val roomCode: String = "",
     /** بازی تک‌نفره با ربات — بدون هیچ شبکه‌ای */
     val botMode: Boolean = false,
     val botLevel: EfBotLevel = EfBotLevel.NORMAL,
+    /** اتاق اینترنتیِ نیمه‌کاره‌ای که روی دیسک مانده و می‌شود ادامه‌اش داد */
+    val resumable: StoredOnlineRoom? = null,
+    /** (مهمان) میزبان لحظه‌ای غایب شده — منتظر برگشتش هستیم */
+    val hostAway: Boolean = false,
+    /** (مهمان) بعد از قطع ارتباط داریم دوباره به همان اتاق وصل می‌شویم */
+    val reconnecting: Boolean = false,
 ) {
     val isHost: Boolean get() = role == EfRole.HOST
     val me: EfPlayer? get() = snapshot.player(myName)
@@ -110,6 +118,13 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private var botAnswers: Map<String, String> = emptyMap()
     private var botActionJob: Job? = null
     private var botStopJob: Job? = null
+
+    private val ctx: Application get() = getApplication()
+
+    init {
+        // اتاق اینترنتیِ نیمه‌کاره؟ در صفحه‌ی ورود پیشنهادِ ادامه می‌دهیم
+        _uiState.update { it.copy(resumable = OnlineSessionStore.load(ctx, GAME_ID)) }
+    }
 
     // ================= ورود =================
 
@@ -185,6 +200,14 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             return
         }
         _uiState.update { it.copy(myName = name) }
+        hostOnline(name = name, code = null, restored = null)
+    }
+
+    /**
+     * هسته‌ی میزبانی اینترنتی — هم برای اتاق تازه و هم برای «ادامه‌ی بازی قبلی».
+     * [code] تهی یعنی کد تازه بساز؛ [restored] وضعیتِ بازیابی‌شده از دیسک (تهی = لابی نو).
+     */
+    private fun hostOnline(name: String, code: String?, restored: EfSnapshot?) {
         _uiState.update { it.copy(connecting = true, connectError = null) }
         val host = OnlineHost<EfMessage>(
             scope = viewModelScope,
@@ -194,6 +217,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             onClientDisconnected = ::handleDisconnect,
             latestState = { EfMessage.State(_uiState.value.snapshot) },
             decode = ::decodeEfMessage,
+            roomCode = code ?: OnlineRooms.newCode(),
         )
         host.start { ok ->
             if (!ok) {
@@ -203,7 +227,9 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
                 return@start
             }
             server = host
-            val snapshot = EfSnapshot(
+            // میزبان اینترنتی هم باید زیر قفلِ صفحه بیدار بماند
+            keepAlive.acquire(lan = false)
+            val snapshot = restored ?: EfSnapshot(
                 phase = EfPhase.LOBBY,
                 players = listOf(EfPlayer(name = name, colorIndex = 0)),
                 hostName = name,
@@ -219,9 +245,43 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
                     hostPort = 0,
                     connecting = false,
                     connectError = null,
+                    lostConnection = false,
+                    resumable = null,
                 )
             }
+            // اتاق روی دیسک می‌ماند تا با بسته شدن اپ یا قفل گوشی بازی نپرد
+            OnlineSessionStore.save(
+                ctx,
+                StoredOnlineRoom(
+                    gameId = GAME_ID,
+                    role = "host",
+                    code = host.roomCode,
+                    name = name,
+                    savedAt = System.currentTimeMillis(),
+                    hostState = EfMessage.State(snapshot).encode(),
+                ),
+            )
             setSnapshot(snapshot)
+            if (restored != null) resumeHostTimers(snapshot)
+        }
+    }
+
+    /** بعد از بازیابیِ وضعیت میزبان، کارهای زمان‌دارِ فاز جاری از نو راه می‌افتند */
+    private fun resumeHostTimers(s: EfSnapshot) {
+        collected.clear()
+        roundApplied = s.answers.isNotEmpty()
+        when (s.phase) {
+            EfPhase.COUNTDOWN -> startCountdownTicker()
+            EfPhase.PLAYING -> startTicker()
+            EfPhase.REVIEW -> if (s.answers.isEmpty()) {
+                // وسطِ جمع‌کردن جواب‌ها بودیم؛ مهلت بیشتری می‌دهیم تا مهمان‌ها برگردند
+                collectJob?.cancel()
+                collectJob = viewModelScope.launch {
+                    delay(8_000)
+                    hostComputeReview()
+                }
+            }
+            else -> Unit
         }
     }
 
@@ -231,8 +291,26 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
             return
         }
+        joinOnline(code, name, reconnect = false)
+    }
+
+    /**
+     * هسته‌ی پیوستن اینترنتی؛ [reconnect] یعنی بازگشت به اتاقی که ازش قطع شده‌ایم
+     * (اگر نشد، روی همان صفحه‌ی «ارتباط قطع شد» می‌مانیم تا دوباره تلاش کند).
+     */
+    private fun joinOnline(code: String, name: String, reconnect: Boolean) {
         val clean = OnlineRooms.normalizeCode(code)
-        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
+        client?.close()
+        _uiState.update {
+            it.copy(
+                myName = name,
+                connecting = true,
+                connectError = null,
+                reconnecting = reconnect,
+                lostConnection = false,
+                hostAway = false,
+            )
+        }
         val c = OnlineClient<EfMessage>(
             scope = viewModelScope,
             encode = { m: EfMessage -> m.encode() },
@@ -240,26 +318,94 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             onMessage = ::handleServerMessage,
             onDisconnected = {
                 if (_uiState.value.role == EfRole.CLIENT) {
-                    _uiState.update { it.copy(lostConnection = true) }
+                    _uiState.update { it.copy(lostConnection = true, hostAway = false) }
                 }
             },
+            onHostAway = { away -> _uiState.update { it.copy(hostAway = away) } },
         )
         client = c
         c.connect(clean, name) { error ->
             if (error != null) {
                 client = null
-                _uiState.update { it.copy(connecting = false, connectError = error) }
+                _uiState.update {
+                    it.copy(
+                        connecting = false,
+                        connectError = error,
+                        // اگر داشتیم دوباره وصل می‌شدیم، روی همان صفحه‌ی قطعی می‌مانیم
+                        lostConnection = reconnect,
+                        reconnecting = false,
+                    )
+                }
             } else {
                 _uiState.update {
                     it.copy(
                         role = EfRole.CLIENT,
                         localScreen = EfLocalScreen.IN_GAME,
+                        roomCode = clean,
                         connecting = false,
                         connectError = null,
+                        reconnecting = false,
+                        lostConnection = false,
+                        resumable = null,
                     )
                 }
+                OnlineSessionStore.save(
+                    ctx,
+                    StoredOnlineRoom(
+                        gameId = GAME_ID,
+                        role = "guest",
+                        code = clean,
+                        name = name,
+                        savedAt = System.currentTimeMillis(),
+                    ),
+                )
             }
         }
+    }
+
+    /** (مهمان) بعد از «ارتباط قطع شد»: با همان اسم به همان اتاق برگرد */
+    fun reconnectOnline() {
+        val st = _uiState.value
+        if (st.roomCode.isBlank() || st.myName.isBlank() || st.connecting) return
+        joinOnline(st.roomCode, st.myName, reconnect = true)
+    }
+
+    // ================= ادامه‌ی اتاق نیمه‌کاره =================
+
+    /** ادامه‌ی بازی اینترنتی‌ای که روی دیسک مانده — با همان کد و همان اسم */
+    fun resumeOnline() {
+        val r = _uiState.value.resumable ?: return
+        if (_uiState.value.connecting) return
+        if (!Cloud.isConfigured) {
+            _uiState.update { it.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست") }
+            return
+        }
+        _uiState.update { it.copy(onlineMode = true, myName = r.name, connectError = null) }
+        if (r.isHost) {
+            // وضعیت ذخیره‌شده برمی‌گردد؛ بقیه تا دوباره join نزنند «قطع» حساب می‌شوند
+            val saved = r.hostState?.let { decodeEfMessage(it) as? EfMessage.State }?.snapshot
+            val restored = saved?.copy(
+                hostName = r.name,
+                players = saved.players.map { p ->
+                    if (sameName(p.name, r.name)) p.copy(connected = true) else p.copy(connected = false)
+                },
+            )?.let { snap ->
+                // نوبتِ انتخاب حرف نباید روی کسی بماند که هنوز برنگشته
+                if (snap.phase == EfPhase.LETTER_PICK && snap.player(snap.pickerName)?.connected != true) {
+                    snap.copy(pickerName = nextConnectedAfter(snap, snap.pickerName))
+                } else snap
+            }
+            hostOnline(name = r.name, code = r.code, restored = restored)
+        } else {
+            _uiState.update { it.copy(roomCode = r.code) }
+            joinOnline(r.code, r.name, reconnect = false)
+        }
+    }
+
+    /** بی‌خیالِ اتاق نیمه‌کاره */
+    fun discardResume() {
+        OnlineSessionStore.clear(ctx)
+        _uiState.update { it.copy(resumable = null) }
     }
 
     // ================= بازی با ربات =================
@@ -784,7 +930,10 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     private fun mutateSnapshot(transform: (EfSnapshot) -> EfSnapshot) {
         val next = transform(_uiState.value.snapshot)
         setSnapshot(next)
-        server?.broadcast(EfMessage.State(next))
+        val link = server
+        link?.broadcast(EfMessage.State(next))
+        // میزبان اینترنتی: آخرین وضعیت روی دیسک هم می‌ماند تا با بسته شدن اپ نپرد
+        if (link is OnlineHost<*>) OnlineSessionStore.saveHostState(ctx, GAME_ID, EfMessage.State(next).encode())
     }
 
     /**
@@ -818,7 +967,14 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     // ================= خروج و پاک‌سازی =================
 
+    /** خروجِ خواسته‌ی بازیکن: شبکه بسته و اتاق اینترنتیِ ذخیره‌شده هم فراموش می‌شود */
     fun leaveGame() {
+        OnlineSessionStore.clear(ctx)
+        stopEverything()
+    }
+
+    /** بستن شبکه و تایمرها — بدون دست زدن به اتاق ذخیره‌شده (بستن صفحه نباید بازی را بپراند) */
+    private fun stopEverything() {
         tickerJob?.cancel()
         collectJob?.cancel()
         botActionJob?.cancel()
@@ -842,6 +998,11 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        leaveGame()
+        // فقط شبکه بسته می‌شود؛ اتاق اینترنتی روی دیسک می‌ماند تا بعداً ادامه‌اش بدهد
+        stopEverything()
+    }
+
+    private companion object {
+        const val GAME_ID = "esm_famil"
     }
 }

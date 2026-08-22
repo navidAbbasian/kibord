@@ -18,8 +18,9 @@ class HostKeepAlive(context: Context) {
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
-    fun acquire() {
-        Analytics.lanHosted()
+    /** [lan] = میزبانی روی وای‌فای محلی (برای آمار)؛ میزبان اینترنتی هم همین قفل‌ها را می‌خواهد */
+    fun acquire(lan: Boolean = true) {
+        if (lan) Analytics.lanHosted()
         if (wifiLock != null || wakeLock != null) return
         try {
             val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager

@@ -26,6 +26,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.navidabbasian.kibord.core.net.online.OnlineSessionStore
+import com.navidabbasian.kibord.hub.gameCatalog
+import com.navidabbasian.kibord.hub.moreGamesCatalog
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.theme.DorAccent
@@ -135,6 +139,51 @@ fun KiBordApp() {
                     KButton(text = "بی‌خیال", style = KButtonStyle.Glass, onClick = {
                         CrashReporter.clear(context)
                         crashReport = null
+                    })
+                }
+            }
+        }
+    }
+
+    // بازی اینترنتیِ نیمه‌کاره: اگر اپ بسته/کشته شده بود، یک بار در هاب پیشنهاد ادامه
+    var pendingRoom by remember { mutableStateOf(OnlineSessionStore.current(context)) }
+    val backStack by navController.currentBackStackEntryAsState()
+    val room = pendingRoom
+    if (room != null && backStack?.destination?.route == Routes.HUB) {
+        val game = remember(room.gameId) { (gameCatalog + moreGamesCatalog).firstOrNull { it.id == room.gameId } }
+        Dialog(onDismissRequest = { pendingRoom = null }) {
+            TicketCard(modifier = Modifier.fillMaxWidth(), tilt = 1.5f) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BobbingEmoji(emoji = game?.emoji ?: "🌐", fontSize = 44.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "یه بازی اینترنتی نیمه‌کاره داری!",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "${game?.title ?: room.gameId} — اتاق ${room.code}" +
+                            if (room.isHost) " (میزبان بودی)" else " (مهمان بودی)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    KButton(text = "برو ادامه بده 🔁", onClick = {
+                        pendingRoom = null
+                        game?.route?.let { navController.navigate(it) }
+                    })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    KButton(text = "بی‌خیالش", style = KButtonStyle.Glass, onClick = {
+                        OnlineSessionStore.clear(context)
+                        pendingRoom = null
                     })
                 }
             }

@@ -4,11 +4,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -32,16 +35,19 @@ import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.TicketCard
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.mafia.model.MfPhase
 import com.navidabbasian.kibord.games.mafia.ui.MfDayAnnounceScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfDayResultScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfDayVoteScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfEntryScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfGameOverScreen
+import com.navidabbasian.kibord.games.mafia.ui.MfHostAwayBanner
 import com.navidabbasian.kibord.games.mafia.ui.MfJoinScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfLobbyScreen
 import com.navidabbasian.kibord.games.mafia.ui.MfNightScreen
@@ -97,6 +103,8 @@ fun MafiaGame(
                             else viewModel.startHosting()
                         },
                         onJoin = viewModel::openJoinScreen,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
                     )
                 }
 
@@ -156,8 +164,13 @@ fun MafiaGame(
             }
         }
 
+        // ---- مهمان اینترنتی: میزبان لحظه‌ای غایب شده، بازی نمی‌پرد ----
+        if (state.localScreen == MfLocalScreen.IN_GAME && state.hostAway && !state.isHost) {
+            MfHostAwayBanner(modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 18.dp))
+        }
+
         // ---- ارتباط با میزبان قطع شد ----
-        if (state.lostConnection) {
+        if (state.lostConnection || state.reconnecting) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -190,13 +203,42 @@ fun MafiaGame(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید",
+                            text = if (state.onlineMode) {
+                                "اینترنت رو چک کن؛ اگر میزبان برگشته، با همون اسم دوباره وصل شو"
+                            } else {
+                                "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
+                        state.connectError?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = kiExtras.danger,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        KButton(text = "باشه", onClick = leaveAndExit)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                        ) {
+                            KButton(
+                                text = if (state.reconnecting) "یه لحظه…" else "دوباره وصل شو 🔁",
+                                enabled = !state.reconnecting,
+                                onClick = viewModel::reconnect,
+                                modifier = Modifier.weight(1f),
+                            )
+                            KButton(
+                                text = "ترک بازی",
+                                onClick = leaveAndExit,
+                                style = KButtonStyle.Glass,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }

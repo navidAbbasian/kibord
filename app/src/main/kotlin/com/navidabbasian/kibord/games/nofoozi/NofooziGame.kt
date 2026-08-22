@@ -6,9 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -27,11 +30,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
@@ -39,6 +44,7 @@ import com.navidabbasian.kibord.core.ui.components.TicketCard
 import com.navidabbasian.kibord.games.nofoozi.model.NfPhase
 import com.navidabbasian.kibord.games.nofoozi.ui.NfDiscussionScreen
 import com.navidabbasian.kibord.games.nofoozi.ui.NfEntryScreen
+import com.navidabbasian.kibord.games.nofoozi.ui.NfHostAwayBanner
 import com.navidabbasian.kibord.games.nofoozi.ui.NfJoinScreen
 import com.navidabbasian.kibord.games.nofoozi.ui.NfLobbyScreen
 import com.navidabbasian.kibord.games.nofoozi.ui.NfRevealScreen
@@ -96,6 +102,8 @@ fun NofooziGame(
                             else viewModel.startHosting()
                         },
                         onJoin = viewModel::openJoinScreen,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
                     )
                 }
 
@@ -152,6 +160,11 @@ fun NofooziGame(
             }
         }
 
+        // ---- مهمان اینترنتی: میزبان لحظه‌ای غایب است، بازی نمی‌پرد ----
+        if (state.localScreen == NfLocalScreen.IN_GAME && state.hostAway && !state.isHost && !state.lostConnection) {
+            NfHostAwayBanner(modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 18.dp))
+        }
+
         // ---- ارتباط با میزبان قطع شد ----
         if (state.lostConnection) {
             Box(
@@ -186,13 +199,46 @@ fun NofooziGame(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید",
+                            text = if (state.onlineMode) {
+                                "اینترنت رو چک کن؛ اگر میزبان برگشته، با همون اسم دوباره وصل شو"
+                            } else {
+                                "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
+                        state.connectError?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = kiExtras.danger,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        KButton(text = "باشه", onClick = leaveAndExit)
+                        if (state.onlineMode) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                KButton(
+                                    text = if (state.reconnecting) "یه لحظه…" else "دوباره وصل شو 🔁",
+                                    enabled = !state.reconnecting,
+                                    onClick = viewModel::reconnectOnline,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                KButton(
+                                    text = "ترک بازی",
+                                    onClick = leaveAndExit,
+                                    style = KButtonStyle.Glass,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        } else {
+                            KButton(text = "باشه", onClick = leaveAndExit)
+                        }
                     }
                 }
             }

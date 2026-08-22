@@ -9,8 +9,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,11 +35,13 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.components.KButtonStyle
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.core.ui.components.TicketCard
+import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.games.esmfamil.model.EfPhase
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfCountdownScreen
 import com.navidabbasian.kibord.games.esmfamil.ui.screens.EfEntryScreen
@@ -99,6 +105,8 @@ fun EsmFamilGame(
                         },
                         onJoin = viewModel::openJoinScreen,
                         onBot = viewModel::startBotGame,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
                     )
                 }
 
@@ -172,6 +180,11 @@ fun EsmFamilGame(
             }
         }
 
+        // ---- (مهمان اینترنتی) میزبان لحظه‌ای غایب است — بنر کوچکِ غیرمسدودکننده ----
+        if (state.hostAway && state.localScreen == EfLocalScreen.IN_GAME && !state.lostConnection) {
+            EfHostAwayBanner(modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 18.dp))
+        }
+
         // ---- ارتباط با میزبان قطع شد ----
         if (state.lostConnection) {
             Box(
@@ -206,16 +219,59 @@ fun EsmFamilGame(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید",
+                            text = if (state.onlineMode) {
+                                "اینترنت رو چک کن؛ اتاق هنوز سر جاشه — می‌تونی با همون اسم برگردی"
+                            } else {
+                                "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
+                        state.connectError?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = kiExtras.danger,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        KButton(text = "باشه", onClick = leaveAndExit)
+                        if (state.onlineMode && state.roomCode.isNotBlank()) {
+                            KButton(
+                                text = if (state.connecting) "داریم وصل می‌شیم…" else "دوباره وصل شو 🔁",
+                                enabled = !state.connecting,
+                                onClick = viewModel::reconnectOnline,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            KButton(text = "بی‌خیال، برم بیرون", style = KButtonStyle.Glass, onClick = leaveAndExit)
+                        } else {
+                            KButton(text = "باشه", onClick = leaveAndExit)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** بنر بالای صفحه‌های بازی: میزبان لحظه‌ای رفته، مهمان‌ها منتظرش می‌مانند */
+@Composable
+private fun EfHostAwayBanner(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .background(kiExtras.glassStrong, RoundedCornerShape(16.dp))
+            .border(1.dp, kiExtras.glassBorder, RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "⏳ میزبان لحظه‌ای قطع شده — منتظر برگشتش…",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
     }
 }

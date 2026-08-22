@@ -11,6 +11,8 @@ import com.navidabbasian.kibord.core.net.HostLink
 import com.navidabbasian.kibord.core.net.online.OnlineClient
 import com.navidabbasian.kibord.core.net.online.OnlineHost
 import com.navidabbasian.kibord.core.net.online.OnlineRooms
+import com.navidabbasian.kibord.core.net.online.OnlineSessionStore
+import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.games.backgammon.engine.BgEngine
 import com.navidabbasian.kibord.games.backgammon.engine.BgMove
 import com.navidabbasian.kibord.games.backgammon.engine.BgMoveGenerator
@@ -84,8 +86,14 @@ data class BgUiState(
     val lostConnection: Boolean = false,
     /** بازی اینترنتی با کد اتاق، به‌جای وای‌فای محلی */
     val onlineMode: Boolean = false,
-    /** کد اتاقِ ساخته‌شده — فقط برای میزبان اینترنتی */
+    /** کد اتاق اینترنتی — برای میزبان کدِ ساخته‌شده، برای مهمان کدی که با آن وصل شده */
     val roomCode: String = "",
+    /** اتاق اینترنتیِ نیمه‌کاره‌ای که روی دیسک مانده و می‌شود ادامه‌اش داد */
+    val resumable: StoredOnlineRoom? = null,
+    /** میزبان لحظه‌ای غایب شده (سمت مهمان) — منتظر برگشتش هستیم */
+    val hostAway: Boolean = false,
+    /** مهمان دارد دوباره به همان اتاق وصل می‌شود */
+    val reconnecting: Boolean = false,
 ) {
     val isNetPlay: Boolean get() = netRole != BgNetRole.NONE
 
@@ -137,6 +145,13 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
     /** شمار دست‌های بازی‌شده در این اتاق شبکه‌ای */
     private var rematchCount = 0
 
+    init {
+        // اتاق اینترنتیِ نیمه‌کاره‌ای مانده؟ پیشنهادِ «ادامه بده» روی صفحه‌ی ورود
+        _uiState.value = _uiState.value.copy(
+            resumable = OnlineSessionStore.load(getApplication(), GAME_ID),
+        )
+    }
+
     private fun emitSound(event: BgSoundEvent) {
         viewModelScope.launch { _soundEvents.emit(event) }
     }
@@ -164,6 +179,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             variant = variant,
             game = e.createGame(),
             myName = _uiState.value.myName,
+            resumable = _uiState.value.resumable,
         )
     }
 
@@ -202,12 +218,26 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     fun backFromJoin() {
         nsd.stopDiscovery()
-        _uiState.value = _uiState.value.copy(stage = BgStage.NetEntry, connectError = null, connecting = false)
+        // اگر وصل شده بودیم ولی هنوز وضعیت نرسیده، این یعنی خروجِ خواسته از اتاق
+        if (_uiState.value.netRole == BgNetRole.CLIENT) {
+            stopNetworking()
+            clearStoredRoom()
+        }
+        _uiState.value = _uiState.value.copy(
+            stage = BgStage.NetEntry,
+            netRole = BgNetRole.NONE,
+            connectError = null,
+            connecting = false,
+            reconnecting = false,
+            hostAway = false,
+            lostConnection = false,
+        )
     }
 
-    /** میزبان از لابی منصرف شد — سرور جمع می‌شود */
+    /** میزبان از لابی منصرف شد — سرور جمع می‌شود و اتاقِ ذخیره‌شده هم می‌رود */
     fun cancelHosting() {
         stopNetworking()
+        clearStoredRoom()
         _uiState.value = _uiState.value.copy(
             stage = BgStage.NetEntry,
             netRole = BgNetRole.NONE,
@@ -216,6 +246,183 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             hostAddress = "",
             game = null,
         )
+    }
+
+    // ================= اتاق پایدار: ذخیره و ادامه‌ی بازی اینترنتی =================
+
+    /** وضعیت کامل میزبان به همان شکلی که روی شبکه می‌رود — برای ذخیره روی دیسک */
+    private fun encodedHostState(): String = BgMessage.State(roomSnapshot()).encode()
+
+    /** میزبان اینترنتی: اتاق با کد و وضعیت کاملش روی دیسک می‌ماند */
+    private fun storeHostRoom(code: String, name: String) {
+        OnlineSessionStore.save(
+            getApplication(),
+            StoredOnlineRoom(
+                gameId = GAME_ID,
+                role = "host",
+                code = code,
+                name = name,
+                savedAt = System.currentTimeMillis(),
+                hostState = encodedHostState(),
+            ),
+        )
+    }
+
+    /** مهمان اینترنتی: فقط کد و اسم لازم است — وضعیت را میزبان می‌دهد */
+    private fun storeGuestRoom(code: String, name: String) {
+        OnlineSessionStore.save(
+            getApplication(),
+            StoredOnlineRoom(
+                gameId = GAME_ID,
+                role = "guest",
+                code = code,
+                name = name,
+                savedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    /** میزبان اینترنتی بعد از هر تغییر وضعیت — ارزان است */
+    private fun persistHostState() {
+        if (_uiState.value.netRole != BgNetRole.HOST || server !is OnlineHost<*>) return
+        OnlineSessionStore.saveHostState(getApplication(), GAME_ID, encodedHostState())
+    }
+
+    /** خروجِ خواسته‌ی بازیکن: اتاق ذخیره‌شده دیگر معنی ندارد */
+    private fun clearStoredRoom() {
+        OnlineSessionStore.clear(getApplication())
+        _uiState.value = _uiState.value.copy(resumable = null)
+    }
+
+    /** «بی‌خیال» — اتاق نیمه‌کاره فراموش می‌شود */
+    fun discardResume() {
+        clearStoredRoom()
+    }
+
+    /** «ادامه بده» — میزبان با همان کد اتاق را دوباره می‌سازد، مهمان دوباره می‌پیوندد */
+    fun resumeOnline() {
+        val stored = _uiState.value.resumable ?: return
+        if (_uiState.value.connecting) return
+        if (!Cloud.isConfigured) {
+            _uiState.value = _uiState.value.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست")
+            return
+        }
+        if (stored.isHost) resumeAsHost(stored) else resumeAsGuest(stored)
+    }
+
+    /**
+     * میزبان برمی‌گردد: موقعیت، نوبت و تاس‌ها دقیقاً از وضعیت ذخیره‌شده، حریف تا
+     * برگشتنش «قطع» حساب می‌شود، و اتاق با همان کد قبلی بالا می‌آید تا مهمانِ
+     * منتظر خودکار وصل شود.
+     */
+    private fun resumeAsHost(stored: StoredOnlineRoom) {
+        val name = stored.name
+        val room = stored.hostState
+            ?.let { decodeBgMessage(it) as? BgMessage.State }
+            ?.room
+        val before = _uiState.value
+        if (room != null) {
+            // همان قواعدِ قبلی: روش بازی از خودِ وضعیت ذخیره‌شده می‌آید
+            val e = BgEngine(BgRules.of(room.variant))
+            engine = e
+            rematchCount = room.rematchCount
+            currentMoves = emptyList()
+            _uiState.value = before.copy(
+                stage = if (room.guestName.isNotBlank()) BgStage.Playing else BgStage.NetLobby,
+                variant = room.variant,
+                game = room.game ?: e.createGame(),
+                netRole = BgNetRole.HOST,
+                myName = name,
+                room = room.copy(hostName = name, guestConnected = false),
+                roomCode = stored.code,
+                hostAddress = "",
+                onlineMode = true,
+                connecting = true,
+                connectError = null,
+                skipMessage = room.skipMessage,
+                selectedSource = null,
+                sourcesAbs = emptySet(),
+                entryIsSource = false,
+                destsAbs = emptySet(),
+                offIsDest = false,
+                lostConnection = false,
+                hostAway = false,
+            )
+            refreshMoves()
+        } else {
+            // وضعیت خوانا نبود: لابیِ تازه با همان کد
+            val variant = before.variant ?: BgVariant.STANDARD
+            _uiState.value = before.copy(onlineMode = true, myName = name)
+            becomeHost(name, variant, roomCode = stored.code, hostAddress = "")
+            _uiState.value = _uiState.value.copy(connecting = true)
+        }
+        val host = OnlineHost<BgMessage>(
+            scope = viewModelScope,
+            encode = { m: BgMessage -> m.encode() },
+            onClientJoin = ::acceptJoin,
+            onCommand = ::handleGuestCommand,
+            onClientDisconnected = ::handleGuestDisconnect,
+            latestState = { BgMessage.State(roomSnapshot()) },
+            decode = ::decodeBgMessage,
+            roomCode = stored.code,
+        )
+        host.start { ok ->
+            if (!ok) {
+                // برگرد به صفحه‌ی ورود؛ کارت «ادامه بده» می‌ماند تا دوباره امتحان کند
+                engine = null
+                currentMoves = emptyList()
+                _uiState.value = _uiState.value.copy(
+                    stage = BgStage.NetEntry,
+                    netRole = BgNetRole.NONE,
+                    room = BgRoomSnapshot(),
+                    roomCode = "",
+                    game = null,
+                    connecting = false,
+                    connectError = "اتاق دوباره ساخته نشد — اینترنت رو چک کن",
+                )
+                return@start
+            }
+            server = host
+            keepAlive.acquire(lan = false)
+            _uiState.value = _uiState.value.copy(connecting = false, connectError = null, resumable = null)
+            storeHostRoom(code = stored.code, name = name)
+        }
+    }
+
+    /** مهمان برمی‌گردد: با همان اسم و کد می‌پیوندد؛ میزبان او را «برگشته» می‌شناسد */
+    private fun resumeAsGuest(stored: StoredOnlineRoom) {
+        _uiState.value = _uiState.value.copy(onlineMode = true, myName = stored.name, connectError = null)
+        connectOnline(code = stored.code, name = stored.name) { error ->
+            if (error != null) {
+                // کارت «ادامه بده» می‌ماند تا دوباره امتحان کند یا بی‌خیال شود
+                _uiState.value = _uiState.value.copy(connecting = false, connectError = error)
+            } else {
+                _uiState.value = _uiState.value.copy(resumable = null)
+            }
+        }
+    }
+
+    /** مهمان روی صفحه‌ی «ارتباط قطع شد»: دوباره به همان اتاق با همان اسم وصل شو */
+    fun reconnectOnline() {
+        val st = _uiState.value
+        if (!st.onlineMode || st.roomCode.isBlank() || st.myName.isBlank()) return
+        if (st.reconnecting) return
+        client?.close()
+        client = null
+        _uiState.value = st.copy(lostConnection = false, reconnecting = true, connectError = null, hostAway = false)
+        connectOnline(code = st.roomCode, name = st.myName) { error ->
+            if (error != null) {
+                // همان‌جا می‌مانیم؛ خطا را نشان بده تا دوباره بزند یا بی‌خیال شود
+                _uiState.value = _uiState.value.copy(
+                    reconnecting = false,
+                    connecting = false,
+                    lostConnection = true,
+                    connectError = error,
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(reconnecting = false)
+            }
+        }
     }
 
     // ================= میزبانی =================
@@ -273,8 +480,10 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
                 return@start
             }
             server = host
-            keepAlive.acquire()
+            keepAlive.acquire(lan = false)
             becomeHost(name, variant, roomCode = host.roomCode, hostAddress = "")
+            // اتاق روی دیسک می‌ماند تا با بسته شدن اپ یا قفل گوشی از دست نرود
+            storeHostRoom(code = host.roomCode, name = name)
         }
     }
 
@@ -401,7 +610,14 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.value = _uiState.value.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE)
             return
         }
-        val clean = OnlineRooms.normalizeCode(code)
+        connectOnline(code = OnlineRooms.normalizeCode(code), name = name)
+    }
+
+    /**
+     * هسته‌ی پیوستن اینترنتی — پیوستن تازه، «ادامه بده» و «دوباره وصل شو» همه از
+     * همین می‌گذرند. نتیجه‌ی وصل شدن ذخیره می‌شود تا قطعیِ بعدی قابل جبران باشد.
+     */
+    private fun connectOnline(code: String, name: String, onDone: (error: String?) -> Unit = {}) {
         _uiState.value = _uiState.value.copy(myName = name, connecting = true, connectError = null)
         val c = OnlineClient<BgMessage>(
             scope = viewModelScope,
@@ -410,22 +626,30 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             onMessage = ::handleServerMessage,
             onDisconnected = {
                 if (_uiState.value.netRole == BgNetRole.CLIENT) {
-                    _uiState.value = _uiState.value.copy(lostConnection = true)
+                    _uiState.value = _uiState.value.copy(lostConnection = true, hostAway = false)
                 }
+            },
+            onHostAway = { away ->
+                _uiState.value = _uiState.value.copy(hostAway = away)
             },
         )
         client = c
-        c.connect(clean, name) { error ->
+        c.connect(code, name) { error ->
             if (error != null) {
                 client = null
                 _uiState.value = _uiState.value.copy(connecting = false, connectError = error)
             } else {
                 _uiState.value = _uiState.value.copy(
                     netRole = BgNetRole.CLIENT,
+                    roomCode = code,
                     connecting = false,
                     connectError = null,
+                    lostConnection = false,
+                    hostAway = false,
                 )
+                storeGuestRoom(code = code, name = name)
             }
+            onDone(error)
         }
     }
 
@@ -594,10 +818,18 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** برگشت به صفحه‌ی انتخاب روش — هر اتصال شبکه‌ای بسته می‌شود */
     fun backToVariants() {
+        val st = _uiState.value
+        // ترکِ خواسته‌ی یک بازی اینترنتی: اتاق ذخیره‌شده هم پاک می‌شود
+        // (بازی محلی یا وای‌فای به اتاقِ نیمه‌کاره‌ی قبلی دست نمی‌زند)
+        val leavingOnline = st.isNetPlay && st.onlineMode
         stopNetworking()
         engine = null
         currentMoves = emptyList()
-        _uiState.value = BgUiState(myName = _uiState.value.myName)
+        if (leavingOnline) OnlineSessionStore.clear(getApplication())
+        _uiState.value = BgUiState(
+            myName = st.myName,
+            resumable = if (leavingOnline) null else st.resumable,
+        )
     }
 
     // ================= فرمان‌های مهمان (سمت میزبان) =================
@@ -666,10 +898,11 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         )
     }
 
-    /** اگر میزبانیم، وضعیت تازه برای مهمان پخش می‌شود */
+    /** اگر میزبانیم، وضعیت تازه برای مهمان پخش می‌شود (و در اینترنتی روی دیسک هم می‌ماند) */
     private fun pushState() {
         if (_uiState.value.netRole != BgNetRole.HOST) return
         server?.broadcast(BgMessage.State(roomSnapshot()))
+        persistHostState()
     }
 
     private fun setGame(game: BgState) {
@@ -806,8 +1039,14 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         keepAlive.release()
     }
 
+    /** بسته شدن صفحه یا کشته شدن اپ: شبکه جمع می‌شود ولی اتاقِ ذخیره‌شده می‌ماند تا ادامه بدهد */
     override fun onCleared() {
         super.onCleared()
         stopNetworking()
+    }
+
+    companion object {
+        /** شناسه‌ی بازی در حافظه‌ی اتاق‌های اینترنتی */
+        const val GAME_ID = "backgammon"
     }
 }

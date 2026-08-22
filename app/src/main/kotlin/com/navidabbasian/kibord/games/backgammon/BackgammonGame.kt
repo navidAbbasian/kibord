@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.net.online.OnlineRooms
+import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.OnlineIdentityField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
@@ -155,7 +156,12 @@ fun BackgammonGame(
             when (state.stage) {
                 BgStage.VariantSelect -> {
                     BackHandler { onExitToHub() }
-                    BgVariantSelectScreen(onPick = viewModel::chooseVariant)
+                    BgVariantSelectScreen(
+                        state = state,
+                        onPick = viewModel::chooseVariant,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
+                    )
                 }
 
                 BgStage.ModeSelect -> {
@@ -178,6 +184,8 @@ fun BackgammonGame(
                             else viewModel.startHosting()
                         },
                         onJoin = viewModel::openJoinScreen,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
                     )
                 }
 
@@ -217,6 +225,19 @@ fun BackgammonGame(
             }
         }
 
+        // ---- میزبان لحظه‌ای غایب شده (سمت مهمان اینترنتی): بنر کوچک، بازی نمی‌ایستد ----
+        if (state.hostAway && !state.lostConnection && state.stage == BgStage.Playing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                BgHostAwayBanner()
+            }
+        }
+
         // ---- ارتباط با میزبان قطع شد (سمت مهمان) ----
         if (state.lostConnection) {
             Box(
@@ -251,13 +272,36 @@ fun BackgammonGame(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید",
+                            text = if (state.onlineMode) {
+                                "اینترنت رو چک کن؛ اتاق هنوز هست — می‌تونی با همون اسم دوباره وصل شی"
+                            } else {
+                                "وای‌فای رو چک کنید؛ اگر میزبان برگشت، دوباره با همون اسم بپیوندید"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
+                        state.connectError?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = kiExtras.danger,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        KButton(text = "باشه", onClick = leaveAndExit)
+                        if (state.onlineMode && state.roomCode.isNotBlank()) {
+                            KButton(
+                                text = if (state.reconnecting) "یه لحظه…" else "دوباره وصل شو 🔁",
+                                enabled = !state.reconnecting,
+                                onClick = viewModel::reconnectOnline,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            KButton(text = "ترک بازی", style = KButtonStyle.Glass, onClick = leaveAndExit)
+                        } else {
+                            KButton(text = "باشه", onClick = leaveAndExit)
+                        }
                     }
                 }
             }
@@ -265,9 +309,14 @@ fun BackgammonGame(
     }
 }
 
-/** صفحه‌ی انتخاب روش: کلاسیک، هلندی، هایپرگامون */
+/** صفحه‌ی انتخاب روش: کلاسیک، هلندی، هایپرگامون (+ پیشنهاد ادامه‌ی بازی اینترنتیِ نیمه‌کاره) */
 @Composable
-private fun BgVariantSelectScreen(onPick: (BgVariant) -> Unit) {
+private fun BgVariantSelectScreen(
+    state: BgUiState,
+    onPick: (BgVariant) -> Unit,
+    onResume: () -> Unit,
+    onDiscardResume: () -> Unit,
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         GameHelpButton(gameId = "backgammon", modifier = Modifier.align(Alignment.TopStart))
         Column(
@@ -290,6 +339,17 @@ private fun BgVariantSelectScreen(onPick: (BgVariant) -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(24.dp))
+            state.resumable?.let { stored ->
+                // بازی اینترنتی نیمه‌کاره: همین اول کار پیشنهاد ادامه بده
+                BgResumeCard(
+                    stored = stored,
+                    busy = state.connecting,
+                    error = state.connectError,
+                    onResume = onResume,
+                    onDiscard = onDiscardResume,
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+            }
             BgVariantCard(
                 emoji = "🏛️",
                 title = "تخته‌نرد کلاسیک",
@@ -345,6 +405,93 @@ private fun BgVariantCard(emoji: String, title: String, desc: String, onClick: (
                 )
             }
         }
+    }
+}
+
+/** کارتِ «بازی اینترنتی نیمه‌کاره داری» — ادامه بده یا بی‌خیال */
+@Composable
+private fun BgResumeCard(
+    stored: StoredOnlineRoom,
+    busy: Boolean,
+    error: String?,
+    onResume: () -> Unit,
+    onDiscard: () -> Unit,
+) {
+    TicketCard(modifier = Modifier.fillMaxWidth(), tilt = -1f) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "🔁 بازی اینترنتی نیمه‌کاره داری",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "اتاق ${stored.code} — ${if (stored.isHost) "میزبان بودی" else "مهمان بودی"}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            error?.let {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = kiExtras.danger,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                KButton(
+                    text = if (busy) "یه لحظه…" else "ادامه بده",
+                    enabled = !busy,
+                    onClick = onResume,
+                    modifier = Modifier.weight(1f),
+                )
+                KButton(
+                    text = "بی‌خیال",
+                    style = KButtonStyle.Glass,
+                    enabled = !busy,
+                    onClick = onDiscard,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** بنر کوچکِ «میزبان لحظه‌ای قطع شده» — سمت مهمان اینترنتی، بازی را نمی‌بندد */
+@Composable
+private fun BgHostAwayBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(kiExtras.glassStrong, RoundedCornerShape(14.dp))
+            .border(1.dp, kiExtras.glassBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Box(modifier = Modifier.breathing(intensity = 0.06f, periodMs = 1400)) {
+            Text(text = "⏳", fontSize = 18.sp)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "میزبان لحظه‌ای قطع شده — منتظر برگشتش…",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -410,6 +557,8 @@ private fun BgNetEntryScreen(
     onToggleOnline: (Boolean) -> Unit,
     onHost: () -> Unit,
     onJoin: () -> Unit,
+    onResume: () -> Unit,
+    onDiscardResume: () -> Unit,
 ) {
     // هشدار تم‌دار وقتی بدون نوشتن اسم روی دکمه‌ها بزند
     var showNameError by remember { mutableStateOf(false) }
@@ -438,6 +587,18 @@ private fun BgNetEntryScreen(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(24.dp))
+
+        state.resumable?.let { stored ->
+            // بازی اینترنتی نیمه‌کاره: بالای اسم، پیشنهاد ادامه
+            BgResumeCard(
+                stored = stored,
+                busy = state.connecting,
+                error = null,
+                onResume = onResume,
+                onDiscard = onDiscardResume,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+        }
 
         if (state.onlineMode) {
             OnlineIdentityField(username = state.myName)

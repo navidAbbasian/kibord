@@ -77,6 +77,8 @@ fun NfEntryScreen(
     onToggleOnline: (Boolean) -> Unit,
     onHost: () -> Unit,
     onJoin: () -> Unit,
+    onResume: () -> Unit = {},
+    onDiscardResume: () -> Unit = {},
 ) {
     // هشدار تم‌دار وقتی بدون نوشتن اسم روی دکمه‌ها بزند
     var showNameError by remember { mutableStateOf(false) }
@@ -104,6 +106,18 @@ fun NfEntryScreen(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
+
+        // ---- بازی اینترنتیِ نیمه‌کاره: ادامه بده یا بی‌خیال ----
+        state.resumable?.let { room ->
+            NfResumeCard(
+                code = room.code,
+                wasHost = room.isHost,
+                busy = state.connecting,
+                onResume = onResume,
+                onDiscard = onDiscardResume,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+        }
 
         if (state.onlineMode) {
             OnlineIdentityField(username = state.myName)
@@ -210,6 +224,82 @@ fun NfEntryScreen(
             Spacer(modifier = Modifier.height(14.dp))
             Text(text = it, style = MaterialTheme.typography.labelLarge, color = kiExtras.danger)
         }
+    }
+}
+
+/** کارتِ «بازی نیمه‌کاره داری» روی صفحه‌ی ورود */
+@Composable
+private fun NfResumeCard(
+    code: String,
+    wasHost: Boolean,
+    busy: Boolean,
+    onResume: () -> Unit,
+    onDiscard: () -> Unit,
+) {
+    TicketCard(modifier = Modifier.fillMaxWidth(), tilt = 1.2f) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🔁 بازی اینترنتی نیمه‌کاره داری",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "اتاق $code — ${if (wasHost) "میزبان بودی" else "مهمان بودی"}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                KButton(
+                    text = if (busy) "یه لحظه…" else "ادامه بده",
+                    enabled = !busy,
+                    onClick = onResume,
+                    modifier = Modifier.weight(1f),
+                )
+                KButton(
+                    text = "بی‌خیال",
+                    enabled = !busy,
+                    onClick = onDiscard,
+                    style = KButtonStyle.Glass,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** بنرِ کوچکِ «میزبان لحظه‌ای قطع شده» — روی همه‌ی صفحه‌های داخل بازیِ مهمان */
+@Composable
+fun NfHostAwayBanner(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(kiExtras.glassStrong, RoundedCornerShape(14.dp))
+            .border(1.dp, kiExtras.glassBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.breathing(intensity = 0.06f, periodMs = 1400)) {
+            Text(text = "⏳", fontSize = 16.sp)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "میزبان لحظه‌ای قطع شده — منتظر برگشتش…",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

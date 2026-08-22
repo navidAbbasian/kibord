@@ -59,6 +59,7 @@ object Routes {
     const val ESM_FAMIL = "game/esm_famil"
     const val MORE_GAMES = "more_games"
     const val TEAM_PICKER = "team_picker"
+    const val ACCOUNT = "account"
     const val TABOO = "game/taboo"
     const val SPY = "game/spy"
     const val FOREHEAD = "game/forehead"

@@ -92,7 +92,11 @@ fun EsmFamilGame(
                     EfEntryScreen(
                         state = state,
                         onNameChanged = viewModel::setMyName,
-                        onHost = viewModel::startHosting,
+                        onToggleOnline = viewModel::setOnlineMode,
+                        onHost = {
+                            if (state.onlineMode) viewModel.startHostingOnline()
+                            else viewModel.startHosting()
+                        },
                         onJoin = viewModel::openJoinScreen,
                         onBot = viewModel::startBotGame,
                     )
@@ -104,6 +108,7 @@ fun EsmFamilGame(
                         state = state,
                         onJoin = { game -> viewModel.joinGame(game.address, game.port) },
                         onManualJoin = { address -> viewModel.joinGame(address) },
+                        onJoinOnline = viewModel::joinOnlineRoom,
                     )
                 }
 

@@ -18,6 +18,23 @@ android {
         targetSdk = 36
         versionCode = 22
         versionName = "1.2.0"
+
+        // کلیدهای Supabase از local.properties خوانده می‌شوند تا در گیت نروند.
+        // اگر نبودند، رشته‌ی خالی می‌ماند و اپ فقط آفلاین کار می‌کند.
+        val localProps = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${System.getenv("SUPABASE_URL") ?: localProps.getProperty("SUPABASE_URL").orEmpty()}\"",
+        )
+        buildConfigField(
+            "String",
+            "SUPABASE_ANON_KEY",
+            "\"${System.getenv("SUPABASE_ANON_KEY") ?: localProps.getProperty("SUPABASE_ANON_KEY").orEmpty()}\"",
+        )
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -73,10 +90,16 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.realtime)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.compose.bom))

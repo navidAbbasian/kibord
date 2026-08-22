@@ -1,5 +1,6 @@
 package com.navidabbasian.kibord.games.whoami.net
 
+import com.navidabbasian.kibord.core.net.HostLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -23,7 +24,7 @@ class WaServer(
     private val onClientDisconnected: (playerName: String) -> Unit,
     /** وضعیت فعلی برای ارسال مستقیم به مهمان تازه‌وصل‌شده */
     private val latestState: () -> WaMessage?,
-) {
+) : HostLink<WaMessage> {
 
     private class Conn(val socket: Socket, val writer: PrintWriter) {
         fun close() {
@@ -109,7 +110,7 @@ class WaServer(
     }
 
     /** ارسال یک پیام به همه‌ی مهمان‌های متصل */
-    fun broadcast(msg: WaMessage) {
+    override fun broadcast(msg: WaMessage) {
         val encoded = msg.encode()
         clients.values.forEach { conn ->
             scope.launch(Dispatchers.IO) {
@@ -121,7 +122,7 @@ class WaServer(
         }
     }
 
-    fun stop() {
+    override fun stop() {
         try {
             serverSocket?.close()
         } catch (_: Exception) {

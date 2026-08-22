@@ -92,7 +92,7 @@ fun HubShell(onOpenGame: (String) -> Unit) {
             when (tab) {
                 HubTab.HOME -> HubScreen(onOpenGame = onOpenGame)
                 HubTab.HOW_TO_PLAY -> HowToPlayScreen()
-                HubTab.SETTINGS -> SettingsScreen()
+                HubTab.SETTINGS -> SettingsScreen(onOpenRoute = onOpenGame)
             }
         }
         KiBordBottomNav(

@@ -4,6 +4,14 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.net.HostKeepAlive
+import com.navidabbasian.kibord.core.cloud.Cloud
+import com.navidabbasian.kibord.core.net.ClientLink
+import com.navidabbasian.kibord.core.net.HostLink
+import com.navidabbasian.kibord.core.net.online.OnlineClient
+import com.navidabbasian.kibord.core.net.online.OnlineHost
+import com.navidabbasian.kibord.core.net.online.OnlineRooms
+import com.navidabbasian.kibord.games.esmfamil.net.decodeEfMessage
+import com.navidabbasian.kibord.games.esmfamil.net.encode
 import com.navidabbasian.kibord.games.esmfamil.logic.EF_BOT_NAME
 import com.navidabbasian.kibord.games.esmfamil.logic.EfBot
 import com.navidabbasian.kibord.games.esmfamil.logic.EfBotLevel
@@ -57,6 +65,10 @@ data class EsmFamilUiState(
     val hostPort: Int = 0,
     /** ارتباط با میزبان قطع شد */
     val lostConnection: Boolean = false,
+    /** بازی اینترنتی با کد اتاق، به‌جای وای‌فای محلی */
+    val onlineMode: Boolean = false,
+    /** کد اتاقِ ساخته‌شده — فقط برای میزبان اینترنتی */
+    val roomCode: String = "",
     /** بازی تک‌نفره با ربات — بدون هیچ شبکه‌ای */
     val botMode: Boolean = false,
     val botLevel: EfBotLevel = EfBotLevel.NORMAL,
@@ -84,8 +96,8 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     private val nsd = EfNsd(application)
     private val keepAlive = HostKeepAlive(application)
-    private var server: EfServer? = null
-    private var client: EfClient? = null
+    private var server: HostLink<EfMessage>? = null
+    private var client: ClientLink<EfMessage>? = null
     private var tickerJob: Job? = null
     private var collectJob: Job? = null
 
@@ -142,6 +154,93 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
             )
         }
         setSnapshot(snapshot)
+    }
+
+    fun setOnlineMode(on: Boolean) {
+        _uiState.update { it.copy(onlineMode = on, connectError = null) }
+    }
+
+    /** میزبانی اینترنتی: به‌جای سوکت محلی، اتاقی با کد شش‌حرفی ساخته می‌شود */
+    fun startHostingOnline() {
+        val name = _uiState.value.myName.trim()
+        if (name.isBlank()) return
+        if (!Cloud.isConfigured) {
+            _uiState.update { it.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست") }
+            return
+        }
+        _uiState.update { it.copy(connecting = true, connectError = null) }
+        val host = OnlineHost<EfMessage>(
+            scope = viewModelScope,
+            encode = { m: EfMessage -> m.encode() },
+            onClientJoin = ::acceptJoin,
+            onCommand = ::handleCommand,
+            onClientDisconnected = ::handleDisconnect,
+            latestState = { EfMessage.State(_uiState.value.snapshot) },
+            decode = ::decodeEfMessage,
+        )
+        host.start { ok ->
+            if (!ok) {
+                _uiState.update {
+                    it.copy(connecting = false, connectError = "اتاق ساخته نشد — اینترنت رو چک کن")
+                }
+                return@start
+            }
+            server = host
+            val snapshot = EfSnapshot(
+                phase = EfPhase.LOBBY,
+                players = listOf(EfPlayer(name = name, colorIndex = 0)),
+                hostName = name,
+                settings = EfSettings(),
+            )
+            _uiState.update {
+                it.copy(
+                    role = EfRole.HOST,
+                    localScreen = EfLocalScreen.IN_GAME,
+                    myName = name,
+                    roomCode = host.roomCode,
+                    hostAddress = "",
+                    hostPort = 0,
+                    connecting = false,
+                    connectError = null,
+                )
+            }
+            setSnapshot(snapshot)
+        }
+    }
+
+    /** پیوستن اینترنتی با کد اتاق */
+    fun joinOnlineRoom(code: String) {
+        val name = _uiState.value.myName.trim()
+        if (name.isBlank()) return
+        val clean = OnlineRooms.normalizeCode(code)
+        _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
+        val c = OnlineClient<EfMessage>(
+            scope = viewModelScope,
+            encode = { m: EfMessage -> m.encode() },
+            decode = ::decodeEfMessage,
+            onMessage = ::handleServerMessage,
+            onDisconnected = {
+                if (_uiState.value.role == EfRole.CLIENT) {
+                    _uiState.update { it.copy(lostConnection = true) }
+                }
+            },
+        )
+        client = c
+        c.connect(clean, name) { error ->
+            if (error != null) {
+                client = null
+                _uiState.update { it.copy(connecting = false, connectError = error) }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        role = EfRole.CLIENT,
+                        localScreen = EfLocalScreen.IN_GAME,
+                        connecting = false,
+                        connectError = null,
+                    )
+                }
+            }
+        }
     }
 
     // ================= بازی با ربات =================
@@ -319,6 +418,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
     fun openJoinScreen() {
         if (_uiState.value.myName.isBlank()) return
         _uiState.update { it.copy(localScreen = EfLocalScreen.JOIN, discovered = emptyList(), connectError = null) }
+        if (_uiState.value.onlineMode) return // اینترنتی: با کد می‌آیند
         nsd.discover(
             onFound = { game ->
                 _uiState.update { st ->

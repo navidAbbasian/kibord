@@ -1,5 +1,6 @@
 package com.navidabbasian.kibord.games.nofoozi.net
 
+import com.navidabbasian.kibord.core.net.ClientLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -19,7 +20,7 @@ class NfClient(
     private val onMessage: (NfMessage) -> Unit,
     /** بعد از یک اتصال موفق، قطع شدن ارتباط با میزبان */
     private val onDisconnected: () -> Unit,
-) {
+) : ClientLink<NfMessage> {
 
     private var socket: Socket? = null
     private var writer: PrintWriter? = null
@@ -72,7 +73,7 @@ class NfClient(
         }
     }
 
-    fun send(msg: NfMessage) {
+    override fun send(msg: NfMessage) {
         val w = writer ?: return
         scope.launch(Dispatchers.IO) {
             try {
@@ -82,7 +83,7 @@ class NfClient(
         }
     }
 
-    fun close() {
+    override fun close() {
         try {
             socket?.close()
         } catch (_: Exception) {

@@ -59,6 +59,7 @@ import com.navidabbasian.kibord.games.esmramz.EsmRamzGame
 import com.navidabbasian.kibord.games.spy.SpyGame
 import com.navidabbasian.kibord.games.whoami.WhoAmIGame
 import com.navidabbasian.kibord.games.taboo.TabooGame
+import com.navidabbasian.kibord.hub.AccountScreen
 import com.navidabbasian.kibord.hub.HubShell
 import com.navidabbasian.kibord.hub.MoreGamesScreen
 import com.navidabbasian.kibord.hub.TeamPickerScreen
@@ -146,6 +147,10 @@ fun KiBordApp() {
         composable(Routes.TEAM_PICKER) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
             TeamPickerScreen()
+        }
+        composable(Routes.ACCOUNT) {
+            LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
+            AccountScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.MORE_GAMES) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }

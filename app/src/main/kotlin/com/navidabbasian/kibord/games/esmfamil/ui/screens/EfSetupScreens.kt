@@ -1,6 +1,9 @@
 package com.navidabbasian.kibord.games.esmfamil.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import com.navidabbasian.kibord.core.net.online.OnlineRooms
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -68,6 +71,7 @@ import com.navidabbasian.kibord.games.esmfamil.viewmodel.EsmFamilUiState
 fun EfEntryScreen(
     state: EsmFamilUiState,
     onNameChanged: (String) -> Unit,
+    onToggleOnline: (Boolean) -> Unit,
     onHost: () -> Unit,
     onJoin: () -> Unit,
     onBot: () -> Unit,
@@ -137,6 +141,46 @@ fun EfEntryScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(40.dp))
+        // ---- سوییچ راهِ بازی: وای‌فای محلی یا اینترنت با کد اتاق ----
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(kiExtras.glassStrong, RoundedCornerShape(18.dp))
+                .border(
+                    1.5.dp,
+                    if (state.onlineMode) LocalGameAccent.current else kiExtras.glassBorder,
+                    RoundedCornerShape(18.dp)
+                )
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { onToggleOnline(!state.onlineMode) }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = if (state.onlineMode) "🌐" else "📶", fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "بازی اینترنتی",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (state.onlineMode) {
+                        "با کد اتاق — رفقات هر جای دنیا باشن"
+                    } else {
+                        "الان: وای‌فای یا هات‌اسپات مشترک"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(text = if (state.onlineMode) "✅" else "⬜", fontSize = 20.sp)
+        }
+
         Spacer(modifier = Modifier.height(34.dp))
         ChoiceBubble(
             main = "با ربات",
@@ -183,7 +227,59 @@ fun EfJoinScreen(
     state: EsmFamilUiState,
     onJoin: (EfDiscoveredGame) -> Unit,
     onManualJoin: (String) -> Unit,
+    onJoinOnline: (String) -> Unit,
 ) {
+    var roomCode by rememberSaveable { mutableStateOf("") }
+
+    if (state.onlineMode) {
+        // ---- پیوستن اینترنتی: فقط کد اتاق ----
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .imePadding()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+            BobbingEmoji(emoji = "🌐", fontSize = 52.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            StickerTitle(text = "کد اتاق رو بزن", rotation = 2f, fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "میزبان بعد از ساختن بازی یه کد ${OnlineRooms.CODE_LENGTH.toPersianDigits()} حرفی می‌بینه — ازش بگیر و همین‌جا بنویس",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            BlobTextField(
+                value = roomCode,
+                onValueChange = { roomCode = it.uppercase().take(OnlineRooms.CODE_LENGTH) },
+                placeholder = "مثلاً H7KQ2M",
+                badge = "🔑",
+                tilt = -1f,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            KButton(
+                text = if (state.connecting) "در حال اتصال…" else "برو تو اتاق!",
+                enabled = !state.connecting && roomCode.length == OnlineRooms.CODE_LENGTH,
+                onClick = { onJoinOnline(roomCode) },
+            )
+            state.connectError?.let {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = kiExtras.danger,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        return
+    }
+
     val accent = LocalGameAccent.current
     var manualAddress by rememberSaveable { mutableStateOf("") }
 
@@ -505,7 +601,27 @@ fun EfLobbyScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            if (state.hostAddress.isNotBlank()) {
+            if (state.roomCode.isNotBlank()) {
+                // ---- بازی اینترنتی: کد اتاق را بلند و خوانا نشان بده ----
+                Text(
+                    text = "این کد رو به رفقات بگو:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = state.roomCode,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 6.sp,
+                    color = LocalGameAccent.current,
+                    modifier = Modifier
+                        .background(kiExtras.glassStrong, RoundedCornerShape(14.dp))
+                        .border(1.5.dp, LocalGameAccent.current.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                        .padding(horizontal = 18.dp, vertical = 6.dp),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            } else if (state.hostAddress.isNotBlank()) {
                 Text(
                     text = "اتصال دستی مهمان‌ها: ${state.hostAddress}",
                     style = MaterialTheme.typography.labelMedium,

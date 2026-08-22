@@ -53,6 +53,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.cloud.AccountViewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.settings.LocalSettingsRepository
 import com.navidabbasian.kibord.core.stats.GameStats
@@ -73,7 +76,7 @@ import kotlinx.coroutines.launch
 
 /** تب تنظیمات هاب — کلیدهای بلابی، انتخاب تم سنگریزه‌ای و بلیت درباره */
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
     val repo = LocalSettingsRepository.current
     val sound = LocalSoundManager.current
     val scope = rememberCoroutineScope()
@@ -138,6 +141,20 @@ fun SettingsScreen() {
                     scope.launch { repo?.setVibrationEnabled(it) }
                 }
             )
+        }
+
+        // ---- حساب کاربری ----
+        item {
+            Text(
+                text = "حساب کاربری",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+            )
+        }
+        item {
+            AccountCard(onOpen = { onOpenRoute(Routes.ACCOUNT) })
         }
 
         // ---- ظاهر: سه سنگریزه‌ی تم ----
@@ -424,6 +441,74 @@ private fun ThemePebbles(
                 )
             }
         }
+    }
+}
+
+/**
+ * کارت حساب در تنظیمات: اگر وارد شده باشد یوزرنیمش را نشان می‌دهد،
+ * وگرنه دعوت به ساختن حساب می‌کند. بازی‌ها به این وابسته نیستند.
+ */
+@Composable
+private fun AccountCard(onOpen: () -> Unit) {
+    val extras = kiExtras
+    val viewModel: AccountViewModel = viewModel()
+    val state by viewModel.uiState.collectAsState()
+    val profile = state.profile
+
+    // هر بار که به تنظیمات برمی‌گردیم، وضعیت تازه خوانده می‌شود
+    LaunchedEffect(Unit) { viewModel.refreshProfile() }
+
+    val shape = rememberMorphingBlobShape(phase = 3.3f)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.glassStrong, shape)
+            .border(1.5.dp, if (profile != null) VioletPrimary.copy(alpha = 0.55f) else extras.glassBorder, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onOpen() }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(
+                    if (profile != null) {
+                        Brush.radialGradient(
+                            colors = listOf(lerp(VioletPrimary, Color.White, 0.25f), VioletPrimary),
+                            center = Offset(0.3f, 0.25f),
+                            radius = 130f
+                        )
+                    } else {
+                        Brush.radialGradient(listOf(extras.glass, extras.glass))
+                    },
+                    blobShape(seed = 91)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = if (profile != null) "🎖️" else "👤", fontSize = 20.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = profile?.let { "@${it.username}" } ?: "ورود یا ثبت‌نام",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = if (profile != null) {
+                    "آمارت آنلاین ذخیره می‌شه"
+                } else {
+                    "آمارت رو آنلاین نگه دار و رقابت کن"
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(text = "‹", fontSize = 22.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

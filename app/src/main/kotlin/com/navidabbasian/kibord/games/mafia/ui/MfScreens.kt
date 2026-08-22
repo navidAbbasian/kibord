@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
+import com.navidabbasian.kibord.core.ui.components.OnlineIdentityField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
@@ -106,7 +107,9 @@ fun MfEntryScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        BlobTextField(
+        if (state.onlineMode) {
+            OnlineIdentityField(username = state.myName)
+        } else BlobTextField(
             value = state.myName,
             onValueChange = {
                 onNameChanged(it)

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.cloud.Cloud
+import com.navidabbasian.kibord.core.cloud.AccountRepository
 import com.navidabbasian.kibord.core.net.ClientLink
 import com.navidabbasian.kibord.core.net.HostLink
 import com.navidabbasian.kibord.core.net.online.OnlineClient
@@ -100,6 +101,8 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
     // ================= ورود =================
 
     fun setMyName(name: String) {
+        // در حالت اینترنتی اسم قفل است: همان یوزرنیم حساب
+        if (_uiState.value.onlineMode) return
         _uiState.update { it.copy(myName = name.take(16)) }
     }
 
@@ -143,17 +146,31 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun setOnlineMode(on: Boolean) {
-        _uiState.update { it.copy(onlineMode = on, connectError = null) }
+        if (!on) {
+            _uiState.update { it.copy(onlineMode = false, connectError = null) }
+            return
+        }
+        // بازی اینترنتی فقط با حساب: اسم بازیکن همان یوزرنیم است تا آمار و
+        // رتبه‌بندی به آدم درست بچسبد
+        val me = AccountRepository.onlineIdentity()
+        if (me == null) {
+            _uiState.update { it.copy(onlineMode = false, connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
+            return
+        }
+        _uiState.update { it.copy(onlineMode = true, myName = me, connectError = null) }
     }
 
     /** میزبانی اینترنتی: به‌جای سوکت محلی، اتاقی با کد شش‌حرفی ساخته می‌شود */
     fun startHostingOnline() {
-        val name = _uiState.value.myName.trim()
-        if (name.isBlank()) return
         if (!Cloud.isConfigured) {
             _uiState.update { it.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست") }
             return
         }
+        val name = AccountRepository.onlineIdentity() ?: run {
+            _uiState.update { it.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
+            return
+        }
+        _uiState.update { it.copy(myName = name) }
         _uiState.update { it.copy(connecting = true, connectError = null) }
         val host = OnlineHost<NfMessage>(
             scope = viewModelScope,
@@ -195,8 +212,10 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
 
     /** پیوستن اینترنتی با کد اتاق */
     fun joinOnlineRoom(code: String) {
-        val name = _uiState.value.myName.trim()
-        if (name.isBlank()) return
+        val name = AccountRepository.onlineIdentity() ?: run {
+            _uiState.update { it.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE) }
+            return
+        }
         val clean = OnlineRooms.normalizeCode(code)
         _uiState.update { it.copy(myName = name, connecting = true, connectError = null) }
         val c = OnlineClient<NfMessage>(

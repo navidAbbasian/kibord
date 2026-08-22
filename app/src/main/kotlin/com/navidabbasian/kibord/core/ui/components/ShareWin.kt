@@ -8,6 +8,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.share.WinnerCard
 import com.navidabbasian.kibord.core.stats.GameStats
+import com.navidabbasian.kibord.core.cloud.AccountRepository
+import com.navidabbasian.kibord.core.cloud.StatsSync
+import com.navidabbasian.kibord.core.net.online.OnlineRooms
 import java.util.UUID
 
 /**
@@ -34,7 +37,15 @@ fun ShareWinButton(
     // می‌شود تا هر دست فقط یک بار در آمار ثبت شود
     val recordToken = rememberSaveable { UUID.randomUUID().toString() }
     LaunchedEffect(recordToken) {
-        GameStats.recordGameFinished(context, gameId, winnerNames, token = recordToken)
+        val fresh = GameStats.recordGameFinished(context, gameId, winnerNames, token = recordToken)
+        // فقط بازیِ اینترنتی به آمار آنلاین بازیکن می‌رود؛ هویتش همان یوزرنیم حساب است
+        if (fresh && OnlineRooms.active) {
+            val me = AccountRepository.onlineIdentity()
+            if (me != null) {
+                val won = winnerNames.any { it.trim().equals(me, ignoreCase = true) }
+                StatsSync.recordOnlineResult(gameId, won)
+            }
+        }
     }
 
     // بعد از اولین بازیِ تمام‌شده، درخواست امتیاز در مایکت

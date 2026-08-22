@@ -3,6 +3,8 @@ package com.navidabbasian.kibord
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import com.navidabbasian.kibord.core.analytics.Analytics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +64,7 @@ import com.navidabbasian.kibord.games.spy.SpyGame
 import com.navidabbasian.kibord.games.whoami.WhoAmIGame
 import com.navidabbasian.kibord.games.taboo.TabooGame
 import com.navidabbasian.kibord.hub.AccountScreen
+import com.navidabbasian.kibord.hub.LeaderboardScreen
 import com.navidabbasian.kibord.hub.HubShell
 import com.navidabbasian.kibord.hub.MoreGamesScreen
 import com.navidabbasian.kibord.hub.TeamPickerScreen
@@ -138,6 +141,20 @@ fun KiBordApp() {
         }
     }
 
+    // گزارش ناشناس: ورود/خروج مسیرهای بازی → شروع، پایان یا رها شدن
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+            val route = destination.route.orEmpty()
+            if (route.startsWith("game/")) {
+                Analytics.gameEntered(route.removePrefix("game/"))
+            } else {
+                Analytics.gameLeft()
+            }
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.HUB
@@ -152,7 +169,14 @@ fun KiBordApp() {
         }
         composable(Routes.ACCOUNT) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
-            AccountScreen(onBack = { navController.popBackStack() })
+            AccountScreen(
+                onBack = { navController.popBackStack() },
+                onOpenLeaderboard = { navController.navigate(Routes.LEADERBOARD) },
+            )
+        }
+        composable(Routes.LEADERBOARD) {
+            LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }
+            LeaderboardScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.MORE_GAMES) {
             LaunchedEffect(Unit) { sound?.switchMusic(MusicTrack.HUB) }

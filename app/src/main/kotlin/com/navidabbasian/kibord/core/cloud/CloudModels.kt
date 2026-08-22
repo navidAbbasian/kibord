@@ -36,6 +36,18 @@ data class LeaderboardRow(
     val shownName: String get() = displayName?.takeIf { it.isNotBlank() } ?: username
 }
 
+/** یک ردیف لیدربوردِ یک بازی — آینه‌ی ویوی game_leaderboard */
+@Serializable
+data class GameLeaderboardRow(
+    @SerialName("game_id") val gameId: String,
+    @SerialName("user_id") val userId: String,
+    val username: String,
+    @SerialName("display_name") val displayName: String? = null,
+    val wins: Int,
+    val plays: Int,
+    val rank: Long,
+)
+
 /** نتیجه‌ی کارهای ابری — تا رابط کاربری بتواند خطای فارسی نشان دهد */
 sealed interface CloudResult<out T> {
     data class Ok<T>(val value: T) : CloudResult<T>

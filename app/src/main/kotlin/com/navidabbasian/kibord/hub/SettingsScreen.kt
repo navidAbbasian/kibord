@@ -70,6 +70,7 @@ import com.navidabbasian.kibord.core.ui.components.rememberMorphingBlobShape
 import com.navidabbasian.kibord.core.ui.theme.VioletDeep
 import com.navidabbasian.kibord.core.ui.theme.VioletPrimary
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -143,6 +144,22 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
             )
         }
 
+        item {
+            val context = LocalContext.current
+            val analyticsOn = remember { mutableStateOf(!Analytics.isOptedOut(context)) }
+            BlobToggleRow(
+                emoji = "📊",
+                label = "ارسال آمار ناشناس استفاده",
+                checked = analyticsOn.value,
+                index = 3,
+                onCheckedChange = {
+                    sound?.playButtonClick()
+                    analyticsOn.value = it
+                    Analytics.setOptOut(context, !it)
+                }
+            )
+        }
+
         // ---- حساب کاربری ----
         item {
             Text(
@@ -155,6 +172,9 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
         }
         item {
             AccountCard(onOpen = { onOpenRoute(Routes.ACCOUNT) })
+        }
+        item {
+            LeaderboardCard(onOpen = { onOpenRoute(Routes.LEADERBOARD) })
         }
 
         // ---- ظاهر: سه سنگریزه‌ی تم ----
@@ -493,17 +513,60 @@ private fun AccountCard(onOpen: () -> Unit) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = profile?.let { "@${it.username}" } ?: "ورود یا ثبت‌نام",
+                text = profile?.let { "\u200E@${it.username}" } ?: "ورود یا ثبت‌نام",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = if (profile != null) {
-                    "آمارت آنلاین ذخیره می‌شه"
+                    "بازی اینترنتی با همین یوزرنیم؛ بردهات توی رتبه‌بندی می‌ره"
                 } else {
-                    "آمارت رو آنلاین نگه دار و رقابت کن"
+                    "برای بازی اینترنتی و رتبه‌بندی لازمه"
                 },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(text = "‹", fontSize = 22.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** ردیف رتبه‌بندی: لیدربورد هر بازی (فقط بازی‌های اینترنتی) */
+@Composable
+private fun LeaderboardCard(onOpen: () -> Unit) {
+    val extras = kiExtras
+    val shape = rememberMorphingBlobShape(phase = 5.1f)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.glassStrong, shape)
+            .border(1.5.dp, extras.glassBorder, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onOpen() }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(Brush.radialGradient(listOf(extras.glass, extras.glass)), blobShape(seed = 47)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "🏆", fontSize = 20.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "رتبه‌بندی بازی‌ها",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "پرافتخارترین بازیکن‌های هر بازی اینترنتی",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -710,8 +773,9 @@ private data class KiBadge(
 )
 
 /**
- * بخش آمار و نشان‌ها: خلاصه‌ی بازی‌های انجام‌شده، پرافتخارترین اسم‌ها و
- * نشان‌هایی که با بازی کردن باز می‌شوند — همه محلی و بدون سرور.
+ * بخش آمار و نشان‌ها: خلاصه‌ی بازی‌های انجام‌شده روی این گوشی و نشان‌هایی
+ * که با بازی کردن باز می‌شوند — محلی و بدون سرور. آمارِ بازیکن‌ها (برد هر
+ * آدم) فقط آنلاین است و در صفحه‌ی حساب/رتبه‌بندی دیده می‌شود.
  */
 @Composable
 private fun StatsSection() {
@@ -720,9 +784,7 @@ private fun StatsSection() {
 
     val total = GameStats.totalPlays(context)
     val distinct = GameStats.distinctGamesPlayed(context)
-    val bestWin = GameStats.bestWinCount(context)
     val topGames = GameStats.playsByGame(context).entries.sortedByDescending { it.value }.take(3)
-    val topWinners = GameStats.topWinners(context, 3)
     val allGames = gameCatalog + moreGamesCatalog
 
     val badges = listOf(
@@ -732,8 +794,6 @@ private fun StatsSection() {
         KiBadge("🎪", "جشنواره", "۱۰۰ بازی", total >= 100),
         KiBadge("🧭", "کاشف", "۵ بازی متفاوت", distinct >= 5),
         KiBadge("🃏", "همه‌فن‌حریف", "همه‌ی بازی‌ها", distinct >= 12),
-        KiBadge("⭐", "ستاره‌ی جمع", "۵ برد با یک اسم", bestWin >= 5),
-        KiBadge("👑", "اسطوره", "۲۰ برد با یک اسم", bestWin >= 20),
     )
 
     Column(
@@ -765,7 +825,6 @@ private fun StatsSection() {
             ) {
                 StatPebble(value = total.toPersianDigits(), label = "بازی")
                 StatPebble(value = distinct.toPersianDigits(), label = "بازی متفاوت")
-                StatPebble(value = bestWin.toPersianDigits(), label = "رکورد برد")
             }
 
             if (topGames.isNotEmpty()) {
@@ -787,23 +846,6 @@ private fun StatsSection() {
                 }
             }
 
-            if (topWinners.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "پرافتخارترین‌ها:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                topWinners.forEachIndexed { i, (name, wins) ->
-                    Text(
-                        text = "${listOf("🥇", "🥈", "🥉").getOrElse(i) { "🏅" }} $name — ${wins.toPersianDigits()} برد",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))

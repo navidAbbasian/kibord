@@ -57,7 +57,7 @@ import com.navidabbasian.kibord.core.util.toPersianDigits
  * که می‌خواهند آمارشان آنلاین ثبت شود.
  */
 @Composable
-fun AccountScreen(onBack: () -> Unit) {
+fun AccountScreen(onBack: () -> Unit, onOpenLeaderboard: () -> Unit = {}) {
     val viewModel: AccountViewModel = viewModel()
     val state by viewModel.uiState.collectAsState()
     val extras = kiExtras
@@ -80,9 +80,9 @@ fun AccountScreen(onBack: () -> Unit) {
                 !viewModel.cloudAvailable -> CloudOffNotice()
                 state.profile != null -> ProfileCard(
                     username = state.profile!!.username,
+                    stats = state.stats,
                     busy = state.busy,
-                    note = state.syncNote,
-                    onSync = viewModel::syncNow,
+                    onLeaderboard = onOpenLeaderboard,
                     onSignOut = viewModel::signOut,
                 )
                 else -> AuthForm(state = state, viewModel = viewModel)
@@ -114,12 +114,15 @@ private fun CloudOffNotice() {
 @Composable
 private fun ProfileCard(
     username: String,
+    stats: List<com.navidabbasian.kibord.core.cloud.CloudGameStat>,
     busy: Boolean,
-    note: String?,
-    onSync: () -> Unit,
+    onLeaderboard: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     val extras = kiExtras
+    val allGames = remember { gameCatalog + moreGamesCatalog }
+    val totalPlays = stats.sumOf { it.plays }
+    val totalWins = stats.sumOf { it.wins }
 
     BobbingEmoji(emoji = "🎖️", fontSize = 58.sp)
     Spacer(modifier = Modifier.height(10.dp))
@@ -139,7 +142,7 @@ private fun ProfileCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "@$username",
+                text = "\u200E@$username",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -147,22 +150,70 @@ private fun ProfileCard(
         }
     }
 
-    if (note != null) {
-        Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(14.dp))
+    // ---- آمار آنلاین: فقط بازی‌های اینترنتی ----
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.glassStrong, RoundedCornerShape(22.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = note,
-            style = MaterialTheme.typography.bodyMedium,
-            color = extras.success,
-            textAlign = TextAlign.Center,
+            text = "آمار بازی‌های اینترنتی",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = totalPlays.toPersianDigits(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(text = "بازی", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = totalWins.toPersianDigits(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = VioletPrimary,
+                )
+                Text(text = "برد", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (stats.isEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "هنوز بازی اینترنتی‌ای تموم نکردی — بازی‌های آفلاین این‌جا شمرده نمی‌شن",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp,
+            )
+        } else {
+            Spacer(modifier = Modifier.height(8.dp))
+            stats.forEach { st ->
+                val game = allGames.firstOrNull { it.id == st.gameId }
+                Text(
+                    text = "${game?.emoji ?: "🎲"} ${game?.title ?: st.gameId} — ${st.wins.toPersianDigits()} برد از ${st.plays.toPersianDigits()} بازی",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
-    KButton(
-        text = if (busy) "یه لحظه…" else "همگام‌سازی آمار 🔄",
-        enabled = !busy,
-        onClick = onSync,
-    )
+    KButton(text = "رتبه‌بندی بازی‌ها 🏆", enabled = !busy, onClick = onLeaderboard)
     Spacer(modifier = Modifier.height(10.dp))
     KButton(text = "خروج از حساب", style = KButtonStyle.Danger, enabled = !busy, onClick = onSignOut)
 }
@@ -188,7 +239,7 @@ private fun AuthForm(
     Spacer(modifier = Modifier.height(10.dp))
     Text(
         text = if (registering) {
-            "با حساب، آمار و بردهات آنلاین ذخیره می‌شن و می‌تونی با بقیه رقابت کنی. بدون حساب هم همه‌ی بازی‌ها کار می‌کنن."
+            "برای بازی اینترنتی حساب لازمه: اسمت توی بازی همون یوزرنیمته و بردهات توی رتبه‌بندی ثبت می‌شه. بازی‌های آفلاین و وای‌فای بدون حساب کار می‌کنن."
         } else {
             "با همون یوزرنیم و پسوردت وارد شو"
         },

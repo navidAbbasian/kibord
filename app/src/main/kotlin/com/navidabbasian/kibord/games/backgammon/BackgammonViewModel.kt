@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.cloud.Cloud
+import com.navidabbasian.kibord.core.cloud.AccountRepository
 import com.navidabbasian.kibord.core.net.ClientLink
 import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.net.HostLink
@@ -172,11 +173,23 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun setMyName(name: String) {
+        // در حالت اینترنتی اسم قفل است: همان یوزرنیم حساب
+        if (_uiState.value.onlineMode) return
         _uiState.value = _uiState.value.copy(myName = name.take(16))
     }
 
     fun setOnlineMode(on: Boolean) {
-        _uiState.value = _uiState.value.copy(onlineMode = on, connectError = null)
+        if (!on) {
+            _uiState.value = _uiState.value.copy(onlineMode = false, connectError = null)
+            return
+        }
+        // بازی اینترنتی فقط با حساب: اسم بازیکن همان یوزرنیم است
+        val me = AccountRepository.onlineIdentity()
+        if (me == null) {
+            _uiState.value = _uiState.value.copy(onlineMode = false, connectError = AccountRepository.NEED_ACCOUNT_MESSAGE)
+            return
+        }
+        _uiState.value = _uiState.value.copy(onlineMode = true, myName = me, connectError = null)
     }
 
     fun backFromModeSelect() {
@@ -231,13 +244,16 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** میزبانی اینترنتی: به‌جای سوکت محلی، اتاقی با کد شش‌حرفی ساخته می‌شود */
     fun startHostingOnline() {
-        val name = _uiState.value.myName.trim()
         val variant = _uiState.value.variant ?: return
-        if (name.isBlank()) return
         if (!Cloud.isConfigured) {
             _uiState.value = _uiState.value.copy(connectError = "بخش آنلاین روی این نسخه فعال نیست")
             return
         }
+        val name = AccountRepository.onlineIdentity() ?: run {
+            _uiState.value = _uiState.value.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE)
+            return
+        }
+        _uiState.value = _uiState.value.copy(myName = name)
         _uiState.value = _uiState.value.copy(connecting = true, connectError = null)
         val host = OnlineHost<BgMessage>(
             scope = viewModelScope,
@@ -381,8 +397,10 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** پیوستن اینترنتی با کد اتاق */
     fun joinOnlineRoom(code: String) {
-        val name = _uiState.value.myName.trim()
-        if (name.isBlank()) return
+        val name = AccountRepository.onlineIdentity() ?: run {
+            _uiState.value = _uiState.value.copy(connectError = AccountRepository.NEED_ACCOUNT_MESSAGE)
+            return
+        }
         val clean = OnlineRooms.normalizeCode(code)
         _uiState.value = _uiState.value.copy(myName = name, connecting = true, connectError = null)
         val c = OnlineClient<BgMessage>(

@@ -21,8 +21,8 @@ data class AccountUiState(
     val error: String? = null,
     /** پروفایلِ کاربر لاگین‌شده — null یعنی وارد نشده */
     val profile: CloudProfile? = null,
-    /** پیام موفقیت پس از همگام‌سازی */
-    val syncNote: String? = null,
+    /** آمار آنلاین کاربر به تفکیک بازی — فقط بازی‌های اینترنتی */
+    val stats: List<CloudGameStat> = emptyList(),
 )
 
 /**
@@ -53,6 +53,18 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 is CloudResult.Ok -> _uiState.update { it.copy(profile = r.value) }
                 is CloudResult.Failed -> Unit // بی‌صدا: نبودِ نت نباید خطا نشان دهد
             }
+            refreshStats()
+        }
+    }
+
+    /** آمار آنلاین خودِ کاربر */
+    fun refreshStats() {
+        if (!cloudAvailable) return
+        viewModelScope.launch {
+            when (val r = StatsSync.myStats()) {
+                is CloudResult.Ok -> _uiState.update { it.copy(stats = r.value) }
+                is CloudResult.Failed -> Unit
+            }
         }
     }
 
@@ -72,24 +84,16 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                     _uiState.update { it.copy(busy = false, error = result.message) }
 
                 is CloudResult.Ok -> {
-                    // ورود موفق: آمار محلی را بالا می‌فرستیم تا چیزی گم نشود
-                    val synced = StatsSync.pushLocalStats(getApplication())
                     when (val p = AccountRepository.myProfile()) {
                         is CloudResult.Ok -> _uiState.update {
-                            it.copy(
-                                busy = false,
-                                profile = p.value,
-                                password = "",
-                                syncNote = if (synced != null && synced > 0) {
-                                    "آمار این گوشی با حسابت همگام شد"
-                                } else null,
-                            )
+                            it.copy(busy = false, profile = p.value, password = "")
                         }
 
                         is CloudResult.Failed -> _uiState.update {
                             it.copy(busy = false, error = p.message)
                         }
                     }
+                    refreshStats()
                 }
             }
         }
@@ -105,19 +109,4 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** همگام‌سازی دستی از دکمه‌ی پروفایل */
-    fun syncNow() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(busy = true, syncNote = null) }
-            val n = StatsSync.pushLocalStats(getApplication())
-            _uiState.update {
-                it.copy(
-                    busy = false,
-                    syncNote = if (n != null) "آمار همگام شد" else "همگام‌سازی نشد — اینترنت را چک کن",
-                )
-            }
-        }
-    }
-
-    fun clearNote() = _uiState.update { it.copy(syncNote = null) }
 }

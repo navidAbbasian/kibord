@@ -1,72 +1,90 @@
 package com.navidabbasian.kibord.core.cloud
 
-import android.content.Context
 import android.util.Log
-import com.navidabbasian.kibord.core.stats.GameStats
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
- * همگام‌سازی آمار محلی با ابر.
+ * آمار آنلاین بازیکن.
  *
- * قاعده‌ی بنیادی: **دفترچه‌ی محلی منبع حقیقت است.** بازی بدون اینترنت هم
- * ثبت می‌شود؛ این لایه فقط هر وقت شد آن را به ابر می‌رساند. اگر اینترنت
- * نبود یا کاربر لاگین نبود، هیچ اتفاقی نمی‌افتد و بازی هیچ آسیبی نمی‌بیند.
- *
- * ادغام با بیشترین مقدار انجام می‌شود: اگر کاربر روی گوشی دیگری بازی کرده
- * باشد، عدد بزرگ‌تر می‌ماند و آمار از بین نمی‌رود.
+ * قاعده‌ی بنیادی: **فقط بازی‌های اینترنتی شمرده می‌شوند.** بازی آفلاین یا
+ * روی وای‌فای محلی هیچ ردی این‌جا نمی‌گذارد، چون اسم‌هایش دستی است و
+ * قابل اعتماد برای رقابت نیست. هویت بازیکن در بازی اینترنتی همان یوزرنیم
+ * حسابش است، پس هر گوشی نتیجه‌ی خودش را برای خودش ثبت می‌کند.
  */
 object StatsSync {
 
     private const val TAG = "StatsSync"
 
     /**
-     * آمار محلی را به ابر می‌فرستد. بی‌صداست: هر خطایی فقط لاگ می‌شود،
-     * چون این کار هیچ‌وقت نباید جلوی بازی کردن را بگیرد.
-     *
-     * @return تعداد ردیف‌های همگام‌شده، یا null اگر اصلاً انجام نشد
+     * نتیجه‌ی یک بازی اینترنتیِ تمام‌شده را برای کاربر لاگین‌شده ثبت می‌کند.
+     * بی‌صداست: شکست فقط لاگ می‌شود و هیچ‌وقت جلوی بازی را نمی‌گیرد.
      */
-    suspend fun pushLocalStats(context: Context): Int? {
-        val c = Cloud.client ?: return null
-        val userId = AccountRepository.currentUserId() ?: return null
-
-        val local = GameStats.playsByGame(context)
-        if (local.isEmpty()) return 0
-
+    suspend fun recordOnlineResult(gameId: String, won: Boolean): Boolean {
+        val c = Cloud.client ?: return false
+        if (AccountRepository.currentUserId() == null) return false
         return try {
-            // آنچه ابر دارد را می‌خوانیم تا عقب‌گرد پیش نیاید
-            val remote = c.from("game_stats")
-                .select(Columns.ALL) { filter { eq("user_id", userId) } }
-                .decodeList<CloudGameStat>()
-                .associateBy { it.gameId }
-
-            val merged = local.map { (gameId, plays) ->
-                val cloudRow = remote[gameId]
-                CloudGameStat(
-                    userId = userId,
-                    gameId = gameId,
-                    plays = maxOf(plays, cloudRow?.plays ?: 0),
-                    wins = cloudRow?.wins ?: 0,
-                )
-            }
-
-            // کلید اصلی جدول (user_id, game_id) است، پس upsert خودش
-            // ردیف موجود را به‌روز می‌کند و ردیف تازه را می‌سازد
-            c.from("game_stats").upsert(merged)
-            merged.size
+            c.postgrest.rpc(
+                "record_online_result",
+                buildJsonObject {
+                    put("p_game_id", gameId)
+                    put("p_won", won)
+                },
+            )
+            true
         } catch (e: Exception) {
-            Log.w(TAG, "همگام‌سازی آمار انجام نشد", e)
-            null
+            Log.w(TAG, "ثبت نتیجه‌ی آنلاین انجام نشد", e)
+            false
         }
     }
 
-    /** جدول رتبه‌بندی برای بخش پز دادن */
+    /** آمار خودِ کاربر به تفکیک بازی */
+    suspend fun myStats(): CloudResult<List<CloudGameStat>> {
+        val c = Cloud.client ?: return CloudResult.Failed("بخش آنلاین فعال نیست")
+        val userId = AccountRepository.currentUserId() ?: return CloudResult.Ok(emptyList())
+        return try {
+            val rows = c.from("game_stats")
+                .select(Columns.ALL) {
+                    filter { eq("user_id", userId) }
+                    order("wins", Order.DESCENDING)
+                }
+                .decodeList<CloudGameStat>()
+            CloudResult.Ok(rows)
+        } catch (e: Exception) {
+            Log.w(TAG, "خواندن آمار کاربر شکست خورد", e)
+            CloudResult.Failed("آمار نیامد — اینترنت را چک کن")
+        }
+    }
+
+    /** برترین‌های یک بازی: بیشترین برد اول */
+    suspend fun gameLeaderboard(gameId: String, limit: Int = 30): CloudResult<List<GameLeaderboardRow>> {
+        val c = Cloud.client ?: return CloudResult.Failed("بخش آنلاین فعال نیست")
+        return try {
+            val rows = c.from("game_leaderboard")
+                .select(Columns.ALL) {
+                    filter { eq("game_id", gameId) }
+                    order("rank", Order.ASCENDING)
+                    limit(limit.toLong())
+                }
+                .decodeList<GameLeaderboardRow>()
+            CloudResult.Ok(rows)
+        } catch (e: Exception) {
+            Log.w(TAG, "خواندن لیدربورد شکست خورد", e)
+            CloudResult.Failed("جدول رتبه‌بندی نیامد — اینترنت را چک کن")
+        }
+    }
+
+    /** جدول کلی همه‌ی بازی‌ها */
     suspend fun leaderboard(limit: Int = 50): CloudResult<List<LeaderboardRow>> {
         val c = Cloud.client ?: return CloudResult.Failed("بخش آنلاین فعال نیست")
         return try {
             val rows = c.from("leaderboard")
                 .select(Columns.ALL) {
-                    order("total_wins", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                    order("total_wins", Order.DESCENDING)
                     limit(limit.toLong())
                 }
                 .decodeList<LeaderboardRow>()

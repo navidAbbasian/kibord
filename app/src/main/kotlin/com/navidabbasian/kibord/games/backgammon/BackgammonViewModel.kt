@@ -1,6 +1,7 @@
 package com.navidabbasian.kibord.games.backgammon
 
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.analytics.Analytics
@@ -15,6 +16,9 @@ import com.navidabbasian.kibord.core.net.online.OnlineRooms
 import com.navidabbasian.kibord.core.net.online.OnlineSessionStore
 import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.games.backgammon.engine.BgEngine
+import com.navidabbasian.kibord.games.backgammon.engine.BgGameEnd
+import com.navidabbasian.kibord.games.backgammon.engine.BgMatch
+import com.navidabbasian.kibord.games.backgammon.engine.BgMatchRules
 import com.navidabbasian.kibord.games.backgammon.engine.BgMove
 import com.navidabbasian.kibord.games.backgammon.engine.BgMoveGenerator
 import com.navidabbasian.kibord.games.backgammon.engine.BgPhase
@@ -37,6 +41,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /** مرحله‌های صفحه‌ای بازی تخته‌نرد */
@@ -46,7 +53,16 @@ enum class BgStage { VariantSelect, ModeSelect, NetEntry, NetJoin, NetLobby, Pla
 enum class BgNetRole { NONE, HOST, CLIENT }
 
 /** رویدادهای صوتی که رابط کاربری به صدای مناسب ترجمه می‌کند */
-enum class BgSoundEvent { DICE, MOVE, HIT, BEAR_OFF, SKIP, WIN }
+enum class BgSoundEvent { DICE, MOVE, HIT, BEAR_OFF, SKIP, WIN, DOUBLE, CHAT, TIMEOUT }
+
+/** حباب چت سریع بالای آواتار یک بازیکن — شناسه برای محو خودکار بعد از چند ثانیه */
+data class BgChatBubble(val text: String, val id: Int)
+
+/** گزینه‌های طول مسابقه در صفحه‌ی تنظیم */
+val BG_MATCH_LENGTHS = listOf(1, 3, 5, 7)
+
+/** گزینه‌های ساعت هر بازیکن (دقیقه) — صفر یعنی بدون ساعت */
+val BG_CLOCK_MINUTES = listOf(0, 2, 5, 10)
 
 /**
  * وضعیت رابط کاربری تخته‌نرد — مبدأ و مقصدهای مجاز به شماره‌ی مطلق صفحه
@@ -95,8 +111,65 @@ data class BgUiState(
     val hostAway: Boolean = false,
     /** مهمان دارد دوباره به همان اتاق وصل می‌شود */
     val reconnecting: Boolean = false,
+
+    // ---- مسابقه، مکعب، ساعت، چت ----
+    /** وضعیت مسابقه‌ی جاری: امتیازها، مکعب دوبل، کرافورد و بانک ساعت‌ها */
+    val match: BgMatch = BgMatch(),
+    /** زمانِ این گوشی (elapsedRealtime) در لحظه‌ای که بانک ساعت‌ها آخرین بار تسویه شد */
+    val clockStampMs: Long = 0L,
+    /** انتخاب صفحه‌ی تنظیم: مسابقه تا چند امتیاز؟ */
+    val matchLength: Int = 1,
+    /** انتخاب صفحه‌ی تنظیم: ساعت هر بازیکن به دقیقه (صفر = بدون ساعت) */
+    val clockMinutes: Int = 0,
+    /** حباب‌های چت سریعِ زنده — هر بازیکن حداکثر یکی */
+    val chatBubbles: Map<BgPlayer, BgChatBubble> = emptyMap(),
+    /** پنل چت سریع باز است؟ */
+    val chatOpen: Boolean = false,
 ) {
     val isNetPlay: Boolean get() = netRole != BgNetRole.NONE
+
+    /** دست تمام شده ولی مسابقه ادامه دارد — پرده‌ی «دست بعدی» */
+    val gameOverMatchContinues: Boolean
+        get() = game?.phase == BgPhase.FINISHED && match.matchWinner == null
+
+    /** مسابقه تمام شده — صفحه‌ی برنده‌ی نهایی */
+    val matchOver: Boolean
+        get() = game?.phase == BgPhase.FINISHED && match.matchWinner != null
+
+    /** آیا «این گوشی» باید به پیشنهاد دوبل جواب بدهد؟ */
+    val mustAnswerDouble: Boolean
+        get() {
+            val offerer = match.doubleOfferedBy ?: return false
+            return !isNetPlay || myPlayer == offerer.opponent
+        }
+
+    /** آیا بازیکنِ نوبت همین حالا (پیش از تاس) می‌تواند دوبل کند؟ */
+    val canOfferDouble: Boolean
+        get() {
+            val g = game ?: return false
+            val p = g.turn ?: return false
+            return g.phase == BgPhase.ROLLING && isMyTurn && BgMatchRules.canDouble(match, p)
+        }
+
+    /**
+     * اتصال سالم است؟ ساعت‌ها فقط در این حالت می‌دوند: محلی همیشه؛ میزبان وقتی
+     * مهمان وصل است؛ مهمان وقتی نه ارتباط قطع شده و نه میزبان غایب است.
+     */
+    val roomHealthy: Boolean
+        get() = when (netRole) {
+            BgNetRole.NONE -> true
+            BgNetRole.HOST -> room.guestConnected
+            BgNetRole.CLIENT -> !lostConnection && !hostAway
+        }
+
+    /** ساعت‌ها باید این لحظه کم شوند؟ */
+    val clocksTicking: Boolean
+        get() = match.hasClocks && match.clockRunning != null && stage == BgStage.Playing &&
+            game?.phase != BgPhase.FINISHED && game?.phase != BgPhase.OPENING_ROLL && roomHealthy
+
+    /** زمان باقی‌مانده‌ی نمایشیِ یک بازیکن در لحظه‌ی [nowMs] (elapsedRealtime این گوشی) */
+    fun clockRemaining(p: BgPlayer, nowMs: Long): Long =
+        if (clocksTicking) BgMatchRules.remainingNow(match, p, nowMs - clockStampMs) else match.clock(p)
 
     /** مهره‌های من در بازی شبکه‌ای — میزبان سفید، مهمان سیاه */
     val myPlayer: BgPlayer?
@@ -175,14 +248,37 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         val e = BgEngine(BgRules.of(variant))
         engine = e
         currentMoves = emptyList()
-        Analytics.gameSetup("variant" to variant.analyticsName, "net" to "local")
+        val st = _uiState.value
+        Analytics.gameSetup(
+            "variant" to variant.analyticsName,
+            "net" to "local",
+            "match_len" to st.matchLength,
+            "clock_min" to st.clockMinutes,
+        )
         _uiState.value = BgUiState(
             stage = BgStage.Playing,
             variant = variant,
             game = e.createGame(),
-            myName = _uiState.value.myName,
-            resumable = _uiState.value.resumable,
+            myName = st.myName,
+            resumable = st.resumable,
+            matchLength = st.matchLength,
+            clockMinutes = st.clockMinutes,
+            match = BgMatchRules.newMatch(st.matchLength, st.clockMinutes * 60_000L),
+            clockStampMs = SystemClock.elapsedRealtime(),
         )
+        startClockTicker()
+    }
+
+    /** صفحه‌ی تنظیم: مسابقه تا چند امتیاز؟ (۱ = تک‌دست) */
+    fun setMatchLength(length: Int) {
+        if (length !in BG_MATCH_LENGTHS) return
+        _uiState.value = _uiState.value.copy(matchLength = length)
+    }
+
+    /** صفحه‌ی تنظیم: ساعت هر بازیکن به دقیقه (صفر = بدون ساعت) */
+    fun setClockMinutes(minutes: Int) {
+        if (minutes !in BG_CLOCK_MINUTES) return
+        _uiState.value = _uiState.value.copy(clockMinutes = minutes)
     }
 
     /** بازی شبکه‌ای — برو به صفحه‌ی اسم و میزبان/مهمان */
@@ -349,8 +445,15 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
                 offIsDest = false,
                 lostConnection = false,
                 hostAway = false,
+                match = room.match,
+                matchLength = room.match.length,
+                clockMinutes = (room.match.clockTotalMs / 60_000L).toInt(),
+                clockStampMs = SystemClock.elapsedRealtime(),
+                chatBubbles = emptyMap(),
+                chatOpen = false,
             )
             refreshMoves()
+            startClockTicker()
         } else {
             // وضعیت خوانا نبود: لابیِ تازه با همان کد
             val variant = before.variant ?: BgVariant.STANDARD
@@ -495,12 +598,14 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         engine = e
         currentMoves = emptyList()
         rematchCount = 0
-        _uiState.value = _uiState.value.copy(
+        val st = _uiState.value
+        val match = BgMatchRules.newMatch(st.matchLength, st.clockMinutes * 60_000L)
+        _uiState.value = st.copy(
             stage = BgStage.NetLobby,
             netRole = BgNetRole.HOST,
             myName = name,
             game = e.createGame(),
-            room = BgRoomSnapshot(variant = variant, hostName = name),
+            room = BgRoomSnapshot(variant = variant, hostName = name, match = match),
             roomCode = roomCode,
             hostAddress = hostAddress,
             connecting = false,
@@ -511,7 +616,12 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             destsAbs = emptySet(),
             offIsDest = false,
             skipMessage = null,
+            match = match,
+            clockStampMs = SystemClock.elapsedRealtime(),
+            chatBubbles = emptyMap(),
+            chatOpen = false,
         )
+        startClockTicker()
     }
 
     /** بررسی ورود مهمان — تهی یعنی خوش آمدی؛ تخته‌نرد فقط یک مهمان دارد */
@@ -527,6 +637,8 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
                 Analytics.gameSetup(
                     "variant" to st.room.variant.analyticsName,
                     "net" to if (st.onlineMode) "online" else "lan",
+                    "match_len" to st.match.length,
+                    "clock_min" to (st.match.clockTotalMs / 60_000L).toInt(),
                 )
                 _uiState.value = _uiState.value.copy(
                     stage = BgStage.Playing,
@@ -661,8 +773,17 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** مهمان: هرچه میزبان پخش کرد، همان حقیقت است */
     private fun handleServerMessage(msg: BgMessage) {
+        if (msg is BgMessage.Chat) {
+            val st = _uiState.value
+            // پژواک پیام خودم را دوباره نشان نده — همان لحظه‌ی فرستادن نشانش دادم
+            if (msg.from.trim() == st.myName.trim()) return
+            val from = if (msg.from.trim() == st.room.guestName.trim()) st.room.guestPlayer else st.room.guestPlayer.opponent
+            showChat(from, msg.text)
+            return
+        }
         val room = (msg as? BgMessage.State)?.room ?: return
-        val before = _uiState.value.game
+        val beforeState = _uiState.value
+        val before = beforeState.game
         // وضعیت فقط از میزبانِ همین اتصال می‌آید — نقش همین‌جا قطعی می‌شود تا
         // اگر پیام وضعیت زودتر از پایان دست‌دادن برسد، ورودی‌ها قاطی نشوند
         _uiState.value = _uiState.value.copy(
@@ -675,9 +796,18 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             selectedSource = null,
             destsAbs = emptySet(),
             offIsDest = false,
+            match = room.match,
+            clockStampMs = SystemClock.elapsedRealtime(),
         )
+        startClockTicker()
         if (before?.phase != BgPhase.FINISHED && room.game?.phase == BgPhase.FINISHED) {
-            emitSound(BgSoundEvent.WIN)
+            emitSound(if (room.match.lastGameEnd == BgGameEnd.TIMEOUT) BgSoundEvent.TIMEOUT else BgSoundEvent.WIN)
+        }
+        // پیشنهاد دوبل تازه رسید؟ صدا فقط برای کسی که باید جواب بدهد
+        if (beforeState.match.doubleOfferedBy == null && room.match.doubleOfferedBy != null &&
+            room.match.doubleOfferedBy != room.guestPlayer
+        ) {
+            emitSound(BgSoundEvent.DOUBLE)
         }
         // پرتاب تازه‌ی میزبان رسید؟ (تاس نوبت یا تک‌تاس‌های شروع) → صدا و انیمیشن غلت
         val g = room.game
@@ -709,6 +839,8 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         val next = e.rollOpening(game)
         setGame(next)
         bumpRoll()
+        // نفر اول مشخص شد: ساعتِ او از همین لحظه می‌دود
+        next.turn?.let { runClockFor(it) }
         if (next.phase == BgPhase.MOVING) afterDiceReady() else pushState()
     }
 
@@ -718,15 +850,208 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         val game = st.game ?: return
         if (game.phase != BgPhase.ROLLING) return
         if (!st.isMyTurn) return
+        if (st.match.doubleOfferedBy != null) return
         if (st.netRole == BgNetRole.CLIENT) {
             // صدا و انیمیشن با رسیدن وضعیتِ تازه از میزبان کوک می‌شوند
             client?.send(BgMessage.RollRequest)
             return
         }
+        settleClocks()
         emitSound(BgSoundEvent.DICE)
         setGame(engine?.rollTurn(game) ?: return)
         bumpRoll()
         afterDiceReady()
+    }
+
+    // ================= مکعب دوبل، تسلیم، دست بعدی =================
+
+    /** پیشنهاد دوبل — فقط پیش از تاس ریختن، در نوبت خودت، با مکعب وسط یا مال خودت */
+    fun offerDouble() {
+        val st = _uiState.value
+        if (!st.canOfferDouble) return
+        val p = st.game?.turn ?: return
+        if (st.netRole == BgNetRole.CLIENT) {
+            client?.send(BgMessage.DoubleOffer)
+            return
+        }
+        doOfferDouble(p)
+    }
+
+    private fun doOfferDouble(p: BgPlayer) {
+        settleClocks()
+        val st = _uiState.value
+        val m = BgMatchRules.offerDouble(st.match, p)
+        if (m.doubleOfferedBy == null) return
+        // تا حریف تصمیم بگیرد، ساعتِ خودش می‌دود
+        _uiState.value = st.copy(match = BgMatchRules.setClockRunning(m, p.opponent))
+        emitSound(BgSoundEvent.DOUBLE)
+        pushState()
+    }
+
+    /** پاسخ به دوبل: قبول (مکعب دو برابر و مال من) یا رد (حریف دست را می‌برد) */
+    fun answerDouble(take: Boolean) {
+        val st = _uiState.value
+        if (!st.mustAnswerDouble) return
+        if (st.netRole == BgNetRole.CLIENT) {
+            client?.send(BgMessage.DoubleAnswer(take))
+            return
+        }
+        doAnswerDouble(take)
+    }
+
+    private fun doAnswerDouble(take: Boolean) {
+        settleClocks()
+        val st = _uiState.value
+        val offerer = st.match.doubleOfferedBy ?: return
+        val game = st.game ?: return
+        if (take) {
+            val m = BgMatchRules.takeDouble(st.match)
+            _uiState.value = st.copy(match = BgMatchRules.setClockRunning(m, offerer))
+            emitSound(BgSoundEvent.MOVE)
+            pushState()
+        } else {
+            val (finished, m) = BgMatchRules.dropDouble(st.match, game)
+            currentMoves = emptyList()
+            setGame(finished)
+            _uiState.value = _uiState.value.copy(match = m, skipMessage = null)
+            emitSound(BgSoundEvent.WIN)
+            pushState()
+        }
+    }
+
+    /** تسلیمِ دست جاری: محلی → بازیکنِ نوبت؛ شبکه → خودم. حریف دست را تکی با مقدار مکعب می‌برد */
+    fun resign() {
+        val st = _uiState.value
+        val game = st.game ?: return
+        if (game.phase == BgPhase.FINISHED) return
+        if (st.netRole == BgNetRole.CLIENT) {
+            client?.send(BgMessage.Resign)
+            return
+        }
+        val loser = if (st.isNetPlay) st.myPlayer else game.turn
+        doConcede(loser ?: return, BgGameEnd.RESIGN)
+    }
+
+    private fun doConcede(loser: BgPlayer, reason: BgGameEnd) {
+        settleClocks()
+        val st = _uiState.value
+        val game = st.game ?: return
+        if (game.phase == BgPhase.FINISHED) return
+        val (finished, m) = BgMatchRules.concede(st.match, game, loser, reason)
+        currentMoves = emptyList()
+        setGame(finished)
+        _uiState.value = _uiState.value.copy(match = m, skipMessage = null)
+        emitSound(if (reason == BgGameEnd.TIMEOUT) BgSoundEvent.TIMEOUT else BgSoundEvent.WIN)
+        pushState()
+    }
+
+    /** دست بعدیِ مسابقه — مهمان از میزبان می‌خواهد */
+    fun nextGame() {
+        val st = _uiState.value
+        if (!st.gameOverMatchContinues) return
+        if (st.netRole == BgNetRole.CLIENT) {
+            client?.send(BgMessage.NextGameRequest)
+            return
+        }
+        val e = engine ?: return
+        currentMoves = emptyList()
+        rematchCount++
+        _uiState.value = st.copy(
+            game = e.createGame(),
+            match = BgMatchRules.beginGame(st.match),
+            clockStampMs = SystemClock.elapsedRealtime(),
+            selectedSource = null,
+            sourcesAbs = emptySet(),
+            entryIsSource = false,
+            destsAbs = emptySet(),
+            offIsDest = false,
+            skipMessage = null,
+        )
+        pushState()
+    }
+
+    // ================= چت سریع =================
+
+    fun setChatOpen(open: Boolean) {
+        _uiState.value = _uiState.value.copy(chatOpen = open)
+    }
+
+    /** فرستادن یک پیام آماده — فقط در بازی شبکه‌ای؛ حباب همین لحظه روی گوشی خودم هم می‌آید */
+    fun sendChat(text: String) {
+        val st = _uiState.value
+        val me = st.myPlayer ?: return
+        val clean = text.trim().take(40)
+        if (clean.isBlank()) return
+        _uiState.value = _uiState.value.copy(chatOpen = false)
+        showChat(me, clean)
+        val msg = BgMessage.Chat(from = st.myName, text = clean)
+        when (st.netRole) {
+            BgNetRole.HOST -> server?.broadcast(msg)
+            BgNetRole.CLIENT -> client?.send(msg)
+            BgNetRole.NONE -> Unit
+        }
+    }
+
+    private var chatSeq = 0
+
+    private fun showChat(from: BgPlayer, text: String) {
+        val id = ++chatSeq
+        _uiState.value = _uiState.value.copy(
+            chatBubbles = _uiState.value.chatBubbles + (from to BgChatBubble(text, id)),
+        )
+        emitSound(BgSoundEvent.CHAT)
+        viewModelScope.launch {
+            delay(CHAT_BUBBLE_MS)
+            val cur = _uiState.value.chatBubbles
+            if (cur[from]?.id == id) {
+                _uiState.value = _uiState.value.copy(chatBubbles = cur - from)
+            }
+        }
+    }
+
+    // ================= ساعت‌ها =================
+
+    private var clockJob: Job? = null
+
+    /**
+     * تیک‌تاک ساعت: هر چند صد میلی‌ثانیه بانکِ بازیکنِ در حال اجرا تسویه می‌شود.
+     * وقتی بازی یا اتصال سالم نیست چیزی کم نمی‌شود (فقط مهر زمان جلو می‌رود).
+     * مرجعِ پایان وقت میزبان/محلی است؛ مهمان فقط برای نمایش تسویه می‌کند.
+     */
+    private fun startClockTicker() {
+        if (clockJob?.isActive == true) return
+        clockJob = viewModelScope.launch {
+            while (isActive) {
+                delay(CLOCK_TICK_MS)
+                val st = _uiState.value
+                if (!st.match.hasClocks) continue
+                if (st.stage != BgStage.Playing) continue
+                settleClocks()
+                val after = _uiState.value
+                val running = after.match.clockRunning ?: continue
+                if (after.netRole != BgNetRole.CLIENT && after.clocksTicking &&
+                    BgMatchRules.isOutOfTime(after.match, running)
+                ) {
+                    doConcede(running, BgGameEnd.TIMEOUT)
+                }
+            }
+        }
+    }
+
+    /** تسویه‌ی ساعت‌ها تا همین لحظه: اگر باید بدود کم می‌شود، وگرنه فقط مهر زمان تازه می‌شود */
+    private fun settleClocks() {
+        val st = _uiState.value
+        val now = SystemClock.elapsedRealtime()
+        if (!st.match.hasClocks) return
+        val m = if (st.clocksTicking) BgMatchRules.settleClock(st.match, now - st.clockStampMs) else st.match
+        _uiState.value = st.copy(match = m, clockStampMs = now)
+    }
+
+    /** ساعتِ این بازیکن از همین لحظه می‌دود (تهی = هیچ‌کس) */
+    private fun runClockFor(p: BgPlayer?) {
+        settleClocks()
+        val st = _uiState.value
+        _uiState.value = st.copy(match = BgMatchRules.setClockRunning(st.match, p))
     }
 
     /** لمس یک خانه‌ی مطلق صفحه: انتخاب مبدأ یا اجرای حرکت به مقصد */
@@ -798,6 +1123,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             destsAbs = emptySet(),
             offIsDest = false,
         )
+        runClockFor(game.turn?.opponent)
         pushState()
     }
 
@@ -811,14 +1137,18 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         Analytics.gameReplay()
         currentMoves = emptyList()
         rematchCount++
-        _uiState.value = _uiState.value.copy(
+        val st = _uiState.value
+        _uiState.value = st.copy(
             game = e.createGame(),
+            match = BgMatchRules.newMatch(st.match.length, st.match.clockTotalMs),
+            clockStampMs = SystemClock.elapsedRealtime(),
             selectedSource = null,
             sourcesAbs = emptySet(),
             entryIsSource = false,
             destsAbs = emptySet(),
             offIsDest = false,
             skipMessage = null,
+            chatBubbles = emptyMap(),
         )
         pushState()
     }
@@ -830,12 +1160,16 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         // (بازی محلی یا وای‌فای به اتاقِ نیمه‌کاره‌ی قبلی دست نمی‌زند)
         val leavingOnline = st.isNetPlay && st.onlineMode
         stopNetworking()
+        clockJob?.cancel()
+        clockJob = null
         engine = null
         currentMoves = emptyList()
         if (leavingOnline) OnlineSessionStore.clear(getApplication())
         _uiState.value = BgUiState(
             myName = st.myName,
             resumable = if (leavingOnline) null else st.resumable,
+            matchLength = st.matchLength,
+            clockMinutes = st.clockMinutes,
         )
     }
 
@@ -850,12 +1184,41 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         val guest = st.room.guestPlayer
         when (msg) {
             is BgMessage.RollRequest -> {
-                if (game.phase == BgPhase.ROLLING && game.turn == guest) {
+                if (game.phase == BgPhase.ROLLING && game.turn == guest && st.match.doubleOfferedBy == null) {
+                    settleClocks()
                     emitSound(BgSoundEvent.DICE)
                     setGame(engine?.rollTurn(game) ?: return)
                     bumpRoll()
                     afterDiceReady()
                 }
+            }
+
+            is BgMessage.DoubleOffer -> {
+                if (game.phase == BgPhase.ROLLING && game.turn == guest &&
+                    BgMatchRules.canDouble(st.match, guest)
+                ) {
+                    doOfferDouble(guest)
+                }
+            }
+
+            is BgMessage.DoubleAnswer -> {
+                if (st.match.doubleOfferedBy == guest.opponent) doAnswerDouble(msg.take)
+            }
+
+            is BgMessage.Resign -> {
+                if (game.phase != BgPhase.FINISHED) doConcede(guest, BgGameEnd.RESIGN)
+            }
+
+            is BgMessage.NextGameRequest -> {
+                if (st.gameOverMatchContinues) nextGame()
+            }
+
+            is BgMessage.Chat -> {
+                val clean = msg.text.trim().take(40)
+                if (clean.isBlank()) return
+                showChat(guest, clean)
+                // بازپخش با همان فرستنده؛ خودِ مهمان پژواکش را نادیده می‌گیرد
+                server?.broadcast(BgMessage.Chat(from = playerName, text = clean))
             }
 
             is BgMessage.MoveRequest -> {
@@ -879,12 +1242,13 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
                         destsAbs = emptySet(),
                         offIsDest = false,
                     )
+                    runClockFor(guest.opponent)
                     pushState()
                 }
             }
 
             is BgMessage.RematchRequest -> {
-                if (game.phase == BgPhase.FINISHED) playAgain()
+                if (st.matchOver) playAgain()
             }
 
             else -> Unit
@@ -902,12 +1266,15 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             hostName = st.myName,
             skipMessage = st.skipMessage,
             rematchCount = rematchCount,
+            match = st.match,
         )
     }
 
     /** اگر میزبانیم، وضعیت تازه برای مهمان پخش می‌شود (و در اینترنتی روی دیسک هم می‌ماند) */
     private fun pushState() {
         if (_uiState.value.netRole != BgNetRole.HOST) return
+        // بانک ساعت‌ها تا همین لحظه تسویه می‌شود تا عکسِ پخش‌شده تازه باشد
+        settleClocks()
         server?.broadcast(BgMessage.State(roomSnapshot()))
         persistHostState()
     }
@@ -1014,6 +1381,11 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         setGame(next)
         if (next.phase == BgPhase.FINISHED) {
             currentMoves = emptyList()
+            settleClocks()
+            val winner = next.winner ?: game.turn!!
+            _uiState.value = _uiState.value.copy(
+                match = BgMatchRules.recordGameResult(_uiState.value.match, winner, next.resultScore),
+            )
             pushState()
             return
         }
@@ -1021,6 +1393,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             // همه‌ی تاس‌ها مصرف شد — نوبت خودکار عوض می‌شود
             currentMoves = emptyList()
             setGame(e.endTurn(next))
+            runClockFor(game.turn?.opponent)
             refreshMoves()
             pushState()
             return
@@ -1055,6 +1428,12 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
     companion object {
         /** شناسه‌ی بازی در حافظه‌ی اتاق‌های اینترنتی */
         const val GAME_ID = "backgammon"
+
+        /** فاصله‌ی تیک ساعت‌ها */
+        const val CLOCK_TICK_MS = 250L
+
+        /** حباب چت چند میلی‌ثانیه می‌ماند */
+        const val CHAT_BUBBLE_MS = 3000L
     }
 }
 

@@ -1,5 +1,6 @@
 package com.navidabbasian.kibord.games.backgammon.net
 
+import com.navidabbasian.kibord.games.backgammon.engine.BgMatch
 import com.navidabbasian.kibord.games.backgammon.engine.BgMove
 import com.navidabbasian.kibord.games.backgammon.engine.BgPlayer
 import com.navidabbasian.kibord.games.backgammon.engine.BgState
@@ -27,6 +28,8 @@ data class BgRoomSnapshot(
     val skipMessage: String? = null,
     /** شمارنده‌ی دست‌ها — با هر «دوباره بازی» یکی بالا می‌رود */
     val rematchCount: Int = 0,
+    /** مسابقه: طول، امتیازها، مکعب دوبل، کرافورد و بانک ساعت‌ها (مرجع: میزبان) */
+    val match: BgMatch = BgMatch(),
 )
 
 /**
@@ -74,6 +77,34 @@ sealed class BgMessage {
     @Serializable
     @SerialName("rematch")
     data object RematchRequest : BgMessage()
+
+    /** مهمان: «دست بعدیِ مسابقه رو شروع کن» — فقط وقتی دست تمام شده و مسابقه ادامه دارد */
+    @Serializable
+    @SerialName("next")
+    data object NextGameRequest : BgMessage()
+
+    /** مهمان: پیشنهاد دوبل — میزبان با قواعد مسابقه می‌سنجد */
+    @Serializable
+    @SerialName("dbl")
+    data object DoubleOffer : BgMessage()
+
+    /** مهمان: پاسخ به دوبلِ میزبان — قبول یا رد */
+    @Serializable
+    @SerialName("dblans")
+    data class DoubleAnswer(val take: Boolean) : BgMessage()
+
+    /** مهمان: تسلیمِ دستِ جاری (حریف دست را تکی با مقدار مکعب می‌برد) */
+    @Serializable
+    @SerialName("resign")
+    data object Resign : BgMessage()
+
+    /**
+     * چت سریع: از مهمان به میزبان یا از میزبان به همه. میزبان پیام مهمان را
+     * با همان فرستنده برای همه بازپخش می‌کند تا هر دو گوشی حبابش را ببینند.
+     */
+    @Serializable
+    @SerialName("chat")
+    data class Chat(val from: String, val text: String) : BgMessage()
 }
 
 val bgJson = Json {

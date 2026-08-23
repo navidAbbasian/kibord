@@ -1,12 +1,6 @@
 package com.navidabbasian.kibord.games.backgammon
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,13 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -79,17 +67,13 @@ import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.backgammon.engine.BgMove
+import com.navidabbasian.kibord.games.backgammon.engine.BgGameEnd
+import com.navidabbasian.kibord.games.backgammon.engine.BgMatch
 import com.navidabbasian.kibord.games.backgammon.engine.BgPhase
 import com.navidabbasian.kibord.games.backgammon.engine.BgPlayer
 import com.navidabbasian.kibord.games.backgammon.engine.BgState
 import com.navidabbasian.kibord.games.backgammon.engine.BgVariant
-import com.navidabbasian.kibord.games.backgammon.engine.relToAbs
 import com.navidabbasian.kibord.games.backgammon.net.BgDiscoveredGame
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.sin
-import kotlin.random.Random
 
 /** اسم فارسی هر روش برای تیترها و لابی */
 private fun variantName(v: BgVariant?): String = when (v) {
@@ -103,6 +87,18 @@ private fun resultName(score: Int): String = when (score) {
     3 -> "مارس کامل"
     2 -> "مارس"
     else -> "تکی"
+}
+
+/** شرح پایان یک دست: چطور تمام شد و چند امتیاز داشت */
+private fun bgGameEndLabel(match: BgMatch, game: BgState): String {
+    val points = if (match.lastGamePoints > 0) match.lastGamePoints else game.resultScore
+    val how = when (match.lastGameEnd) {
+        BgGameEnd.DROP -> "حریف دوبل رو رد کرد"
+        BgGameEnd.RESIGN -> "حریف تسلیم شد"
+        BgGameEnd.TIMEOUT -> "وقت حریف تموم شد"
+        BgGameEnd.BEAR_OFF -> resultName(game.resultScore)
+    }
+    return "$how (${points.toPersianDigits()} امتیاز)"
 }
 
 /** ریشه‌ی بازی تخته‌نرد — سه روش؛ روی یک گوشی، شبکه‌ی محلی یا اینترنتی */
@@ -134,6 +130,15 @@ fun BackgammonGame(
                     sound?.playGameOver()
                     sound?.vibrate(200)
                 }
+                BgSoundEvent.DOUBLE -> {
+                    sound?.playTurnStart()
+                    sound?.vibrate(60)
+                }
+                BgSoundEvent.CHAT -> sound?.playButtonClick()
+                BgSoundEvent.TIMEOUT -> {
+                    sound?.playTimerEnd()
+                    sound?.vibrate(150)
+                }
             }
         }
     }
@@ -152,7 +157,7 @@ fun BackgammonGame(
             onDismiss = { pendingExit = null },
         )
         val game = state.game
-        PhaseTransition(key = state.stage to (game?.phase == BgPhase.FINISHED)) {
+        PhaseTransition(key = state.stage to state.matchOver) {
             when (state.stage) {
                 BgStage.VariantSelect -> {
                     BackHandler { onExitToHub() }
@@ -167,7 +172,9 @@ fun BackgammonGame(
                 BgStage.ModeSelect -> {
                     BackHandler { viewModel.backFromModeSelect() }
                     BgModeSelectScreen(
-                        variant = state.variant,
+                        state = state,
+                        onMatchLength = viewModel::setMatchLength,
+                        onClockMinutes = viewModel::setClockMinutes,
                         onLocal = viewModel::chooseLocalMode,
                         onNetwork = viewModel::chooseNetworkMode,
                     )
@@ -207,7 +214,8 @@ fun BackgammonGame(
                 BgStage.Playing -> when {
                     game == null -> Unit
 
-                    game.phase == BgPhase.FINISHED -> {
+                    // مسابقه واقعاً تمام شد — صفحه‌ی برنده‌ی نهایی با امتیاز مسابقه
+                    state.matchOver -> {
                         BackHandler { leaveAndExit() }
                         BgWinnerScreen(
                             state = state,
@@ -217,9 +225,15 @@ fun BackgammonGame(
                         )
                     }
 
+                    // وسط بازی، یا دست تمام شده و پرده‌ی «دست بعدی» روی همین صفحه است
                     else -> {
                         BackHandler { pendingExit = { leaveAndExit() } }
-                        BgPlayScreen(state = state, game = game, viewModel = viewModel)
+                        BgPlayScreen(
+                            state = state,
+                            game = game,
+                            viewModel = viewModel,
+                            onRequestExit = { pendingExit = { leaveAndExit() } },
+                        )
                     }
                 }
             }
@@ -495,10 +509,12 @@ private fun BgHostAwayBanner() {
     }
 }
 
-/** انتخاب راه بازی: دو نفر روی همین گوشی یا دو گوشی روی شبکه */
+/** انتخاب راه بازی و تنظیم مسابقه: طول مسابقه، ساعت، و همین گوشی یا شبکه */
 @Composable
 private fun BgModeSelectScreen(
-    variant: BgVariant?,
+    state: BgUiState,
+    onMatchLength: (Int) -> Unit,
+    onClockMinutes: (Int) -> Unit,
     onLocal: () -> Unit,
     onNetwork: () -> Unit,
 ) {
@@ -506,21 +522,42 @@ private fun BgModeSelectScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-        BobbingEmoji(emoji = "🎲", fontSize = 56.sp)
-        Spacer(modifier = Modifier.height(12.dp))
-        StickerTitle(text = variantName(variant), fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(28.dp))
+        BobbingEmoji(emoji = "🎲", fontSize = 52.sp)
         Spacer(modifier = Modifier.height(10.dp))
+        StickerTitle(text = variantName(state.variant), fontSize = 26.sp)
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // ---- مسابقه تا چند امتیاز؟ ----
+        BgOptionChips(
+            title = "تا چند امتیاز؟",
+            options = BG_MATCH_LENGTHS,
+            selected = state.matchLength,
+            label = { if (it == 1) "تک‌دست" else it.toPersianDigits() },
+            onSelect = onMatchLength,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        // ---- ساعت هر بازیکن ----
+        BgOptionChips(
+            title = "زمان هر بازیکن",
+            options = BG_CLOCK_MINUTES,
+            selected = state.clockMinutes,
+            label = { if (it == 0) "بدون ساعت" else "${it.toPersianDigits()} دقیقه" },
+            onSelect = onClockMinutes,
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
         Text(
             text = "چطوری بازی می‌کنید؟",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(34.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(26.dp, Alignment.CenterHorizontally),
@@ -545,6 +582,58 @@ private fun BgModeSelectScreen(
                 modifier = Modifier.offset(y = 26.dp),
                 onClick = onNetwork,
             )
+        }
+        Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+/** یک ردیف گزینه‌ی چیپی: عنوان و چند انتخاب که یکی روشن است */
+@Composable
+private fun BgOptionChips(
+    title: String,
+    options: List<Int>,
+    selected: Int,
+    label: (Int) -> String,
+    onSelect: (Int) -> Unit,
+) {
+    val sound = LocalSoundManager.current
+    val accent = LocalGameAccent.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { opt ->
+                val on = opt == selected
+                Text(
+                    text = label(opt),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    color = if (on) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .background(
+                            if (on) accent else kiExtras.glassStrong,
+                            RoundedCornerShape(14.dp),
+                        )
+                        .border(
+                            1.dp,
+                            if (on) accent else kiExtras.glassBorder,
+                            RoundedCornerShape(14.dp),
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            sound?.playButtonClick()
+                            onSelect(opt)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                )
+            }
         }
     }
 }
@@ -945,375 +1034,6 @@ private fun BgNetLobbyScreen(state: BgUiState) {
     }
 }
 
-/** صفحه‌ی اصلی بازی: نشان نوبت، صفحه‌ی تخته، تاس‌ها و پیام‌ها */
-@Composable
-private fun BgPlayScreen(
-    state: BgUiState,
-    game: BgState,
-    viewModel: BackgammonViewModel,
-) {
-    val teamColors = kiExtras.teamColors
-    val whiteColor = teamColors.getOrElse(0) { Color(0xFFF2E9DC) }
-    val blackColor = teamColors.getOrElse(1) { Color(0xFF54423A) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // ---- نشان بازیکن‌ها و نوبت ----
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BgPlayerChip(
-                player = BgPlayer.WHITE,
-                color = whiteColor,
-                state = state,
-                game = game,
-                isTurn = game.turn == BgPlayer.WHITE && game.phase != BgPhase.OPENING_ROLL,
-            )
-            BgPlayerChip(
-                player = BgPlayer.BLACK,
-                color = blackColor,
-                state = state,
-                game = game,
-                isTurn = game.turn == BgPlayer.BLACK && game.phase != BgPhase.OPENING_ROLL,
-            )
-        }
-
-        // حریفِ شبکه‌ای وسط بازی رفت — میزبان خبردار می‌شود
-        if (state.netRole == BgNetRole.HOST && state.room.guestName.isNotBlank() && !state.room.guestConnected) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "📴 ارتباط حریف قطع شد — اگه با همون اسم برگرده، بازی ادامه پیدا می‌کنه",
-                style = MaterialTheme.typography.labelMedium,
-                color = kiExtras.danger,
-                textAlign = TextAlign.Center,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // ---- صفحه‌ی تخته ----
-        BackgammonBoard(
-            state = game,
-            sourcesAbs = state.sourcesAbs,
-            selectedAbs = state.selectedSource?.let { sel ->
-                if (sel == BgMove.ENTRY) null else game.turn?.let { relToAbs(it, sel) }
-            },
-            destsAbs = state.destsAbs,
-            offIsDest = state.offIsDest,
-            whiteColor = whiteColor,
-            blackColor = blackColor,
-            onTapPoint = viewModel::tapPoint,
-            onTapEntry = viewModel::tapEntry,
-            onTapOff = viewModel::tapOff,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // ---- ناحیه‌ی تاس و پیام ----
-        when {
-            state.skipMessage != null -> {
-                GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = if (state.isNetPlay && !state.isMyTurn) {
-                                "${state.displayName(game.turn ?: BgPlayer.WHITE)} حرکتی نداره — نوبتش می‌سوزه"
-                            } else {
-                                state.skipMessage
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center,
-                        )
-                        if (state.isMyTurn) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            KButton(text = "باشه، نوبت بعدی", onClick = viewModel::confirmSkip)
-                        }
-                    }
-                }
-            }
-
-            game.phase == BgPhase.OPENING_ROLL -> BgOpeningArea(state, game, viewModel)
-
-            game.phase == BgPhase.ROLLING -> {
-                val turnName = state.displayName(game.turn ?: BgPlayer.WHITE)
-                if (state.isMyTurn) {
-                    Text(
-                        text = if (state.isNetPlay) "نوبت توئه — تاس بریز!" else "نوبت $turnName — تاس بریز!",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    KButton(text = "تاس بریز 🎲", onClick = viewModel::rollDice)
-                } else {
-                    BgWaitingHint(text = "منتظر تاسِ $turnName…")
-                }
-            }
-
-            game.phase == BgPhase.MOVING -> {
-                BgDiceRow(dice = game.dice, remaining = game.remainingDice, rollKey = state.rollNonce)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = when {
-                        state.isNetPlay && !state.isMyTurn ->
-                            "${state.displayName(game.turn ?: BgPlayer.WHITE)} داره حرکت می‌کنه…"
-                        state.entryIsSource -> "باید مهره وارد کنی — یه خونه‌ی سبز رو لمس کن"
-                        else -> "یه مهره‌ت رو انتخاب کن، بعد خونه‌ی سبز رو بزن"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-/** انتظار نرم برای حریف شبکه‌ای */
-@Composable
-private fun BgWaitingHint(text: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.breathing(intensity = 0.05f, periodMs = 1800)) {
-            Text(text = "⏳", fontSize = 26.sp)
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/** ناحیه‌ی پرتاب شروع: هر بازیکن یک تاس؛ مساوی یعنی تکرار — در شبکه دست میزبان است */
-@Composable
-private fun BgOpeningArea(state: BgUiState, game: BgState, viewModel: BackgammonViewModel) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        val w = game.openingDieWhite
-        val b = game.openingDieBlack
-        if (w != null && b != null) {
-            BgDiceRow(dice = listOf(w, b), remaining = null, rollKey = state.rollNonce)
-            Spacer(modifier = Modifier.height(4.dp))
-            // چیدمان راست‌به‌چپ: تاس اول (سفید) سمت راست می‌افتد
-            Text(
-                text = "راست: ${state.displayName(BgPlayer.WHITE)} — چپ: ${state.displayName(BgPlayer.BLACK)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        val message = when {
-            game.openingTie -> "مساوی شد! دوباره تاس بریزید"
-            else -> "هر بازیکن یه تاس می‌ندازه — بالاتر شروع می‌کنه"
-        }
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        if (state.netRole == BgNetRole.CLIENT) {
-            BgWaitingHint(text = "میزبان تاس شروع رو می‌ندازه…")
-        } else {
-            KButton(text = "تاس بریز 🎲", onClick = viewModel::rollOpening)
-        }
-    }
-}
-
-/** نشان یک بازیکن: رنگ، اسم، مهره‌های بیرون و بار و خارج‌شده */
-@Composable
-private fun BgPlayerChip(
-    player: BgPlayer,
-    color: Color,
-    state: BgUiState,
-    game: BgState,
-    isTurn: Boolean,
-) {
-    GlassCard(strong = isTurn, cornerRadius = 18.dp) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .background(color, CircleShape),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                val youBadge = if (state.isNetPlay && state.myPlayer == player) " (تو)" else ""
-                Text(
-                    text = state.displayName(player) + youBadge + if (isTurn) " — نوبتشه" else "",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isTurn) FontWeight.Bold else FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            val parts = buildList {
-                if (game.offBoard(player) > 0) add("بیرون: ${game.offBoard(player).toPersianDigits()}")
-                if (game.bar(player) > 0) add("بار: ${game.bar(player).toPersianDigits()}")
-                add("خارج‌شده: ${game.borneOff(player).toPersianDigits()}")
-            }
-            Text(
-                text = parts.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/** موقعیت خال‌های هر وجه تاس در مختصات واحد ۰ تا ۱ */
-private fun pipPositions(value: Int): List<Offset> {
-    val c = Offset(0.5f, 0.5f)
-    val tl = Offset(0.27f, 0.27f)
-    val tr = Offset(0.73f, 0.27f)
-    val bl = Offset(0.27f, 0.73f)
-    val br = Offset(0.73f, 0.73f)
-    val ml = Offset(0.27f, 0.5f)
-    val mr = Offset(0.73f, 0.5f)
-    return when (value) {
-        1 -> listOf(c)
-        2 -> listOf(tl, br)
-        3 -> listOf(tl, c, br)
-        4 -> listOf(tl, tr, bl, br)
-        5 -> listOf(tl, tr, c, bl, br)
-        else -> listOf(tl, tr, ml, mr, bl, br)
-    }
-}
-
-/**
- * ردیف تاس‌ها با انیمیشن غلت خوردن: با هر پرتاب تازه (rollKey عوض می‌شود)
- * وجه‌ها تند عوض می‌شوند، تاس می‌چرخد و بالا می‌پرد و آخرش فنری روی
- * عدد واقعی می‌نشیند — روی گوشی مهمان هم با رسیدن وضعیت میزبان اجرا می‌شود.
- * جفت چهار تاس نشان می‌دهد و مصرف‌شده‌ها کم‌رنگ می‌شوند (remaining تهی = بدون کم‌رنگی).
- */
-@Composable
-private fun BgDiceRow(dice: List<Int>, remaining: List<Int>?, rollKey: Int) {
-    if (dice.isEmpty()) return
-    // چهارتایی‌شدن جفت فقط مال تاس نوبت است؛ تساویِ پرتاب شروع (remaining تهی) دو تاس می‌ماند
-    val faces = if (remaining != null && dice.size == 2 && dice[0] == dice[1]) List(4) { dice[0] } else dice
-    var flash by remember { mutableStateOf<List<Int>?>(null) }
-    val progress = remember { Animatable(1f) }
-    val bounce = remember { Animatable(1f) }
-    LaunchedEffect(rollKey) {
-        progress.snapTo(0f)
-        bounce.snapTo(1f)
-        // در حین غلت، وجه‌ها هر چند فریم یک عدد شانسی نشان می‌دهند
-        val flashJob = launch {
-            while (progress.value < 0.8f) {
-                flash = List(6) { Random.nextInt(1, 7) }
-                delay(70)
-            }
-        }
-        progress.animateTo(1f, animationSpec = tween(650, easing = FastOutSlowInEasing))
-        flashJob.cancel()
-        flash = null
-        // فرود فنری روی عدد واقعی
-        bounce.snapTo(1.18f)
-        bounce.animateTo(1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = Spring.StiffnessMedium))
-    }
-    val p = progress.value
-    val tumbling = p < 1f
-    val remainingPool = remaining?.toMutableList()
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        faces.forEachIndexed { i, value ->
-            val used = remainingPool != null && !remainingPool.remove(value)
-            val dir = if (i % 2 == 0) 1f else -1f
-            val shown = if (tumbling) flash?.getOrNull(i % 6) ?: value else value
-            BgDie3D(
-                value = shown,
-                used = used && !tumbling,
-                rotationZ = dir * (1f - p) * (1f - p) * 540f,
-                rotationX = (1f - p) * 300f * dir,
-                scale = (0.72f + 0.28f * p) * bounce.value,
-                hop = sin(p * Math.PI.toFloat()) * 26f,
-            )
-        }
-    }
-}
-
-/** یک تاس سه‌بعدی سفید با خال‌های مشکی — مثل عکس مرجع، با نور و سایه */
-@Composable
-private fun BgDie3D(
-    value: Int,
-    used: Boolean,
-    rotationZ: Float = 0f,
-    rotationX: Float = 0f,
-    scale: Float = 1f,
-    hop: Float = 0f,
-) {
-    Canvas(
-        modifier = Modifier
-            .size(54.dp)
-            .graphicsLayer {
-                this.rotationZ = rotationZ
-                this.rotationX = rotationX
-                scaleX = scale
-                scaleY = scale
-                translationY = -hop * density
-                alpha = if (used) 0.35f else 1f
-                cameraDistance = 16f * density
-            },
-    ) {
-        val s = size.minDimension
-        val body = Size(s * 0.94f, s * 0.94f)
-        val corner = CornerRadius(s * 0.22f, s * 0.22f)
-        // سایه‌ی نرم زیر تاس
-        drawRoundRect(
-            color = Color.Black.copy(alpha = 0.22f),
-            topLeft = Offset(s * 0.06f, s * 0.10f),
-            size = body,
-            cornerRadius = corner,
-        )
-        // بدنه‌ی سفید با نور از بالا-چپ
-        drawRoundRect(
-            brush = Brush.linearGradient(
-                colors = listOf(Color(0xFFFFFFFE), Color(0xFFF3F0E7), Color(0xFFD8D4C6)),
-                start = Offset.Zero,
-                end = Offset(s, s),
-            ),
-            size = body,
-            cornerRadius = corner,
-        )
-        // لبه‌ی خاکستری گرم
-        drawRoundRect(
-            color = Color(0xFFB9B5A6),
-            size = body,
-            cornerRadius = corner,
-            style = Stroke(width = s * 0.03f),
-        )
-        // خال‌های مشکی با برق ریز نور
-        pipPositions(value).forEach { pos ->
-            val cpt = Offset(pos.x * body.width, pos.y * body.height)
-            drawCircle(Color(0xFF191919), radius = s * 0.082f, center = cpt)
-            drawCircle(
-                color = Color.White.copy(alpha = 0.35f),
-                radius = s * 0.024f,
-                center = cpt + Offset(-s * 0.02f, -s * 0.02f),
-            )
-        }
-    }
-}
-
 /** صفحه‌ی برنده: نتیجه (تکی/مارس/مارس کامل)، پز دادن و بازی دوباره */
 @Composable
 private fun BgWinnerScreen(
@@ -1322,8 +1042,9 @@ private fun BgWinnerScreen(
     onPlayAgain: () -> Unit,
     onExitToHub: () -> Unit,
 ) {
-    val winner = game.winner ?: return
+    val winner = state.match.matchWinner ?: game.winner ?: return
     val winnerName = state.displayName(winner)
+    val match = state.match
     Box(modifier = Modifier.fillMaxSize()) {
         ConfettiOverlay()
         Column(
@@ -1337,14 +1058,32 @@ private fun BgWinnerScreen(
             Spacer(modifier = Modifier.height(48.dp))
             BobbingEmoji(emoji = "🏆", fontSize = 64.sp)
             Spacer(modifier = Modifier.height(12.dp))
-            StickerTitle(text = "$winnerName برد!")
+            StickerTitle(text = if (match.length > 1) "$winnerName مسابقه رو برد!" else "$winnerName برد!")
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "نتیجه: ${resultName(game.resultScore)} (${game.resultScore.toPersianDigits()} امتیاز)",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
+            if (match.length > 1) {
+                // مسابقه‌ی چندامتیازی: نتیجه‌ی کل مسابقه
+                Text(
+                    text = "نتیجه‌ی مسابقه تا ${match.length.toPersianDigits()}: " +
+                        "${match.score(winner).toPersianDigits()} – ${match.score(winner.opponent).toPersianDigits()}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "دست آخر: ${bgGameEndLabel(match, game)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                Text(
+                    text = "نتیجه: ${bgGameEndLabel(match, game)}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
             if (state.isNetPlay) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -1361,7 +1100,11 @@ private fun BgWinnerScreen(
                 gameEmoji = "🎲",
                 winnerText = winnerName,
                 scoreLines = listOf(BgPlayer.WHITE, BgPlayer.BLACK).map { p ->
-                    state.displayName(p) to "${game.borneOff(p).toPersianDigits()} مهره خارج"
+                    state.displayName(p) to if (match.length > 1) {
+                        "${match.score(p).toPersianDigits()} امتیاز"
+                    } else {
+                        "${game.borneOff(p).toPersianDigits()} مهره خارج"
+                    }
                 },
                 winnerNames = listOf(winnerName),
             )

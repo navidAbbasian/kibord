@@ -293,27 +293,31 @@ private fun DrawScope.drawBar(
             drawCircle(HingeGoldDark.darken(0.3f), radius = 1.4f.dp.toPx(), center = Offset(geo.barCx, sy))
         }
     }
-    // مهره‌های زده‌شده: سیاه بالای مرکز، سفید پایین — به سمت وسط پشته می‌شوند
+    // مهره‌های منتظر روی بار: زده‌شده‌ها + واردنشده‌های نرد هلندی (که از همین‌جا
+    // وارد می‌شوند و بعد از خورده شدن هم به همین‌جا برمی‌گردند).
+    // سیاه بالای مرکز، سفید پایین — به سمت وسط پشته می‌شوند
     val r = minOf(geo.barW * 0.44f, geo.fieldH / 14f)
-    if (state.barBlack > 0) {
-        val shown = minOf(state.barBlack, 3)
+    val blackWaiting = state.barBlack + state.offBoardBlack
+    val whiteWaiting = state.barWhite + state.offBoardWhite
+    if (blackWaiting > 0) {
+        val shown = minOf(blackWaiting, 3)
         for (i in 0 until shown) {
             drawChecker(
                 center = Offset(geo.barCx, size.height * 0.36f - i * 2f * r * 0.62f),
                 radius = r,
                 color = blackColor,
-                countLabel = if (i == shown - 1 && state.barBlack > 3) state.barBlack else 0,
+                countLabel = if (i == shown - 1 && blackWaiting > 3) blackWaiting else 0,
             )
         }
     }
-    if (state.barWhite > 0) {
-        val shown = minOf(state.barWhite, 3)
+    if (whiteWaiting > 0) {
+        val shown = minOf(whiteWaiting, 3)
         for (i in 0 until shown) {
             drawChecker(
                 center = Offset(geo.barCx, size.height * 0.64f + i * 2f * r * 0.62f),
                 radius = r,
                 color = whiteColor,
-                countLabel = if (i == shown - 1 && state.barWhite > 3) state.barWhite else 0,
+                countLabel = if (i == shown - 1 && whiteWaiting > 3) whiteWaiting else 0,
             )
         }
     }

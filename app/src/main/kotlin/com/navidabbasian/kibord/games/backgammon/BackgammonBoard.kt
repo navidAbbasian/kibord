@@ -160,8 +160,10 @@ fun BackgammonBoard(
     onTapCube: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val entrySelectable = state.phase == BgPhase.MOVING && state.turn != null &&
-        (state.bar(state.turn!!) > 0 || state.isEntering(state.turn!!))
+    // مهره‌ی زده از چوب وسط برمی‌گردد؛ واردنشده‌ی نرد هلندی از سینیِ خودش می‌آید
+    val barEntry = state.phase == BgPhase.MOVING && state.turn != null && state.bar(state.turn!!) > 0
+    val trayEntry = state.phase == BgPhase.MOVING && state.turn != null &&
+        state.bar(state.turn!!) == 0 && state.isEntering(state.turn!!)
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -171,7 +173,7 @@ fun BackgammonBoard(
                     val geo = BgBoardGeometry(Size(size.width.toFloat(), size.height.toFloat()))
                     when {
                         geo.isCube(offset.x, offset.y, cubeOwner) -> onTapCube()
-                        geo.isTray(offset.x, offset.y) -> onTapOff()
+                        geo.isTray(offset.x, offset.y) -> if (trayEntry) onTapEntry() else onTapOff()
                         geo.isBar(offset.x, offset.y) -> onTapEntry()
                         else -> geo.pointAt(offset.x, offset.y)?.let(onTapPoint)
                     }
@@ -181,9 +183,9 @@ fun BackgammonBoard(
         val geo = BgBoardGeometry(size)
         drawFrameAndField(geo)
         for (abs in 1..24) drawPointTriangle(geo, abs, destsAbs.contains(abs))
-        drawBar(geo, state, whiteColor, blackColor, entrySelectable)
+        drawBar(geo, state, whiteColor, blackColor, barEntry)
         drawPipPills(geo, state)
-        drawTrays(geo, state, offIsDest, whiteColor, blackColor)
+        drawTrays(geo, state, offIsDest, trayEntry, whiteColor, blackColor)
         drawCube(geo, cubeValue, cubeOwner, crawford, cubeGlow)
         for (abs in 1..24) {
             drawCheckers(geo, abs, state, sourcesAbs.contains(abs), selectedAbs == abs, whiteColor, blackColor)
@@ -293,12 +295,12 @@ private fun DrawScope.drawBar(
             drawCircle(HingeGoldDark.darken(0.3f), radius = 1.4f.dp.toPx(), center = Offset(geo.barCx, sy))
         }
     }
-    // مهره‌های منتظر روی بار: زده‌شده‌ها + واردنشده‌های نرد هلندی (که از همین‌جا
-    // وارد می‌شوند و بعد از خورده شدن هم به همین‌جا برمی‌گردند).
+    // فقط مهره‌های زده‌شده روی چوب وسط می‌نشینند؛ واردنشده‌های نرد هلندی
+    // در سینیِ خروجِ خودِ بازیکن منتظرند و از همان‌جا وارد می‌شوند.
     // سیاه بالای مرکز، سفید پایین — به سمت وسط پشته می‌شوند
     val r = minOf(geo.barW * 0.44f, geo.fieldH / 14f)
-    val blackWaiting = state.barBlack + state.offBoardBlack
-    val whiteWaiting = state.barWhite + state.offBoardWhite
+    val blackWaiting = state.barBlack
+    val whiteWaiting = state.barWhite
     if (blackWaiting > 0) {
         val shown = minOf(blackWaiting, 3)
         for (i in 0 until shown) {
@@ -374,6 +376,7 @@ private fun DrawScope.drawTrays(
     geo: BgBoardGeometry,
     state: BgState,
     offIsDest: Boolean,
+    trayEntry: Boolean,
     whiteColor: Color,
     blackColor: Color,
 ) {
@@ -399,6 +402,12 @@ private fun DrawScope.drawTrays(
             )
         }
         if (count > 0) {
+            // قرص تیره پشت شماره تا روی تیغه‌های سفید هم خوانا بماند
+            drawCircle(
+                color = TrayDark.copy(alpha = 0.92f),
+                radius = rect.height * 0.42f,
+                center = Offset(rect.left + rect.height * 0.42f, rect.center.y),
+            )
             val paint = android.graphics.Paint().apply {
                 this.color = android.graphics.Color.WHITE
                 textAlign = android.graphics.Paint.Align.CENTER
@@ -430,9 +439,22 @@ private fun DrawScope.drawTrays(
         }
     }
 
-    // سیاه خانه‌اش بالاست پس سینی‌اش بالایی است؛ سفید پایین
-    drawTray(geo.topTray, state.borneOffBlack, blackColor.lighten(0.12f), offIsDest && mover == BgPlayer.BLACK)
-    drawTray(geo.bottomTray, state.borneOffWhite, whiteColor, offIsDest && mover == BgPlayer.WHITE)
+    // سیاه خانه‌اش بالاست پس سینی‌اش بالایی است؛ سفید پایین.
+    // شمار سینی = خارج‌شده‌های آخر بازی + واردنشده‌های ابتدای نرد هلندی
+    // (این دو هیچ‌وقت هم‌زمان ناصفر نیستند). وقتی نوبتِ واردکردن است،
+    // سینیِ همان بازیکن مثل مبدأ طلایی می‌درخشد.
+    drawTray(
+        geo.topTray,
+        state.borneOffBlack + state.offBoardBlack,
+        blackColor.lighten(0.12f),
+        (offIsDest || trayEntry) && mover == BgPlayer.BLACK,
+    )
+    drawTray(
+        geo.bottomTray,
+        state.borneOffWhite + state.offBoardWhite,
+        whiteColor,
+        (offIsDest || trayEntry) && mover == BgPlayer.WHITE,
+    )
 }
 
 /** مکعب دوبل روی بار: وسط وقتی مال کسی نیست، سمت صاحبش وقتی گرفته شده */

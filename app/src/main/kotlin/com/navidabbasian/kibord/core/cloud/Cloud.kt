@@ -1,5 +1,6 @@
 package com.navidabbasian.kibord.core.cloud
 
+import android.util.Log
 import com.navidabbasian.kibord.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -21,6 +22,12 @@ object Cloud {
 
     val client: SupabaseClient? by lazy {
         if (!isConfigured) return@lazy null
+        // اگر ساختن کلاینت به هر دلیلی شکست بخورد، اپ فقط «آفلاین» می‌ماند —
+        // هیچ‌وقت نباید بازی را بیندازد
+        runCatching { build() }.onFailure { Log.w("Cloud", "کلاینت ابری ساخته نشد", it) }.getOrNull()
+    }
+
+    private fun build(): SupabaseClient =
         createSupabaseClient(
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY,
@@ -34,5 +41,4 @@ object Cloud {
             install(Postgrest)
             install(Realtime)
         }
-    }
 }

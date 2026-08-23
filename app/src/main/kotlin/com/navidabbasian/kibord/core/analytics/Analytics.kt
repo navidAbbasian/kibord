@@ -26,8 +26,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.CoroutineExceptionHandler
 import java.io.File
-import java.time.Instant
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 /**
@@ -54,6 +58,8 @@ object Analytics {
     /** اگر بیشتر از این در پس‌زمینه بمانیم، برگشت = نشست تازه */
     private const val NEW_SESSION_AFTER_MS = 5 * 60_000L
     private const val MAX_QUEUE = 500
+    private const val MAX_BACKOFF_MS = 5 * 60_000L
+    private const val PERSIST_DEBOUNCE_MS = 2_500L
 
     @Serializable
     private data class EventRow(
@@ -66,8 +72,49 @@ object Analytics {
     )
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * هیچ خطایی از این‌جا نباید به بازی برسد: هر استثنای جامانده فقط لاگ می‌شود.
+     * (بدون این handler، یک استثنای گرفته‌نشده داخل کوروتین کل اپ را می‌اندازد.)
+     */
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e ->
+            Log.w(TAG, "خطای بی‌صدا در گزارش‌گیری", e)
+        },
+    )
     private val lock = Mutex()
+
+    /** زمانِ ISO-8601 به وقت جهانی — بدون java.time تا روی اندروید ۵ تا ۷ هم کار کند */
+    private val tsFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    private fun nowIso(): String = synchronized(tsFormat) { tsFormat.format(Date()) }
+
+    /**
+     * عقب‌نشینی وقتی سرور در دسترس نیست (نت قطع، فیلتر، جدول نساخته…):
+     * بعد از هر شکست، فاصله‌ی تلاش بعدی دو برابر می‌شود تا سقف ۵ دقیقه.
+     */
+    private var backoffMs = 0L
+    private var retryAfter = 0L
+    private fun noteFailure() {
+        backoffMs = if (backoffMs == 0L) FLUSH_EVERY_MS else (backoffMs * 2).coerceAtMost(MAX_BACKOFF_MS)
+        retryAfter = SystemClock.elapsedRealtime() + backoffMs
+    }
+    private fun noteSuccess() { backoffMs = 0L; retryAfter = 0L }
+    private fun inBackoff() = SystemClock.elapsedRealtime() < retryAfter
+
+    /** ذخیره‌ی صف روی دیسک با تأخیر، نه به‌ازای هر رویداد */
+    private var persistJob: Job? = null
+    private var queueDirty = false
+
+    /** هر ورودیِ عمومی از این می‌گذرد: گزارش‌گیری حق ندارد بازی را خراب کند */
+    private inline fun safely(block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Throwable) {
+            Log.w(TAG, "خطای بی‌صدا در گزارش‌گیری", e)
+        }
+    }
 
     private var appContext: Context? = null
     private var deviceId: String = ""
@@ -89,8 +136,8 @@ object Analytics {
 
     // ================= چرخه‌ی حیات =================
 
-    fun init(context: Context) {
-        if (appContext != null) return
+    fun init(context: Context) = safely {
+        if (appContext != null) return@safely
         val app = context.applicationContext
         appContext = app
         optOut = GamePrefs.getBool(app, KEY_OPT_OUT, false)
@@ -105,7 +152,7 @@ object Analytics {
     fun isOptedOut(context: Context): Boolean = GamePrefs.getBool(context, KEY_OPT_OUT, false)
 
     /** کاربر از تنظیمات: ارسال آمار ناشناس روشن/خاموش */
-    fun setOptOut(context: Context, out: Boolean) {
+    fun setOptOut(context: Context, out: Boolean) = safely {
         optOut = out
         GamePrefs.setBool(context, KEY_OPT_OUT, out)
         if (out) {
@@ -118,15 +165,16 @@ object Analytics {
     }
 
     /** اپ به جلو آمد (از MainActivity.onResume) */
-    fun onForeground() {
-        if (!isEnabled) return
+    fun onForeground() = safely {
+        if (!isEnabled) return@safely
+        val app = appContext ?: return@safely
         val now = SystemClock.elapsedRealtime()
         val stale = sessionId == null || (backgroundedAt > 0 && now - backgroundedAt > NEW_SESSION_AFTER_MS)
         if (stale) {
             sessionId = UUID.randomUUID().toString()
             sessionStartedAt = now
-            track("app_open", buildJsonObject { put("first_session", GamePrefs.getBool(appContext!!, "analytics_seen", false).not()) })
-            GamePrefs.setBool(appContext!!, "analytics_seen", true)
+            track("app_open", buildJsonObject { put("first_session", GamePrefs.getBool(app, "analytics_seen", false).not()) })
+            GamePrefs.setBool(app, "analytics_seen", true)
         }
         backgroundedAt = 0L
         startHeartbeat()
@@ -134,26 +182,33 @@ object Analytics {
     }
 
     /** اپ به پس‌زمینه رفت (از MainActivity.onPause) */
-    fun onBackground() {
+    fun onBackground() = safely {
         backgroundedAt = SystemClock.elapsedRealtime()
         stopHeartbeat()
-        // آخرین شانس برای ارسال قبل از خواب
-        scope.launch { flush() }
+        // آخرین شانس برای ارسال قبل از خواب؛ و صف حتماً روی دیسک برود
+        scope.launch {
+            lock.withLock { persistQueueLocked(force = true) }
+            flush()
+        }
     }
 
     // ================= ثبت رویداد =================
 
-    fun track(name: String, props: JsonObject = JsonObject(emptyMap())) {
-        if (!isEnabled) return
-        val row = EventRow(
-            sessionId = sessionId,
-            deviceId = deviceId,
-            userId = runCatching { AccountRepository.currentUserId() }.getOrNull(),
-            name = name,
-            props = props,
-            clientTs = Instant.now().toString(),
-        )
+    fun track(name: String, props: JsonObject = JsonObject(emptyMap())) = safely {
+        if (!isEnabled) return@safely
+        val sid = sessionId
+        val ts = nowIso()
+        // هیچ کار سنگینی روی نخ رابط کاربری نه — حتی خواندن شناسه‌ی کاربر که
+        // ممکن است اولین بار کلاینت ابری را بسازد
         scope.launch {
+            val row = EventRow(
+                sessionId = sid,
+                deviceId = deviceId,
+                userId = runCatching { AccountRepository.currentUserId() }.getOrNull(),
+                name = name,
+                props = props,
+                clientTs = ts,
+            )
             val big = lock.withLock {
                 if (queue.size >= MAX_QUEUE) queue.removeAt(0)
                 queue += row
@@ -287,18 +342,20 @@ object Analytics {
     }
 
     private suspend fun flush() {
-        val client = Cloud.client ?: return
-        if (!isEnabled) return
+        if (!isEnabled || inBackoff()) return
+        val client = runCatching { Cloud.client }.getOrNull() ?: return
         val batch = lock.withLock { if (queue.isEmpty()) null else ArrayList(queue) } ?: return
         try {
             client.from("events").insert(batch)
+            noteSuccess()
             lock.withLock {
                 // فقط همان‌هایی که فرستادیم پاک می‌شوند؛ تازه‌رسیده‌ها می‌مانند
                 repeat(batch.size) { if (queue.isNotEmpty()) queue.removeAt(0) }
-                persistQueueLocked()
+                persistQueueLocked(force = true)
             }
-        } catch (e: Exception) {
-            Log.d(TAG, "ارسال رویدادها به بعد موکول شد: ${e.message}")
+        } catch (e: Throwable) {
+            noteFailure()
+            Log.d(TAG, "ارسال رویدادها به بعد موکول شد (${backoffMs / 1000}s): ${e.message}")
         }
     }
 
@@ -318,7 +375,8 @@ object Analytics {
     }
 
     private suspend fun heartbeat() {
-        val client = Cloud.client ?: return
+        if (!isEnabled || inBackoff()) return
+        val client = runCatching { Cloud.client }.getOrNull() ?: return
         val sid = sessionId ?: return
         try {
             client.postgrest.rpc(
@@ -332,7 +390,9 @@ object Analytics {
                     put("p_sdk", Build.VERSION.SDK_INT)
                 },
             )
-        } catch (e: Exception) {
+            noteSuccess()
+        } catch (e: Throwable) {
+            noteFailure()
             Log.d(TAG, "ضربان نشست نرفت: ${e.message}")
         }
     }
@@ -352,12 +412,32 @@ object Analytics {
         }
     }
 
-    /** باید داخل lock صدا زده شود */
-    private fun persistQueueLocked() {
+    /**
+     * باید داخل lock صدا زده شود. به‌طور پیش‌فرض با تأخیر می‌نویسد تا رگبارِ
+     * رویدادها دیسک را خسته نکند؛ force یعنی همین حالا (قبل از خواب/بعد از ارسال).
+     */
+    private fun persistQueueLocked(force: Boolean = false) {
+        queueDirty = true
+        if (force) {
+            persistJob?.cancel()
+            persistJob = null
+            writeQueueLocked()
+            return
+        }
+        if (persistJob?.isActive == true) return
+        persistJob = scope.launch {
+            delay(PERSIST_DEBOUNCE_MS)
+            lock.withLock { writeQueueLocked() }
+        }
+    }
+
+    private fun writeQueueLocked() {
+        if (!queueDirty) return
         val f = queueFile() ?: return
         try {
             if (queue.isEmpty()) f.delete() else f.writeText(json.encodeToString(queue))
-        } catch (_: Exception) {
+            queueDirty = false
+        } catch (_: Throwable) {
         }
     }
 }

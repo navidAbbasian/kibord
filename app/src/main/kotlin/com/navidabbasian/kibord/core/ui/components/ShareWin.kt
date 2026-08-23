@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.share.WinnerCard
 import com.navidabbasian.kibord.core.stats.GameStats
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.cloud.AccountRepository
 import com.navidabbasian.kibord.core.cloud.StatsSync
 import com.navidabbasian.kibord.core.net.online.OnlineRooms
@@ -57,6 +58,7 @@ fun ShareWinButton(
         modifier = modifier,
         onClick = {
             sound?.playButtonClick()
+            Analytics.track("share_win", "game_id" to gameId)
             WinnerCard.share(context, gameTitle, gameEmoji, winnerText, scoreLines)
         },
     )

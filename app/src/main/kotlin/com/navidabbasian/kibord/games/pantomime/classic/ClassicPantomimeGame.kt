@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
@@ -171,7 +172,7 @@ fun ClassicPantomimeGame(
                         state = state,
                         spec = viewModel.spec,
                         loserTeam = phase.loserTeam,
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()
@@ -185,7 +186,7 @@ fun ClassicPantomimeGame(
                         state = state,
                         spec = viewModel.spec,
                         winners = viewModel.winners(),
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()

@@ -186,3 +186,94 @@ create or replace view public.v_game_duration as
     from public.events
     where name = 'game_finish' and props ? 'elapsed_s'
     group by 1 order by finished_games desc;
+
+-- ═══════════════════ نماهای «هر کاربر چه می‌کند» و رفتار در همه‌ی بازی‌ها ═══════════════════
+-- رویدادها برای همه‌ی بازی‌ها (آفلاین، وای‌فای، اینترنتی) ثبت می‌شوند؛ وقتی کاربر
+-- وارد حساب باشد user_id هم می‌نشیند، پس می‌شود رفتار هر حساب را دنبال کرد.
+
+-- هر حساب: اولین/آخرین حضور، نشست‌ها، دستگاه‌ها، بازی‌ها و بازیِ محبوب
+create or replace view public.v_user_overview as
+    select p.id as user_id,
+           p.username,
+           min(s.started_at)                                   as first_seen,
+           max(s.last_seen_at)                                 as last_seen,
+           count(distinct s.id)                                as sessions,
+           count(distinct s.device_id)                         as devices,
+           (select count(*) from public.events e
+             where e.user_id = p.id and e.name = 'game_start')  as games_started,
+           (select count(*) from public.events e
+             where e.user_id = p.id and e.name = 'game_finish') as games_finished,
+           (select count(*) from public.events e
+             where e.user_id = p.id and e.name = 'game_finish'
+               and coalesce(e.props->>'mode', 'local') = 'online') as online_finished,
+           (select e.props->>'game_id' from public.events e
+             where e.user_id = p.id and e.name = 'game_start'
+             group by 1 order by count(*) desc limit 1)        as favorite_game
+    from public.profiles p
+    left join public.sessions s on s.user_id = p.id
+    group by p.id, p.username;
+
+-- هر حساب × هر بازی: شروع/پایان/رهاکردن و آخرین بار
+create or replace view public.v_user_games as
+    select e.user_id,
+           p.username,
+           e.props->>'game_id' as game_id,
+           count(*) filter (where e.name = 'game_start')   as starts,
+           count(*) filter (where e.name = 'game_finish')  as finishes,
+           count(*) filter (where e.name = 'game_abandon') as abandons,
+           count(*) filter (where e.name = 'game_finish'
+                              and coalesce(e.props->>'mode', 'local') = 'online') as online_finishes,
+           max(e.client_ts) as last_played
+    from public.events e
+    join public.profiles p on p.id = e.user_id
+    where e.name in ('game_start', 'game_finish', 'game_abandon')
+    group by 1, 2, 3;
+
+-- اندازه‌ی جمع: هر بازی معمولاً چند نفره بازی می‌شود
+create or replace view public.v_party_size as
+    select props->>'game_id'         as game_id,
+           (props->>'players')::int  as players,
+           count(*)                  as games
+    from public.events
+    where name = 'game_setup' and props ? 'players'
+    group by 1, 2 order by 1, 2;
+
+-- تنظیمات پرکاربرد هر بازی (هر کلید/مقدارِ game_setup جز شناسه و راهِ بازی)
+create or replace view public.v_setup_options as
+    select props->>'game_id' as game_id,
+           kv.key,
+           kv.value,
+           count(*) as games
+    from public.events, jsonb_each_text(props) kv
+    where name = 'game_setup' and kv.key not in ('game_id', 'mode')
+    group by 1, 2, 3 order by 1, 2, 4 desc;
+
+-- «دوباره بازی» و «پز دادن»: کدام بازی‌ها آدم‌ها را نگه می‌دارند
+create or replace view public.v_replay_rate as
+    select props->>'game_id' as game_id,
+           count(*) filter (where name = 'game_finish') as finishes,
+           count(*) filter (where name = 'game_replay') as replays,
+           round(100.0 * count(*) filter (where name = 'game_replay')
+                 / nullif(count(*) filter (where name = 'game_finish'), 0), 1) as replay_pct,
+           count(*) filter (where name = 'share_win') as shares
+    from public.events
+    where name in ('game_finish', 'game_replay', 'share_win')
+    group by 1 order by finishes desc;
+
+-- تنظیمات اپ: چند دستگاه صدا/موسیقی/لرزش/تم/آمار را چه کرده‌اند
+create or replace view public.v_app_settings as
+    select props->>'key'   as key,
+           props->>'value' as value,
+           count(distinct device_id) as devices
+    from public.events
+    where name = 'setting_change'
+    group by 1, 2 order by 1, 3 desc;
+
+-- حساب‌دار در برابر مهمان: چه‌کسی بیشتر بازی می‌کند
+create or replace view public.v_account_vs_guest as
+    select case when user_id is null then 'guest' else 'account' end as kind,
+           count(distinct device_id)                    as devices,
+           count(*) filter (where name = 'game_start')  as games_started,
+           count(*) filter (where name = 'game_finish') as games_finished
+    from public.events
+    group by 1;

@@ -115,6 +115,7 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
                 index = 0,
                 onCheckedChange = {
                     sound?.playButtonClick()
+                    Analytics.track("setting_change", "key" to "sound", "value" to it)
                     scope.launch { repo?.setSoundEnabled(it) }
                 }
             )
@@ -127,6 +128,7 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
                 index = 1,
                 onCheckedChange = {
                     sound?.playButtonClick()
+                    Analytics.track("setting_change", "key" to "music", "value" to it)
                     scope.launch { repo?.setMusicEnabled(it) }
                 }
             )
@@ -139,6 +141,7 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
                 index = 2,
                 onCheckedChange = {
                     if (it) sound?.vibrate(40)
+                    Analytics.track("setting_change", "key" to "vibration", "value" to it)
                     scope.launch { repo?.setVibrationEnabled(it) }
                 }
             )
@@ -155,6 +158,8 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
                 onCheckedChange = {
                     sound?.playButtonClick()
                     analyticsOn.value = it
+                    // آخرین رویداد قبل از خاموش شدن: تا بدانیم چند نفر خاموش می‌کنند
+                    Analytics.track("setting_change", "key" to "analytics", "value" to it)
                     Analytics.setOptOut(context, !it)
                 }
             )
@@ -192,6 +197,7 @@ fun SettingsScreen(onOpenRoute: (String) -> Unit = {}) {
                 current = themeMode,
                 onSelect = { mode ->
                     sound?.playButtonClick()
+                    Analytics.track("setting_change", "key" to "theme", "value" to mode.name.lowercase())
                     scope.launch { repo?.setThemeMode(mode) }
                 }
             )

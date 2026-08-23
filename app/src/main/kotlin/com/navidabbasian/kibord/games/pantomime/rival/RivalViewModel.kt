@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.data.PantomimeRepository
@@ -157,6 +158,7 @@ class RivalViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun confirmTeamNames() {
+        Analytics.gameSetup("teams" to _uiState.value.teamCount)
         repository.resetUsed()
         _uiState.update {
             it.copy(

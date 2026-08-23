@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
@@ -192,7 +193,7 @@ fun GandeGooGame(
                     GgWinnerScreen(
                         state = state,
                         winners = viewModel.winners(),
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()

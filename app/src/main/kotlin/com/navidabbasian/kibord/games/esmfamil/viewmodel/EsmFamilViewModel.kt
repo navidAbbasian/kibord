@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.esmfamil.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.cloud.Cloud
 import com.navidabbasian.kibord.core.cloud.AccountRepository
@@ -565,6 +566,14 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
         val s = _uiState.value.snapshot
         if (s.players.count { it.connected } < MIN_PLAYERS) return@hostOnly
         if (s.settings.topics.size < 2) return@hostOnly
+        Analytics.gameSetup(
+            "players" to s.players.count { it.connected },
+            "rounds" to s.settings.totalRounds,
+            "timer_s" to s.settings.roundSeconds,
+            "topics" to s.settings.topics.size,
+            "stop_enabled" to s.settings.stopEnabled,
+            "bot" to _uiState.value.botMode,
+        )
         mutateSnapshot { snap ->
             snap.copy(
                 phase = EfPhase.LETTER_PICK,
@@ -732,6 +741,7 @@ class EsmFamilViewModel(application: Application) : AndroidViewModel(application
 
     /** میزبان: بازی دوباره با همان جمع */
     fun playAgain() = hostOnly {
+        Analytics.gameReplay()
         mutateSnapshot { s ->
             s.copy(
                 phase = EfPhase.LOBBY,

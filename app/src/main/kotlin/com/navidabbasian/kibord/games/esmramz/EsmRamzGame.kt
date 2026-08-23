@@ -46,6 +46,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
@@ -230,6 +231,7 @@ class EsmRamzViewModel(application: Application) : AndroidViewModel(application)
 
     fun confirmTeamNames() {
         GamePrefs.setNames(getApplication(), "esmramz_names", _uiState.value.teamNames)
+        Analytics.gameSetup("teams" to _uiState.value.teamNames.size, "board_size" to BOARD_SIZE)
         dealBoard()
         _uiState.update { it.copy(phase = ErPhase.KeyReveal(shown = false)) }
     }
@@ -454,7 +456,7 @@ fun EsmRamzGame(
                         state = state,
                         winner = phase.winner,
                         byAssassin = phase.byAssassin,
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExit = { viewModel.leaveGame(); onExitToHub() },
                     )
                 }

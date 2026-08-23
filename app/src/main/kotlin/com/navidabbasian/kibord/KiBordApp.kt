@@ -131,12 +131,14 @@ fun KiBordApp() {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     KButton(text = "بفرست 📧", onClick = {
+                        Analytics.track("crash_report", "result" to "sent")
                         CrashReporter.sendByEmail(context, report)
                         CrashReporter.clear(context)
                         crashReport = null
                     })
                     Spacer(modifier = Modifier.height(8.dp))
                     KButton(text = "بی‌خیال", style = KButtonStyle.Glass, onClick = {
+                        Analytics.track("crash_report", "result" to "dismissed")
                         CrashReporter.clear(context)
                         crashReport = null
                     })
@@ -198,6 +200,8 @@ fun KiBordApp() {
                 Analytics.gameEntered(route.removePrefix("game/"))
             } else {
                 Analytics.gameLeft()
+                // صفحه‌های غیر بازی: هاب، بازی‌های بیشتر، حساب، رتبه‌بندی، تیم‌کشی…
+                Analytics.track("screen_view", "screen" to route)
             }
         }
         navController.addOnDestinationChangedListener(listener)

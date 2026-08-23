@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.nofoozi.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.cloud.Cloud
 import com.navidabbasian.kibord.core.cloud.AccountRepository
@@ -417,6 +418,12 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
     fun startGame() = hostOnly {
         val s = _uiState.value.snapshot
         if (s.players.count { it.connected } < NF_MIN_PLAYERS) return@hostOnly
+        val playerCount = s.players.count { it.connected }
+        Analytics.gameSetup(
+            "players" to playerCount,
+            "rounds" to s.totalRounds,
+            "undercovers" to undercoverCountFor(playerCount),
+        )
         dealRound(roundIndex = 1, resetScores = true)
     }
 
@@ -555,6 +562,7 @@ class NofooziViewModel(application: Application) : AndroidViewModel(application)
 
     /** میزبان: بازی دوباره با همان جمع */
     fun playAgain() = hostOnly {
+        Analytics.gameReplay()
         mutateSnapshot { s ->
             s.copy(
                 phase = NfPhase.LOBBY,

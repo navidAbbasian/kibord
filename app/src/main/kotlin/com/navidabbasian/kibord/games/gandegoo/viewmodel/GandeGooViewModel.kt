@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.games.gandegoo.data.GandeGooRepository
 import com.navidabbasian.kibord.games.gandegoo.model.GandeGooUiState
@@ -157,6 +158,11 @@ class GandeGooViewModel(application: Application) : AndroidViewModel(application
         lastSwapCell = null
         shownThisCell.clear()
         val categories = repository.buildGameCategories(ids, state.mode.tiers)
+        Analytics.gameSetup(
+            "teams" to state.teamCount,
+            "variant" to state.mode.name.lowercase(),
+            "categories" to ids.size,
+        )
         _uiState.update {
             it.copy(
                 categories = categories,

@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.navidabbasian.kibord.core.analytics.Analytics
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +100,7 @@ fun HubShell(onOpenGame: (String) -> Unit) {
             currentTab = tab,
             onTabSelected = {
                 if (it == HubTab.HOW_TO_PLAY) dismissHint()
+                if (it != tab) Analytics.track("screen_view", "screen" to "hub/" + it.name.lowercase())
                 tab = it
             },
             highlightHowToPlay = showHowToHint,

@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
@@ -152,7 +153,7 @@ fun KalamzGame(
                     BackHandler { pendingExit = { viewModel.resetGame(); onExitToHub() } }
                     ResultsScreen(
                         teams = state.teams,
-                        onPlayAgain = { viewModel.resetGame() },
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.resetGame() },
                         onExitToHub = {
                             viewModel.resetGame()
                             onExitToHub()

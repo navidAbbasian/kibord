@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.mafia.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.net.HostKeepAlive
 import com.navidabbasian.kibord.core.cloud.Cloud
 import com.navidabbasian.kibord.core.cloud.AccountRepository
@@ -438,6 +439,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
         // قرعه‌ی نقش‌ها: مافیا(ها)، دکتر، کارآگاه و بقیه شهروند
         val shuffled = connected.shuffled()
         val mafiaCount = mafiaCountFor(connected.size)
+        Analytics.gameSetup("players" to connected.size, "mafia_count" to mafiaCount)
         val roles = mutableMapOf<String, MfRole>()
         shuffled.forEachIndexed { i, p ->
             roles[p.name] = when {
@@ -594,6 +596,7 @@ class MafiaViewModel(application: Application) : AndroidViewModel(application) {
 
     /** میزبان: بازی دوباره با همان جمع */
     fun playAgain() = hostOnly {
+        Analytics.gameReplay()
         mutateSnapshot { s ->
             s.copy(
                 phase = MfPhase.LOBBY,

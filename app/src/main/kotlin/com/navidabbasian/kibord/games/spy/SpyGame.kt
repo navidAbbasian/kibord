@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
@@ -222,6 +223,12 @@ class SpyViewModel(application: Application) : AndroidViewModel(application) {
         }
         val location = fresh.random()
         playedStore.markPlayed(KEY, location.name)
+        _uiState.value.let { s ->
+            Analytics.gameSetup(
+                "players" to s.playerCount,
+                "timer_s" to s.discussionMinutes * 60,
+            )
+        }
         _uiState.update {
             it.copy(
                 location = location,
@@ -405,7 +412,7 @@ fun SpyGame(
                     BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     SpyUncoverScreen(
                         state = state,
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()

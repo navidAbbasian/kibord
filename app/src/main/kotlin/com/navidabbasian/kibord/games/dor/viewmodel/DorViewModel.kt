@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.SettingsRepository
 import com.navidabbasian.kibord.games.dor.data.DorWordRepository
@@ -192,6 +193,13 @@ class DorViewModel(application: Application) : AndroidViewModel(application) {
     fun selectMode(mode: DorGameMode) {
         val state = _uiState.value
         repository.prepareWordsForGame(state.selectedCategoryIds)
+        Analytics.gameSetup(
+            "players" to state.playerCount,
+            "teams" to state.teams.size,
+            "categories" to state.selectedCategoryIds.size,
+            "variant" to mode.name.lowercase(),
+            "timer_s" to (mode.teamTimeMillis / 1000).toInt(),
+        )
         _uiState.update {
             it.copy(
                 mode = mode,

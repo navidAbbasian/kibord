@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.kalamz.viewmodel
 import android.app.Application
 import android.os.CountDownTimer
 import androidx.lifecycle.AndroidViewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.games.kalamz.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -170,6 +171,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             // All players have entered words, build the play order and start round 1
             buildPlayOrder()
+            _uiState.value.let { s ->
+                Analytics.gameSetup(
+                    "players" to s.allPlayers.size,
+                    "teams" to s.teams.size,
+                    "word_count" to s.wordsPerPlayer,
+                    "timer_s" to (s.timerDurationMillis / 1000).toInt(),
+                )
+            }
             _uiState.update {
                 it.copy(
                     wordBank = allWords,

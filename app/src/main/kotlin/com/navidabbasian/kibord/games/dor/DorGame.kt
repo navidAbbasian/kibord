@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -168,7 +169,7 @@ fun DorGame(
                     BackHandler { pendingExit = { viewModel.playAgain(); onExitToHub() } }
                     DorWinnerScreen(
                         winner = phase.team,
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.playAgain()
                             onExitToHub()

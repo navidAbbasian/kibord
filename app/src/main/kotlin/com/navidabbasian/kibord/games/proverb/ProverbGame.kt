@@ -57,6 +57,7 @@ import com.navidabbasian.kibord.core.content.PlayedContentStore
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
 import com.navidabbasian.kibord.core.ui.components.GlassCard
@@ -279,6 +280,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
         GamePrefs.setNames(app, "proverb_names", s.teamNames)
         GamePrefs.setInt(app, "proverb_seconds", s.turnSeconds)
         GamePrefs.setInt(app, "proverb_rounds", s.totalRounds)
+        Analytics.gameSetup("teams" to 2, "rounds" to s.totalRounds, "timer_s" to s.turnSeconds)
         deck = ArrayDeque(prepareDeck())
         _uiState.update {
             it.copy(
@@ -388,6 +390,7 @@ class ProverbViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun playAgain() {
+        Analytics.gameReplay()
         tickerJob?.cancel()
         clearSession()
         val old = _uiState.value

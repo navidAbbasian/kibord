@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.net.HostKeepAlive
@@ -346,6 +347,11 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
     fun startGame() = hostOnly {
         val s = _uiState.value.snapshot
         if (s.players.count { it.connected } < WA_MIN_PLAYERS) return@hostOnly
+        Analytics.gameSetup(
+            "players" to s.players.count { it.connected },
+            "rounds" to s.totalRounds,
+            "questions" to s.questionsTotal,
+        )
         dealRound(roundIndex = 1, resetScores = true)
     }
 
@@ -444,6 +450,7 @@ class WhoAmIViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun playAgain() = hostOnly {
+        Analytics.gameReplay()
         mutateSnapshot { s ->
             s.copy(
                 phase = WaPhase.LOBBY,

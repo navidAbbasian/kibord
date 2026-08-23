@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.games.esmfamilsorati.data.EfsTopicRepository
 import com.navidabbasian.kibord.games.esmfamilsorati.model.EFS_LETTER_CARDS
@@ -150,6 +151,11 @@ class EfsViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         if (state.topic == null || state.players.isEmpty()) return
         val deck = EFS_LETTER_CARDS.shuffled()
+        Analytics.gameSetup(
+            "players" to state.players.size,
+            "topic" to state.topic.id,
+            "timer_s" to (EfsConstants.PLAYER_BANK_MILLIS / 1000).toInt(),
+        )
         turnStartElapsed = SystemClock.elapsedRealtime()
         lastWholeBombSecond = (EfsConstants.BOMB_MILLIS / 1000).toInt()
         _uiState.update {

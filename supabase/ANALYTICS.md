@@ -5,6 +5,11 @@
 
 ## چه چیزی جمع می‌شود؟
 
+**همه‌ی بازی‌ها** — آفلاین، وای‌فای محلی و اینترنتی — رویداد می‌فرستند؛ ستون `mode`
+می‌گوید کدام راه بوده. وقتی کاربر وارد حساب باشد، `user_id` روی هر رویداد و نشست
+می‌نشیند، پس رفتار هر حساب (فارغ از آنلاین/آفلاین) قابل دنبال‌کردن است.
+فقط **لیدربورد/آمار رقابتی** (`game_stats`) به بازی‌های اینترنتی محدود است.
+
 | جدول | محتوا | چه‌کسی می‌نویسد |
 |---|---|---|
 | `sessions` | هر بار بازشدنِ اپ (با ضربان هر ۶۰ ثانیه، پس «آخرین لحظه‌ی زنده‌بودن» را داریم) | اپ، با RPC `analytics_heartbeat` |
@@ -22,6 +27,9 @@
 | `app_open` | — | یک نشست تازه شروع شد |
 | `game_start` | `game_id`, `mode` | وارد صفحه‌ی یک بازی شد |
 | `game_mode` | `game_id`, `mode` (`lan`/`online`) | بازی چندگوشی شد |
+| `game_setup` | `game_id`, `mode`, + تنظیمات همان بازی: `players`, `teams`, `rounds`, `timer_s`, `variant`, … | بازی با این تنظیمات واقعاً شروع شد |
+| `game_replay` | `game_id`, `mode` | از صفحه‌ی برنده «دوباره بازی» زد |
+| `share_win` | `game_id` | کارت برنده را به اشتراک گذاشت |
 | `game_finish` | `game_id`, `mode`, `elapsed_s` | به صفحه‌ی برنده رسید |
 | `game_abandon` | `game_id`, `mode`, `elapsed_s`, `elapsed_bucket` | بدون پایان از بازی بیرون رفت |
 | `online_enter` | `role` (`host`/`guest`), `game_id` | وارد اتاق اینترنتی شد |
@@ -33,6 +41,9 @@
 | `account_sign_in` | — | وارد حساب شد |
 | `onboarding_done` | `skipped` | خوش‌آمدگویی تمام/رد شد |
 | `guide_open` | `game_id` | راهنمای یک بازی را باز کرد |
+| `screen_view` | `screen` (`hub`, `hub/how_to_play`, `hub/settings`, `more_games`, `account`, `leaderboard`, `team_picker`) | صفحه‌های غیر بازی را دید |
+| `setting_change` | `key` (`sound`/`music`/`vibration`/`theme`/`analytics`), `value` | تنظیمات اپ را عوض کرد |
+| `crash_report` | `result` (`sent`/`dismissed`) | بعد از کرش، گزارش فرستاد یا نه |
 
 ## ویوهای آماده
 
@@ -49,6 +60,13 @@
 | `v_onboarding_funnel` | چند نفر خوش‌آمدگویی را دیدند/رد کردند |
 | `v_rate_prompt` | پاپ‌آپ امتیاز چقدر جواب داده |
 | `game_leaderboard` | رتبه‌بندی هر بازی (بیشترین برد) — همان که اپ نشان می‌دهد |
+| `v_user_overview` | **هر حساب** چه می‌کند: اولین/آخرین حضور، نشست‌ها، دستگاه‌ها، بازی‌ها، بازیِ محبوب |
+| `v_user_games` | هر حساب × هر بازی: شروع/پایان/رهاکردن، آخرین بار |
+| `v_party_size` | هر بازی معمولاً چند نفره بازی می‌شود |
+| `v_setup_options` | تنظیمات پرکاربرد هر بازی (راند، تایمر، تیم، نوع…) |
+| `v_replay_rate` | نرخ «دوباره بازی» و «پز دادن» هر بازی |
+| `v_app_settings` | صدا/موسیقی/لرزش/تم/آمار را چند دستگاه چه کرده‌اند |
+| `v_account_vs_guest` | حساب‌دارها در برابر مهمان‌ها چقدر بازی می‌کنند |
 
 ## کوئری‌های پرکاربرد
 
@@ -125,6 +143,33 @@ select app_version, count(distinct device_id) as devices
 from sessions
 where started_at > now() - interval '14 days'
 group by 1 order by 2 desc;
+```
+
+### یک کاربر مشخص چه می‌کند؟
+```sql
+select * from v_user_overview where username = 'shanti_qa7';
+select * from v_user_games where username = 'shanti_qa7' order by starts desc;
+-- تاریخچه‌ی خامِ همان کاربر
+select client_ts, name, props from events
+where user_id = (select id from profiles where username = 'shanti_qa7')
+order by client_ts desc limit 100;
+```
+
+### فعال‌ترین حساب‌ها
+```sql
+select username, sessions, games_started, games_finished, online_finished, favorite_game, last_seen
+from v_user_overview order by games_started desc limit 50;
+```
+
+### چند نفره بازی می‌کنند؟ چه تنظیماتی می‌زنند؟
+```sql
+select * from v_party_size where game_id = 'kalamz';
+select * from v_setup_options where game_id = 'taboo' and key in ('rounds', 'timer_s');
+```
+
+### کدام بازی‌ها آدم‌ها را نگه می‌دارند؟ (دوباره بازی / پز دادن)
+```sql
+select * from v_replay_rate;
 ```
 
 ### پرافتخارترین بازیکن‌های یک بازی

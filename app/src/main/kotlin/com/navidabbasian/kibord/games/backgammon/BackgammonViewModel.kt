@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.backgammon
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.cloud.Cloud
 import com.navidabbasian.kibord.core.cloud.AccountRepository
 import com.navidabbasian.kibord.core.net.ClientLink
@@ -174,6 +175,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         val e = BgEngine(BgRules.of(variant))
         engine = e
         currentMoves = emptyList()
+        Analytics.gameSetup("variant" to variant.analyticsName, "net" to "local")
         _uiState.value = BgUiState(
             stage = BgStage.Playing,
             variant = variant,
@@ -522,6 +524,10 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             name.trim() == st.myName.trim() -> "این اسم مالِ میزبانه — یه اسم دیگه انتخاب کن"
             guest.isBlank() -> {
                 // اولین مهمان: صندلی سیاه مال اوست و بازی خودکار شروع می‌شود
+                Analytics.gameSetup(
+                    "variant" to st.room.variant.analyticsName,
+                    "net" to if (st.onlineMode) "online" else "lan",
+                )
                 _uiState.value = _uiState.value.copy(
                     stage = BgStage.Playing,
                     room = st.room.copy(guestName = name, guestConnected = true),
@@ -802,6 +808,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
         val e = engine ?: return
+        Analytics.gameReplay()
         currentMoves = emptyList()
         rematchCount++
         _uiState.value = _uiState.value.copy(
@@ -1050,3 +1057,11 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         const val GAME_ID = "backgammon"
     }
 }
+
+/** نام روش بازی برای گزارش‌گیری — رشته‌ی ثابت و مستقل از ترجمه */
+private val BgVariant.analyticsName: String
+    get() = when (this) {
+        BgVariant.STANDARD -> "standard"
+        BgVariant.DUTCH -> "dutch"
+        BgVariant.HYPER -> "hypergammon"
+    }

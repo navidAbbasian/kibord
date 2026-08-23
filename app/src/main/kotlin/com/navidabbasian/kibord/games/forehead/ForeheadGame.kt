@@ -57,6 +57,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.content.ContentBank
@@ -336,6 +337,17 @@ class ForeheadViewModel(application: Application) : AndroidViewModel(application
             fresh = cat.words.map { it.text }
         }
         GamePrefs.setInt(getApplication(), "forehead_seconds", _uiState.value.turnSeconds)
+        _uiState.value.let { s ->
+            // فقط اولین نوبتِ بازی = لحظه‌ی شروع واقعی با تنظیمات نهایی
+            if (s.roundIndex == 1 && s.currentTeam == 0) {
+                Analytics.gameSetup(
+                    "teams" to s.teamCount,
+                    "rounds" to s.totalRounds,
+                    "timer_s" to s.turnSeconds,
+                    "category" to s.selectedCategory,
+                )
+            }
+        }
         deck = ArrayDeque(fresh.shuffled())
         neutral = true
         _uiState.update {
@@ -607,7 +619,7 @@ fun ForeheadGame(
                     FhWinnerScreen(
                         state = state,
                         winners = viewModel.winners(),
-                        onPlayAgain = viewModel::playAgain,
+                        onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onExitToHub = {
                             viewModel.leaveGame()
                             onExitToHub()

@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.games.pantomime.data.PantomimeRepository
@@ -156,6 +157,10 @@ open class ClassicViewModel @JvmOverloads constructor(
     }
 
     fun setRounds(rounds: Int) {
+        Analytics.gameSetup(
+            "teams" to _uiState.value.teamNames.size,
+            "rounds" to rounds.coerceIn(1, 10),
+        )
         _uiState.update {
             it.copy(
                 totalRounds = rounds.coerceIn(1, 10),

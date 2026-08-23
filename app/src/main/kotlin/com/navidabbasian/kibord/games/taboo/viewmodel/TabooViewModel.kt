@@ -3,6 +3,7 @@ package com.navidabbasian.kibord.games.taboo.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.session.SessionStore
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.games.taboo.data.TabooRepository
@@ -140,6 +141,11 @@ class TabooViewModel(application: Application) : AndroidViewModel(application) {
         GamePrefs.setNames(app, "taboo_names", s.teamNames)
         GamePrefs.setInt(app, "taboo_seconds", s.turnSeconds)
         GamePrefs.setInt(app, "taboo_rounds", s.totalRounds)
+        Analytics.gameSetup(
+            "teams" to s.teamCount,
+            "rounds" to s.totalRounds,
+            "timer_s" to s.turnSeconds,
+        )
         deck = ArrayDeque(repository.prepareDeck())
         _uiState.update {
             it.copy(

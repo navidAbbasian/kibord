@@ -198,6 +198,25 @@ object Analytics {
         track("game_mode", "game_id" to currentGame, "mode" to mode)
     }
 
+    /**
+     * تنظیماتِ یک دست، درست لحظه‌ای که بازی واقعاً شروع می‌شود: چند نفر، چند تیم،
+     * چند راند، تایمر، نوعِ بازی… هر بازی فقط آن‌چه دارد را می‌فرستد. شناسه‌ی
+     * بازی و راهِ بازی خودکار اضافه می‌شود.
+     */
+    fun gameSetup(vararg props: Pair<String, Any?>) {
+        val g = currentGame ?: return
+        track("game_setup", "game_id" to g, "mode" to currentGameMode, *props)
+    }
+
+    /** «دوباره بازی» / دست بعدی بعد از صفحه‌ی برنده */
+    fun gameReplay() {
+        val g = currentGame ?: return
+        // دستِ تازه شروع می‌شود: اگر دوباره رها شود، رهاشدنِ همان دست است
+        currentGameFinished = false
+        currentGameStartedAt = SystemClock.elapsedRealtime()
+        track("game_replay", "game_id" to g, "mode" to currentGameMode)
+    }
+
     /** از صفحه‌ی برنده: بازی واقعاً تمام شد */
     fun gameFinished(gameId: String) {
         val elapsed = elapsedGameSeconds()

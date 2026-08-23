@@ -91,3 +91,13 @@ val teamColorsOnLight = listOf(
     Color(0xFF55B5DE), // آسمانی پررنگ
     Color(0xFF97C25F), // لیمویی پررنگ
 )
+
+// بازی‌های تخته‌ای و کارتی
+val LudoAccent = Color(0xFF3FB37A)
+val LudoAccentDark = Color(0xFF2E9762)
+val DoozAccent = Color(0xFF5B7CFA)
+val DoozAccentDark = Color(0xFF4262D9)
+val HokmAccent = Color(0xFFD94F6B)
+val HokmAccentDark = Color(0xFFB83A55)
+val ShelemAccent = Color(0xFF8A5CF6)
+val ShelemAccentDark = Color(0xFF6F44D6)

@@ -36,6 +36,14 @@ import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccent
 import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccentDark
 import com.navidabbasian.kibord.core.ui.theme.BackgammonAccent
 import com.navidabbasian.kibord.core.ui.theme.BackgammonAccentDark
+import com.navidabbasian.kibord.core.ui.theme.LudoAccent
+import com.navidabbasian.kibord.core.ui.theme.LudoAccentDark
+import com.navidabbasian.kibord.core.ui.theme.DoozAccent
+import com.navidabbasian.kibord.core.ui.theme.DoozAccentDark
+import com.navidabbasian.kibord.core.ui.theme.HokmAccent
+import com.navidabbasian.kibord.core.ui.theme.HokmAccentDark
+import com.navidabbasian.kibord.core.ui.theme.ShelemAccent
+import com.navidabbasian.kibord.core.ui.theme.ShelemAccentDark
 
 @Immutable
 data class GameInfo(
@@ -72,6 +80,10 @@ object Routes {
     const val MAFIA = "game/mafia"
     const val WHO_AM_I = "game/who_am_i"
     const val ESM_FAMIL_SORATI = "game/esm_famil_sorati"
+    const val LUDO = "game/ludo"
+    const val DOOZ = "game/dooz"
+    const val HOKM = "game/hokm"
+    const val SHELEM = "game/shelem"
     const val BACKGAMMON = "game/backgammon"
 }
 
@@ -240,6 +252,46 @@ val moreGamesCatalog = listOf(
         accentDark = BackgammonAccentDark,
         players = "۲ نفر — حضوری یا آنلاین",
         route = Routes.BACKGAMMON,
+    ),
+    GameInfo(
+        id = "ludo",
+        title = "منچ",
+        tagline = "تاس بنداز، مهره بزن، زودتر از همه برسون خونه!",
+        emoji = "🎯",
+        accent = LudoAccent,
+        accentDark = LudoAccentDark,
+        players = "۲ تا ۴ نفر — یا با ربات",
+        route = Routes.LUDO,
+    ),
+    GameInfo(
+        id = "dooz",
+        title = "دوز",
+        tagline = "سه تا پشت هم! دو نفره یا با ربات",
+        emoji = "⭕",
+        accent = DoozAccent,
+        accentDark = DoozAccentDark,
+        players = "۲ نفر — یا با ربات",
+        route = Routes.DOOZ,
+    ),
+    GameInfo(
+        id = "hokm",
+        title = "حکم",
+        tagline = "حاکم حکم می‌کنه، هفت دست می‌بره — دو، سه یا چهار نفره",
+        emoji = "🃏",
+        accent = HokmAccent,
+        accentDark = HokmAccentDark,
+        players = "۲ تا ۴ نفر — با ربات",
+        route = Routes.HOKM,
+    ),
+    GameInfo(
+        id = "shelem",
+        title = "شلم",
+        tagline = "شرط ببند، حکم کن، ۱۶۵ امتیاز رو جمع کن",
+        emoji = "♠️",
+        accent = ShelemAccent,
+        accentDark = ShelemAccentDark,
+        players = "۴ نفر — با ربات",
+        route = Routes.SHELEM,
     ),
     GameInfo(
         id = "who_am_i",

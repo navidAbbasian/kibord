@@ -50,6 +50,14 @@ import com.navidabbasian.kibord.core.ui.theme.WhoAmIAccent
 import com.navidabbasian.kibord.core.ui.theme.TabooAccent
 import com.navidabbasian.kibord.core.ui.theme.EsmFamilSoratiAccent
 import com.navidabbasian.kibord.core.ui.theme.BackgammonAccent
+import com.navidabbasian.kibord.core.ui.theme.LudoAccent
+import com.navidabbasian.kibord.core.ui.theme.DoozAccent
+import com.navidabbasian.kibord.core.ui.theme.HokmAccent
+import com.navidabbasian.kibord.core.ui.theme.ShelemAccent
+import com.navidabbasian.kibord.games.ludo.LudoGame
+import com.navidabbasian.kibord.games.dooz.DoozGame
+import com.navidabbasian.kibord.games.hokm.HokmGame
+import com.navidabbasian.kibord.games.shelem.ShelemGame
 import com.navidabbasian.kibord.games.backgammon.BackgammonGame
 import com.navidabbasian.kibord.games.dor.DorGame
 import com.navidabbasian.kibord.games.esmfamil.EsmFamilGame
@@ -318,6 +326,26 @@ fun KiBordApp() {
         composable(Routes.BACKGAMMON) {
             CompositionLocalProvider(LocalGameAccent provides BackgammonAccent) {
                 BackgammonGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.LUDO) {
+            CompositionLocalProvider(LocalGameAccent provides LudoAccent) {
+                LudoGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.DOOZ) {
+            CompositionLocalProvider(LocalGameAccent provides DoozAccent) {
+                DoozGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.HOKM) {
+            CompositionLocalProvider(LocalGameAccent provides HokmAccent) {
+                HokmGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.SHELEM) {
+            CompositionLocalProvider(LocalGameAccent provides ShelemAccent) {
+                ShelemGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
     }

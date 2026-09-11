@@ -552,12 +552,12 @@ private fun HumanHand(
                             card = card,
                             width = cardW,
                             compact = true,
+                            dimmed = enabled && !playable,
                             modifier = Modifier
                                 .offset(
                                     x = leading + step * i,
                                     y = rowY - (if (playable) lift else 0.dp),
                                 )
-                                .graphicsLayer { alpha = if (!enabled || playable) 1f else 0.45f }
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,

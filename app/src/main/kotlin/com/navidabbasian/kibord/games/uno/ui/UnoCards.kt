@@ -1,6 +1,7 @@
 package com.navidabbasian.kibord.games.uno.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -95,11 +96,11 @@ fun UnoCardFace(
     width: Dp,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    dimmed: Boolean = false,
 ) {
     val height = width * 1.5f
     val body = card.color?.let { unoColorOf(it) } ?: WildBody
     val corner = RoundedCornerShape(width * 0.14f)
-    val full = !compact && width >= 56.dp
 
     Box(
         modifier = modifier
@@ -109,71 +110,98 @@ fun UnoCardFace(
             .clip(corner),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // بدنه + درخشش ملایم بالای کارت (گرادیان نرم تا نوار گوشه تمیز بماند)
-            drawRect(body)
-            drawRect(
+            // آناتومی کارتِ واقعی اونو: لبه‌ی سفیدِ بیرونی، میدانِ رنگی داخلش،
+            // بیضیِ سفیدِ مورب از پایین-چپ به بالا-راست
+            drawRect(Color.White)
+            val inset = size.width * 0.06f
+            drawRoundRect(
+                color = body,
+                topLeft = Offset(inset, inset),
+                size = Size(size.width - inset * 2, size.height - inset * 2),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.10f),
+            )
+            // درخشش خیلی ملایم بالای میدان
+            drawRoundRect(
                 brush = Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.20f),
+                    0f to Color.White.copy(alpha = 0.14f),
                     1f to Color.Transparent,
                     endY = size.height * 0.30f,
                 ),
-                size = Size(size.width, size.height * 0.30f),
-            )
-            // قاب سفید داخلی
-            val inset = size.width * 0.055f
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.9f),
                 topLeft = Offset(inset, inset),
-                size = Size(size.width - inset * 2, size.height - inset * 2),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.12f),
-                style = Stroke(width = size.width * 0.035f),
+                size = Size(size.width - inset * 2, size.height * 0.30f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.10f),
             )
-            if (full) {
-                // نوار بیضی سفید مورب — کمی جمع‌تر از قبل تا به نشان گوشه نرسد
-                rotate(degrees = -32f) {
-                    drawOval(
-                        color = Color.White,
-                        topLeft = Offset(size.width * 0.13f, size.height * 0.27f),
-                        size = Size(size.width * 0.74f, size.height * 0.46f),
-                    )
-                }
+            // بیضی مورب — امضای کارت اونو؛ وایلدها بیضیِ چهارپاره‌ی رنگی دارند
+            val ovalTL = Offset(size.width * 0.10f, size.height * 0.235f)
+            val ovalSize = Size(size.width * 0.80f, size.height * 0.53f)
+            rotate(degrees = -33f) {
                 when (card.kind) {
-                    UnoKind.SKIP -> drawSkipGlyph(body)
-                    UnoKind.WILD, UnoKind.WILD_DRAW_FOUR -> drawColorWheel(
-                        center = Offset(size.width / 2f, size.height / 2f),
-                        radius = size.width * 0.30f,
-                        ringWidth = size.width * 0.045f,
-                    )
-                    else -> Unit
+                    UnoKind.WILD, UnoKind.WILD_DRAW_FOUR -> {
+                        // بیضیِ چهاررنگ کلاسیکِ وایلد
+                        val segs = listOf(
+                            unoColorOf(UnoColor.RED),
+                            unoColorOf(UnoColor.BLUE),
+                            unoColorOf(UnoColor.GREEN),
+                            unoColorOf(UnoColor.YELLOW),
+                        )
+                        segs.forEachIndexed { i, col ->
+                            drawArc(
+                                color = col,
+                                startAngle = -90f + i * 90f,
+                                sweepAngle = 90f,
+                                useCenter = true,
+                                topLeft = ovalTL,
+                                size = ovalSize,
+                            )
+                        }
+                        drawOval(
+                            color = Color.White,
+                            topLeft = ovalTL,
+                            size = ovalSize,
+                            style = Stroke(width = size.width * 0.035f),
+                        )
+                    }
+                    else -> drawOval(color = Color.White, topLeft = ovalTL, size = ovalSize)
                 }
             }
-        }
-
-        // نماد مرکزی متنی — فقط در رندر کامل
-        if (full) {
-            val centerText = when (card.kind) {
-                UnoKind.NUMBER -> card.number.toPersianDigits()
-                UnoKind.REVERSE -> "⇄"
-                UnoKind.DRAW_TWO -> "+۲"
-                UnoKind.WILD_DRAW_FOUR -> "+۴"
-                else -> null
-            }
-            if (centerText != null) {
-                val onWheel = card.kind == UnoKind.WILD_DRAW_FOUR
-                Text(
-                    text = centerText,
-                    color = if (onWheel) Color.White else body,
-                    style = if (onWheel) TextStyle(shadow = IndexShadow) else TextStyle.Default,
-                    fontSize = (width.value * if (card.kind == UnoKind.NUMBER) 0.52f else 0.40f).sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.align(Alignment.Center),
+            // نمادهای ترسیمیِ مرکز (روی بیضی)
+            when (card.kind) {
+                UnoKind.SKIP -> drawSkipGlyph(body)
+                UnoKind.REVERSE -> drawReverseGlyph(body)
+                UnoKind.DRAW_TWO -> drawMiniCards(listOf(body, body))
+                UnoKind.WILD_DRAW_FOUR -> drawMiniCards(
+                    listOf(
+                        unoColorOf(UnoColor.RED),
+                        unoColorOf(UnoColor.BLUE),
+                        unoColorOf(UnoColor.GREEN),
+                        unoColorOf(UnoColor.YELLOW),
+                    ),
                 )
+                else -> Unit
             }
         }
 
-        // نشان گوشه‌ی بالا-آغاز: تنها چیزی که در نوار دیدنیِ کارتِ زیر بادبزن می‌ماند
+        // عدد مرکزی: هم‌رنگ کارت با سایه‌ی تیره — مثل چاپ واقعی
+        if (card.kind == UnoKind.NUMBER) {
+            Text(
+                text = card.number.toPersianDigits(),
+                color = body,
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.35f),
+                        offset = Offset(width.value * 0.05f, width.value * 0.06f),
+                        blurRadius = 1f,
+                    ),
+                ),
+                fontSize = (width.value * 0.58f).sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        // ایندکس گوشه‌ی بالا-آغاز — سفید با سایه، مثل کارت واقعی
         val label = cornerLabel(card)
-        val indexFraction = if (full) 0.20f else 0.26f
+        val indexFraction = if (compact) 0.24f else 0.20f
         if (label != null) {
             Text(
                 text = label,
@@ -183,40 +211,43 @@ fun UnoCardFace(
                 fontWeight = FontWeight.Black,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(horizontal = width * 0.10f, vertical = width * 0.05f),
+                    .padding(horizontal = width * 0.11f, vertical = width * 0.045f),
             )
         } else {
-            // وایلد ساده: نقطه‌ی چهاررنگ کوچک
             CornerWheelDot(
                 size = width * indexFraction,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(horizontal = width * 0.10f, vertical = width * 0.08f),
+                    .padding(horizontal = width * 0.11f, vertical = width * 0.07f),
             )
         }
 
-        // ایندکس کوچک وارونه در پایین-پایان — فقط در رندر کامل
-        if (full) {
+        // ایندکس وارونه‌ی پایین-پایان
+        if (!compact) {
             if (label != null) {
                 Text(
                     text = label,
                     color = Color.White,
                     style = TextStyle(shadow = IndexShadow),
-                    fontSize = (width.value * 0.16f).sp,
+                    fontSize = (width.value * 0.17f).sp,
                     fontWeight = FontWeight.Black,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(horizontal = width * 0.10f, vertical = width * 0.05f)
+                        .padding(horizontal = width * 0.11f, vertical = width * 0.045f)
                         .graphicsLayer { rotationZ = 180f },
                 )
             } else {
                 CornerWheelDot(
-                    size = width * 0.16f,
+                    size = width * 0.17f,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(horizontal = width * 0.10f, vertical = width * 0.08f),
+                        .padding(horizontal = width * 0.11f, vertical = width * 0.07f),
                 )
             }
+        }
+        // کارتِ غیرمجاز: پرده‌ی تیره‌ی مات — رنگ‌ها شسته نمی‌شوند و کارت پشتی دیده نمی‌شود
+        if (dimmed) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.38f)))
         }
     }
 }
@@ -233,6 +264,57 @@ private fun CornerWheelDot(
             radius = this.size.minDimension / 2f * 0.85f,
             ringWidth = this.size.minDimension * 0.10f,
         )
+    }
+}
+
+/** نماد «برعکس»: دو پیکانِ قرینه مثل کارت واقعی */
+private fun DrawScope.drawReverseGlyph(color: Color) {
+    val c = Offset(size.width / 2f, size.height / 2f)
+    val u = size.width * 0.052f
+    fun arrow(sign: Float) {
+        val p = androidx.compose.ui.graphics.Path().apply {
+            moveTo(c.x + sign * (-3.4f * u), c.y + sign * (0.4f * u))
+            lineTo(c.x + sign * (-0.6f * u), c.y + sign * (-2.4f * u))
+            lineTo(c.x + sign * (-0.6f * u), c.y + sign * (-1.1f * u))
+            lineTo(c.x + sign * (2.2f * u), c.y + sign * (-1.1f * u))
+            lineTo(c.x + sign * (2.2f * u), c.y + sign * (1.9f * u))
+            lineTo(c.x + sign * (0.8f * u), c.y + sign * (0.6f * u))
+            lineTo(c.x + sign * (0.8f * u), c.y + sign * (0.3f * u))
+            lineTo(c.x + sign * (-0.6f * u), c.y + sign * (0.3f * u))
+            close()
+        }
+        drawPath(p, color = color)
+    }
+    rotate(degrees = -33f) {
+        arrow(1f)
+        arrow(-1f)
+    }
+}
+
+/** کارت‌های کوچکِ روی‌همِ مرکز (+۲ دو تا هم‌رنگ، +۴ چهار تا چهاررنگ) */
+private fun DrawScope.drawMiniCards(colors: List<Color>) {
+    val c = Offset(size.width / 2f, size.height / 2f)
+    val w = size.width * 0.20f
+    val h = w * 1.5f
+    val n = colors.size
+    colors.forEachIndexed { i, col ->
+        val t = i - (n - 1) / 2f
+        val cx = c.x + t * w * 0.55f
+        val cy = c.y + t * h * 0.16f
+        rotate(degrees = -12f + i * 8f, pivot = Offset(cx, cy)) {
+            drawRoundRect(
+                color = Color.White,
+                topLeft = Offset(cx - w / 2f - size.width * 0.016f, cy - h / 2f - size.width * 0.016f),
+                size = Size(w + size.width * 0.032f, h + size.width * 0.032f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.22f),
+            )
+            drawRoundRect(
+                color = col,
+                topLeft = Offset(cx - w / 2f, cy - h / 2f),
+                size = Size(w, h),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.18f),
+            )
+        }
     }
 }
 
@@ -295,39 +377,38 @@ fun UnoCardBack(
             .clip(corner),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(BackBody)
-            drawRect(
-                color = lerp(BackBody, Color.White, 0.16f).copy(alpha = 0.6f),
-                size = Size(size.width, size.height * 0.24f),
-            )
-            val inset = size.width * 0.055f
+            // پشتِ کلاسیک: لبه‌ی سفید، میدان مشکی، بیضی قرمزِ مورب
+            drawRect(Color.White)
+            val inset = size.width * 0.06f
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.85f),
+                color = Color(0xFF17161C),
                 topLeft = Offset(inset, inset),
                 size = Size(size.width - inset * 2, size.height - inset * 2),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.12f),
-                style = Stroke(width = size.width * 0.035f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.10f),
             )
-            rotate(degrees = -32f) {
+            rotate(degrees = -33f) {
                 drawOval(
-                    color = Color(0xFFE64A3C),
-                    topLeft = Offset(size.width * 0.10f, size.height * 0.24f),
-                    size = Size(size.width * 0.80f, size.height * 0.52f),
-                )
-                drawOval(
-                    color = Color.White,
-                    topLeft = Offset(size.width * 0.10f, size.height * 0.24f),
-                    size = Size(size.width * 0.80f, size.height * 0.52f),
-                    style = Stroke(width = size.width * 0.03f),
+                    color = Color(0xFFD32F2F),
+                    topLeft = Offset(size.width * 0.10f, size.height * 0.235f),
+                    size = Size(size.width * 0.80f, size.height * 0.53f),
                 )
             }
         }
         Text(
             text = "اونو",
-            color = Color.White,
+            color = Color(0xFFF7C948),
+            style = TextStyle(
+                shadow = Shadow(
+                    color = Color.White,
+                    offset = Offset(0f, 0f),
+                    blurRadius = 6f,
+                ),
+            ),
             fontSize = (width.value * 0.30f).sp,
             fontWeight = FontWeight.Black,
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .graphicsLayer { rotationZ = -18f },
         )
     }
 }

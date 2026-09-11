@@ -20,9 +20,8 @@ const val TRICKS_TO_WIN = 7
  */
 object HokmRules {
 
-    /** دسته‌ی این روش، بُرخورده */
-    fun deck(variant: HokmVariant, random: Random): List<Card> =
-        Deck.shuffledWithout(variant.excludedCards, random)
+    /** دسته‌ی این روش، بُرخورده — در مردابادی دوِ بیرون‌مانده‌ی مسابقه حذف می‌شود */
+    fun deck(variant: HokmVariant, random: Random): List<Card> = Deck.shuffled(random)
 
     /**
      * آس‌کِشی: کارت‌ها یکی‌یکی از صندلی ۰ به بعد رو می‌شوند تا اولین آس بیاید؛
@@ -53,14 +52,29 @@ object HokmRules {
 
     /** شروع یک دستِ تازه: حاکم ۵ کارت اول را می‌گیرد و باید حکم کند */
     fun startHand(state: HokmState, random: Random): HokmState {
-        val cards = deck(state.variant, random)
+        val cards = if (state.isMordabadi) {
+            Deck.shuffledWithout(state.removedCards, random)
+        } else {
+            deck(state.variant, random)
+        }
         val n = state.playerCount
         val hands = MutableList<List<Card>>(n) { emptyList() }
-        hands[state.hakem] = cards.take(5).sortedForHand(null)
+        var stock = cards
+        if (state.isMordabadi) {
+            // مردابادی: اول همه ۹ کارت می‌گیرند و حاکم از همان ۹ حکم می‌کند
+            val order = (0 until n).map { (state.hakem + it) % n }
+            for (seat in order) {
+                hands[seat] = stock.take(9).sortedForHand(null)
+                stock = stock.drop(9)
+            }
+        } else {
+            hands[state.hakem] = stock.take(5).sortedForHand(null)
+            stock = stock.drop(5)
+        }
         return state.copy(
             phase = HokmPhase.CHOOSE_TRUMP,
             hands = hands,
-            stock = cards.drop(5),
+            stock = stock,
             trump = null,
             turn = state.hakem,
             trick = emptyList(),
@@ -68,6 +82,7 @@ object HokmRules {
             played = emptyList(),
             lastResult = null,
             handNumber = state.handNumber + 1,
+            collectorIndex = 0,
         )
     }
 
@@ -80,13 +95,13 @@ object HokmRules {
         val order = (1..n).map { (state.hakem + it) % n } // از نفر بعد از حاکم تا خود حاکم
         state.variant.dealPattern.forEachIndexed { round, count ->
             for (seat in order) {
-                // حاکم ۵ کارت اول را قبلاً گرفته
-                if (round == 0 && seat == state.hakem) continue
+                // دور اول قبلاً پخش شده: در مردابادی همه ۹ تا دارند، وگرنه حاکم ۵ تا
+                if (round == 0 && (state.isMordabadi || seat == state.hakem)) continue
                 hands[seat] += stock.take(count)
                 stock = stock.drop(count)
             }
         }
-        return state.copy(
+        val dealt = state.copy(
             phase = HokmPhase.PLAYING,
             trump = trump,
             hands = hands.map { it.sortedForHand(trump) },
@@ -94,6 +109,8 @@ object HokmRules {
             turn = state.hakem,
             trick = emptyList(),
         )
+        // مردابادی: قبل از اولین دست، طلبکارها وصول می‌کنند
+        return if (dealt.isMordabadi) MordabadiRules.beginCollection(dealt) else dealt
     }
 
     /** کارت‌های مجاز این صندلی در این لحظه (اگر نوبتش نباشد، خالی) */
@@ -134,17 +151,21 @@ object HokmRules {
 
     /** اگر شرط پایان دست برقرار است، نتیجه را حساب می‌کند؛ وگرنه همان وضعیت */
     private fun finishHandIfOver(state: HokmState): HokmState {
+        val cardsLeft = state.hands.any { it.isNotEmpty() }
+        // مردابادی: توقفِ ۷ دست نداریم — هر ۱۷ دست بازی و بعد تسویه می‌شود
+        if (state.isMordabadi) {
+            return if (cardsLeft) state else MordabadiRules.settle(state)
+        }
         val variant = state.variant
         val teamTricks = state.teamTricksAll
         val reached = teamTricks.indices.firstOrNull { teamTricks[it] >= TRICKS_TO_WIN }
-        val cardsLeft = state.hands.any { it.isNotEmpty() }
         if (reached == null && cardsLeft) return state
 
         val hakemTeam = variant.teamOf(state.hakem)
         val winnerTeam: Int? = when {
             reached != null -> reached
             else -> {
-                // سه نفره: کارت‌ها تمام شد و کسی به ۷ نرسید → بیشترین دست؛ مساوی → هیچ‌کس
+                // کارت‌ها تمام شد و کسی به ۷ نرسید (عملاً پیش نمی‌آید) → بیشترین دست
                 val best = teamTricks.max()
                 val winners = teamTricks.indices.filter { teamTricks[it] == best }
                 if (winners.size == 1) winners.first() else null

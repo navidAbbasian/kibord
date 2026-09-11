@@ -30,6 +30,10 @@ object HokmBot {
         require(legal.isNotEmpty()) { "نوبت این صندلی نیست" }
         if (legal.size == 1) return legal.first()
         val ctx = Ctx(state, seat, legal)
+        // مردابادی: رباتی که سهمیه‌اش پر شده تا جای ممکن ارزان رد می‌شود
+        if (state.isMordabadi && state.quotas.isNotEmpty() && state.tricksWon[seat] >= state.quotaOf(seat)) {
+            return quotaSatisfied(ctx)
+        }
         return if (state.trick.isEmpty()) lead(ctx) else follow(ctx)
     }
 
@@ -43,7 +47,7 @@ object HokmBot {
         fun isTopRemaining(card: Card): Boolean =
             Rank.entries.filter { it.order > card.rank.order }.all { r ->
                 val c = Card(card.suit, r)
-                c in seen || c in hand || c in state.variant.excludedCards
+                c in seen || c in hand || c in state.removedCards
             }
 
         fun suitLen(suit: Suit): Int = hand.count { it.suit == suit }
@@ -51,7 +55,7 @@ object HokmBot {
         /** تعداد حکم‌هایی که هنوز دستِ دیگران می‌تواند باشد */
         fun outstandingTrumps(): Int {
             val t = trump ?: return 0
-            val total = 13 - state.variant.excludedCards.count { it.suit == t }
+            val total = 13 - state.removedCards.count { it.suit == t }
             return total - seen.count { it.suit == t } - hand.count { it.suit == t }
         }
     }
@@ -80,6 +84,28 @@ object HokmBot {
         }
         // ۴) فقط حکم داریم
         return trumps.minBy { it.rank.order }
+    }
+
+    // ---------- مردابادی: سهمیه پر است ----------
+
+    /** تا جای ممکن نبَر: دنبال‌کردن با پایین‌ترین کارتِ بازنده، شروع با ارزان‌ترین کارت */
+    private fun quotaSatisfied(c: Ctx): Card {
+        if (c.state.trick.isEmpty()) {
+            val nonTrump = c.legal.filter { it.suit != c.trump }
+            if (nonTrump.isNotEmpty()) {
+                return nonTrump.minWith(compareBy<Card> { it.rank.order }.thenBy { c.suitLen(it.suit) })
+            }
+            return c.legal.minBy { it.rank.order }
+        }
+        val trickCards = c.state.trick.map { it.card }
+        val leadSuit = trickCards.first().suit
+        val winning = trickCards[trickWinnerIndex(trickCards, c.trump)]
+        val losers = c.legal.filterNot { beats(it, winning, leadSuit, c.trump) }
+        if (losers.isNotEmpty()) {
+            return losers.minWith(compareBy<Card> { if (it.suit == c.trump) 1 else 0 }.thenBy { it.rank.order })
+        }
+        // چاره‌ای جز بردن نیست → ارزان‌ترین برد
+        return c.legal.minBy { it.rank.order }
     }
 
     // ---------- دنبال‌کردن ----------

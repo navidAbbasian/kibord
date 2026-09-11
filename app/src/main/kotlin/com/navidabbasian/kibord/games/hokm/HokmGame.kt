@@ -68,7 +68,9 @@ import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.ui.theme.teamColorFor
 import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.games.hokm.engine.HokmState
 import com.navidabbasian.kibord.games.hokm.engine.HokmVariant
+import com.navidabbasian.kibord.games.hokm.engine.MordabadiRules
 
 /** ریشه‌ی بازی حکم: تنظیمات → آس‌کِشی → میز → برنده */
 @Composable
@@ -215,7 +217,7 @@ private fun HokmSetupScreen(state: HokmUiState, viewModel: HokmViewModel) {
             Text(
                 text = when (state.variant) {
                     HokmVariant.FOUR -> "تو و ${HokmUiState.BOT_NAMES[1]} یه تیم، ${HokmUiState.BOT_NAMES[0]} و ${HokmUiState.BOT_NAMES[2]} تیم مقابل"
-                    HokmVariant.THREE -> "هرکی برای خودش — بدون ۲ خشت، هر نفر ۱۷ کارت"
+                    HokmVariant.THREE -> "مردابادی! سهمیه‌های ۳/۵/۹ — یه دو از بازی بیرونه، طلب و بدهی رد و بدل می‌شه"
                     HokmVariant.TWO -> "تک به تک با ${HokmUiState.BOT_NAMES[0]} — نصف دسته کنار می‌مونه"
                 },
                 style = MaterialTheme.typography.bodyMedium,
@@ -224,25 +226,57 @@ private fun HokmSetupScreen(state: HokmUiState, viewModel: HokmViewModel) {
             )
 
             Spacer(modifier = Modifier.height(22.dp))
-            SectionLabel("تا چند امتیاز؟")
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-            ) {
-                listOf(3, 5, 7).forEachIndexed { i, t ->
-                    val selected = state.target == t
-                    ChoiceBubble(
-                        main = t.toPersianDigits(),
-                        sub = "امتیاز",
-                        size = 96.dp,
-                        mainFontSize = 28.sp,
-                        accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
-                        tilt = if (i % 2 == 0) 3f else -3f,
-                        phase = i * 1.1f + 0.5f,
-                        modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
-                        onClick = { viewModel.setTarget(t) },
-                    )
+            if (state.variant == HokmVariant.THREE) {
+                // مردابادی پایانش حذفی است: به جای امتیاز، سقف بدهی انتخاب می‌شود
+                SectionLabel("سقف بدهی چند؟")
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                ) {
+                    MordabadiRules.DEBT_LIMITS.forEachIndexed { i, t ->
+                        val selected = state.debtLimit == t
+                        ChoiceBubble(
+                            main = t.toPersianDigits(),
+                            sub = "بدهی",
+                            size = 96.dp,
+                            mainFontSize = 28.sp,
+                            accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
+                            tilt = if (i % 2 == 0) 3f else -3f,
+                            phase = i * 1.1f + 0.5f,
+                            modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
+                            onClick = { viewModel.setDebtLimit(t) },
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "جمع بدهیت به سقف برسه حذف می‌شی — دو بازمانده دوئل می‌کنن!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                SectionLabel("تا چند امتیاز؟")
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                ) {
+                    listOf(3, 5, 7).forEachIndexed { i, t ->
+                        val selected = state.target == t
+                        ChoiceBubble(
+                            main = t.toPersianDigits(),
+                            sub = "امتیاز",
+                            size = 96.dp,
+                            mainFontSize = 28.sp,
+                            accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
+                            tilt = if (i % 2 == 0) 3f else -3f,
+                            phase = i * 1.1f + 0.5f,
+                            modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
+                            onClick = { viewModel.setTarget(t) },
+                        )
+                    }
                 }
             }
 
@@ -413,6 +447,19 @@ private fun HokmWinnerScreen(
     onExitToHub: () -> Unit,
 ) {
     val game = state.game ?: return
+    val mordabadi = state.mordabadiGame
+    val duelSeats = state.duelSeats
+    if (state.variant == HokmVariant.THREE && mordabadi != null && duelSeats != null) {
+        MordabadiWinnerScreen(
+            state = state,
+            duel = game,
+            final = mordabadi,
+            duelSeats = duelSeats,
+            onPlayAgain = onPlayAgain,
+            onExitToHub = onExitToHub,
+        )
+        return
+    }
     val winnerTeam = game.matchWinnerTeam ?: return
     val humanWon = winnerTeam == state.humanTeam
     val variant = state.variant
@@ -497,6 +544,113 @@ private fun HokmWinnerScreen(
                 winnerText = winnerText,
                 scoreLines = scoreLines,
                 winnerNames = winnerNames,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            KButton(text = "دوباره بازی 🔁", onClick = onPlayAgain)
+            Spacer(modifier = Modifier.height(10.dp))
+            KButton(text = "بازگشت به خانه", style = KButtonStyle.Glass, onClick = onExitToHub)
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+/** صفحه‌ی برنده‌ی مردابادی: نتیجه‌ی دوئل + ترازها و جمعِ بدهی‌های نهایی */
+@Composable
+private fun MordabadiWinnerScreen(
+    state: HokmUiState,
+    duel: HokmState,
+    final: HokmState,
+    duelSeats: List<Int>,
+    onPlayAgain: () -> Unit,
+    onExitToHub: () -> Unit,
+) {
+    val duelWinnerTeam = duel.matchWinnerTeam ?: return
+    val winnerSeat = duelSeats.getOrElse(duelWinnerTeam) { 0 }
+    val loserSeat = duelSeats.getOrElse(1 - duelWinnerTeam) { 1 }
+    val humanWon = winnerSeat == 0
+    val eliminated = final.lastResult?.eliminatedSeat
+    val duelTricks = duel.lastResult?.teamTricks ?: duel.teamTricksAll
+
+    val winnerText = "${state.mordabadiNameOf(winnerSeat)} قهرمان مردابادی شد!"
+    val scoreLines = (0..2).map { seat ->
+        val label = state.mordabadiNameOf(seat) + if (eliminated == seat) " (حذف 🚫)" else ""
+        val balance = final.balances.getOrElse(seat) { 0 }
+        val balanceText = when {
+            balance > 0 -> "طلب ${balance.toPersianDigits()}"
+            balance < 0 -> "بدهی ${(-balance).toPersianDigits()}"
+            else -> "تراز ۰"
+        }
+        label to "$balanceText • جمع بدهی ${final.totalDebts.getOrElse(seat) { 0 }.toPersianDigits()}"
+    } + listOf(
+        "دوئل نهایی ⚔️" to "${state.mordabadiNameOf(winnerSeat)} ${duelTricks.getOrElse(duelWinnerTeam) { 0 }.toPersianDigits()}" +
+            " – ${duelTricks.getOrElse(1 - duelWinnerTeam) { 0 }.toPersianDigits()} ${state.mordabadiNameOf(loserSeat)}",
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (humanWon) ConfettiOverlay()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+            BobbingEmoji(emoji = if (humanWon) "🏆" else "🃏", fontSize = 64.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            StickerTitle(text = winnerText, fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = when {
+                    humanWon -> "دمت گرم! هم حساب و کتابت جمع بود هم دوئل رو بردی 🎉"
+                    eliminated == 0 -> "بدهی امونت نداد و حذف شدی — دفعه‌ی بعد سهمیه‌تو بگیر!"
+                    else -> "تا دوئل رفتی ولی آخرش نشد — تلافی کن!"
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
+                Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                    scoreLines.forEachIndexed { i, (name, score) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = (if (i == winnerSeat) "🏆 " else "") + name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = score,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Black,
+                                color = if (i == winnerSeat) LocalGameAccent.current else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${final.handNumber.toPersianDigits()} دست مردابادی — سقف بدهی ${final.debtLimit.toPersianDigits()}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(22.dp))
+            ShareWinButton(
+                gameId = "hokm",
+                gameTitle = "حکم مردابادی",
+                gameEmoji = "🃏",
+                winnerText = winnerText,
+                scoreLines = scoreLines,
+                winnerNames = listOf(state.mordabadiNameOf(winnerSeat)),
             )
             Spacer(modifier = Modifier.height(12.dp))
             KButton(text = "دوباره بازی 🔁", onClick = onPlayAgain)

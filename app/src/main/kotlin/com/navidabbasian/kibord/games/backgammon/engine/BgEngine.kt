@@ -104,6 +104,8 @@ class BgEngine(
             dice = emptyList(),
             remainingDice = emptyList(),
             phase = BgPhase.ROLLING,
+            // قفل «زننده تک می‌ماند» فقط تا پایان همان نوبت زنده است
+            homeHitLockRel = null,
         )
     }
 
@@ -183,6 +185,17 @@ class BgEngine(
                 if (p == BgPlayer.WHITE) homeReachedWhite = true else homeReachedBlack = true
             }
 
+            // قانون ایرانی «زننده تک می‌ماند»: جای مهره‌ی زننده دنبال می‌شود —
+            // اگر همان مهره ادامه داد قفل با او می‌رود، و زدن تازه در خانه‌ی
+            // خودی قفل را روی خانه‌ی زده‌شده می‌گذارد.
+            var homeHitLockRel = state.homeHitLockRel
+            if (state.rules.hitInHomeStaysSingle) {
+                if (homeHitLockRel != null && move.from == homeHitLockRel) {
+                    homeHitLockRel = if (move.to in 1..24) move.to else null
+                }
+                if (move.hit && move.to in 1..6) homeHitLockRel = move.to
+            }
+
             return state.copy(
                 points = points,
                 barWhite = barWhite,
@@ -194,6 +207,7 @@ class BgEngine(
                 remainingDice = remaining,
                 homeReachedWhite = homeReachedWhite,
                 homeReachedBlack = homeReachedBlack,
+                homeHitLockRel = homeHitLockRel,
             )
         }
     }

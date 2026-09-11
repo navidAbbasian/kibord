@@ -13,9 +13,9 @@ enum class BgPlayer {
     val opponent: BgPlayer get() = if (this == WHITE) BLACK else WHITE
 }
 
-/** سه روش بازی که موتور مشترک پشتیبانی می‌کند */
+/** چهار روش بازی که موتور مشترک پشتیبانی می‌کند */
 @Serializable
-enum class BgVariant { STANDARD, DUTCH, HYPER }
+enum class BgVariant { STANDARD, DUTCH, HYPER, IRANI }
 
 /** فازهای چرخه‌ی نوبت */
 @Serializable
@@ -54,6 +54,14 @@ data class BgRules(
     val canHitBeforeHomeEntry: Boolean,
     /** آیا امتیاز مارس کامل (۳) در این روش تعریف شده؟ هلندی فقط تکی/مارس دارد */
     val hasBackgammonScore: Boolean,
+    /** آیا مکعب دوبل در این روش وجود دارد؟ (ایرانی: هرگز) */
+    val usesCube: Boolean = true,
+    /** دست به مهره: مهره‌ای که لمس شد باید بازی شود — قفلِ رابط کاربری (ایرانی) */
+    val touchMove: Boolean = false,
+    /** مهره‌ای که در خانه‌ی خودی زد، همان نوبت روی خانه‌ی پرِ خودی نمی‌نشیند (ایرانی) */
+    val hitInHomeStaysSingle: Boolean = false,
+    /** با آخرین مهره در حال خروج، اول باید تاس بزرگ‌تر بازی شود (ایرانی) */
+    val lastCheckerHigherDie: Boolean = false,
 ) {
     companion object {
         /** تخته‌نرد کلاسیک: چیدمان استاندارد بین‌المللی */
@@ -92,10 +100,31 @@ data class BgRules(
             hasBackgammonScore = true,
         )
 
+        /**
+         * تخته‌نرد ایرانی: چیدمان استاندارد ولی بدون مکعب دوبل، با دست به مهره،
+         * قانون «زننده در خانه‌ی خودی تک می‌ماند» و «آخرین مهره با تاس بزرگ‌تر».
+         * امتیاز ۳ همان سگ‌مارس است (مهره‌ی بازنده در خانه‌ی برنده یا روی بار).
+         */
+        val IRANI = BgRules(
+            variant = BgVariant.IRANI,
+            piecesPerPlayer = 15,
+            startingLayout = mapOf(24 to 2, 13 to 5, 8 to 3, 6 to 5),
+            startingOffBoard = 0,
+            mustEnterAllBeforeNormalMovement = false,
+            openingWinnerRerolls = false,
+            canHitBeforeHomeEntry = true,
+            hasBackgammonScore = true,
+            usesCube = false,
+            touchMove = true,
+            hitInHomeStaysSingle = true,
+            lastCheckerHigherDie = true,
+        )
+
         fun of(variant: BgVariant): BgRules = when (variant) {
             BgVariant.STANDARD -> STANDARD
             BgVariant.DUTCH -> DUTCH
             BgVariant.HYPER -> HYPER
+            BgVariant.IRANI -> IRANI
         }
     }
 }

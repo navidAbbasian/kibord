@@ -70,6 +70,7 @@ import com.navidabbasian.kibord.games.backgammon.engine.BgMove
 import com.navidabbasian.kibord.games.backgammon.engine.BgPhase
 import com.navidabbasian.kibord.games.backgammon.engine.BgPlayer
 import com.navidabbasian.kibord.games.backgammon.engine.BgState
+import com.navidabbasian.kibord.games.backgammon.engine.BgVariant
 import com.navidabbasian.kibord.hub.gameGuides
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -222,6 +223,7 @@ internal fun BgPlayScreen(
                     cubeOwner = state.match.cubeOwner,
                     crawford = state.match.crawford,
                     cubeGlow = state.canOfferDouble,
+                    showCube = state.cubeAllowed,
                     onTapPoint = viewModel::tapPoint,
                     onTapEntry = viewModel::tapEntry,
                     onTapOff = viewModel::tapOff,
@@ -336,7 +338,11 @@ internal fun BgPlayScreen(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "حریف این دست رو با ارزش فعلی مکعب (${state.match.cubeValue.toPersianDigits()} برابرِ تکی) می‌بره.",
+                text = if (state.cubeAllowed) {
+                    "حریف این دست رو با ارزش فعلی مکعب (${state.match.cubeValue.toPersianDigits()} برابرِ تکی) می‌بره."
+                } else {
+                    "حریف این دست رو تکی می‌بره."
+                },
                 color = TextDim,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -602,6 +608,17 @@ private fun BgActionArea(state: BgUiState, game: BgState, viewModel: BackgammonV
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
+            // راهنمای یک‌باره‌ی روش ایرانی: انتخاب مهره قفل می‌شود
+            if (state.touchMoveActive && !state.touchMoveHintSeen && state.isMyTurn) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "دست به مهره! مهره‌ای که لمس کنی باید بازی بشه",
+                    color = AccentGold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -855,12 +872,12 @@ private fun BgGameOverOverlay(state: BgUiState, game: BgState, onNext: () -> Uni
         BgGameEnd.RESIGN -> "حریف تسلیم شد"
         BgGameEnd.TIMEOUT -> "وقت حریف تموم شد"
         BgGameEnd.BEAR_OFF -> when (game.resultScore) {
-            3 -> "مارس کامل!"
+            3 -> if (game.rules.variant == BgVariant.IRANI) "سگ‌مارس!" else "مارس کامل!"
             2 -> "مارس!"
             else -> "بردِ تکی"
         }
     }
-    val nextCrawford = BgMatchRules.beginGame(match).crawford
+    val nextCrawford = BgMatchRules.beginGame(match).crawford && state.cubeAllowed
     Box(
         modifier = Modifier
             .fillMaxSize()

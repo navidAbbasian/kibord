@@ -79,12 +79,13 @@ import com.navidabbasian.kibord.games.backgammon.net.BgDiscoveredGame
 private fun variantName(v: BgVariant?): String = when (v) {
     BgVariant.DUTCH -> "تخته‌نرد هلندی"
     BgVariant.HYPER -> "هایپرگامون"
+    BgVariant.IRANI -> "تخته‌نرد ایرانی"
     else -> "تخته‌نرد کلاسیک"
 }
 
-/** اسم فارسی نتیجه: تکی، مارس، مارس کامل */
-private fun resultName(score: Int): String = when (score) {
-    3 -> "مارس کامل"
+/** اسم فارسی نتیجه: تکی، مارس، مارس کامل — در ایرانی امتیاز ۳ سگ‌مارس است */
+private fun resultName(score: Int, variant: BgVariant?): String = when (score) {
+    3 -> if (variant == BgVariant.IRANI) "سگ‌مارس" else "مارس کامل"
     2 -> "مارس"
     else -> "تکی"
 }
@@ -96,7 +97,7 @@ private fun bgGameEndLabel(match: BgMatch, game: BgState): String {
         BgGameEnd.DROP -> "حریف دوبل رو رد کرد"
         BgGameEnd.RESIGN -> "حریف تسلیم شد"
         BgGameEnd.TIMEOUT -> "وقت حریف تموم شد"
-        BgGameEnd.BEAR_OFF -> resultName(game.resultScore)
+        BgGameEnd.BEAR_OFF -> resultName(game.resultScore, game.rules.variant)
     }
     return "$how (${points.toPersianDigits()} امتیاز)"
 }
@@ -384,6 +385,13 @@ private fun BgVariantSelectScreen(
                 desc = "فقط ۳ مهره برای هر نفر — کوتاه، تند و پرهیجان!",
                 onClick = { onPick(BgVariant.HYPER) },
             )
+            Spacer(modifier = Modifier.height(14.dp))
+            BgVariantCard(
+                emoji = "🏺",
+                title = "تخته‌نرد ایرانی",
+                desc = "بدون دوبل، دست به مهره — سگ‌مارس ۳ امتیازه!",
+                onClick = { onPick(BgVariant.IRANI) },
+            )
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -540,15 +548,18 @@ private fun BgModeSelectScreen(
             label = { if (it == 1) "تک‌دست" else it.toPersianDigits() },
             onSelect = onMatchLength,
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        // ---- ساعت هر بازیکن ----
-        BgOptionChips(
-            title = "زمان هر بازیکن",
-            options = BG_CLOCK_MINUTES,
-            selected = state.clockMinutes,
-            label = { if (it == 0) "بدون ساعت" else "${it.toPersianDigits()} دقیقه" },
-            onSelect = onClockMinutes,
-        )
+        // نرد ایرانی ساعت ندارد — وقت بازیکن‌ها آزاد است
+        if (state.variant != BgVariant.IRANI) {
+            Spacer(modifier = Modifier.height(12.dp))
+            // ---- ساعت هر بازیکن ----
+            BgOptionChips(
+                title = "زمان هر بازیکن",
+                options = BG_CLOCK_MINUTES,
+                selected = state.clockMinutes,
+                label = { if (it == 0) "بدون ساعت" else "${it.toPersianDigits()} دقیقه" },
+                onSelect = onClockMinutes,
+            )
+        }
 
         Spacer(modifier = Modifier.height(22.dp))
         Text(

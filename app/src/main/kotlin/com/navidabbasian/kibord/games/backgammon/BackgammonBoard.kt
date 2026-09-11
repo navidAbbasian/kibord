@@ -152,6 +152,8 @@ fun BackgammonBoard(
     cubeOwner: BgPlayer?,
     crawford: Boolean,
     cubeGlow: Boolean,
+    /** روش‌های بدون دوبل (ایرانی): مکعب اصلاً نقاشی و لمس نمی‌شود */
+    showCube: Boolean = true,
     whiteColor: Color = BgCheckerWhite,
     blackColor: Color = BgCheckerBlack,
     onTapPoint: (Int) -> Unit,
@@ -168,11 +170,11 @@ fun BackgammonBoard(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(BG_BOARD_ASPECT)
-            .pointerInput(cubeOwner) {
+            .pointerInput(cubeOwner, showCube) {
                 detectTapGestures { offset ->
                     val geo = BgBoardGeometry(Size(size.width.toFloat(), size.height.toFloat()))
                     when {
-                        geo.isCube(offset.x, offset.y, cubeOwner) -> onTapCube()
+                        showCube && geo.isCube(offset.x, offset.y, cubeOwner) -> onTapCube()
                         geo.isTray(offset.x, offset.y) -> if (trayEntry) onTapEntry() else onTapOff()
                         geo.isBar(offset.x, offset.y) -> onTapEntry()
                         else -> geo.pointAt(offset.x, offset.y)?.let(onTapPoint)
@@ -186,7 +188,7 @@ fun BackgammonBoard(
         drawBar(geo, state, whiteColor, blackColor, barEntry)
         drawPipPills(geo, state)
         drawTrays(geo, state, offIsDest, trayEntry, whiteColor, blackColor)
-        drawCube(geo, cubeValue, cubeOwner, crawford, cubeGlow)
+        if (showCube) drawCube(geo, cubeValue, cubeOwner, crawford, cubeGlow)
         for (abs in 1..24) {
             drawCheckers(geo, abs, state, sourcesAbs.contains(abs), selectedAbs == abs, whiteColor, blackColor)
         }

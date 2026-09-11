@@ -35,16 +35,28 @@ object BgMoveGenerator {
     }
 
     /** حرکت‌های معمولی و خارج‌کردن با یک تاس */
-    private fun normalMoves(state: BgState, p: BgPlayer, die: Int): List<BgMove> {
+    private fun normalMoves(
+        state: BgState,
+        p: BgPlayer,
+        die: Int,
+        honorHomeHitLock: Boolean,
+    ): List<BgMove> {
         val moves = mutableListOf<BgMove>()
         val bearingAllowed = state.allActiveInHome(p)
         val highest = state.highestOccupied(p)
+        // قانون ایرانی: مهره‌ای که در خانه‌ی خودی زد، همین نوبت روی خانه‌ی
+        // پرِ خودی نمی‌نشیند — خانه‌ی خالی، زدن دوباره و خروج آزادند.
+        val lock = if (honorHomeHitLock && state.rules.hitInHomeStaysSingle) state.homeHitLockRel else null
         for (rel in 1..24) {
             if (state.pointOf(p, rel).owner != p) continue
             val to = rel - die
             if (to >= 1) {
                 when (landing(state, p, to)) {
-                    Landing.OPEN -> moves += BgMove(rel, to, die, hit = false)
+                    Landing.OPEN -> {
+                        if (rel != lock || state.pointOf(p, to).owner != p) {
+                            moves += BgMove(rel, to, die, hit = false)
+                        }
+                    }
                     Landing.HIT -> moves += BgMove(rel, to, die, hit = true)
                     Landing.BLOCKED -> Unit
                 }
@@ -63,15 +75,19 @@ object BgMoveGenerator {
      * اولویت مطلق بار، و در هلندی اولویت ورود اولیه، همین‌جا اعمال می‌شود:
      * حرکت معمولی فقط وقتی مجاز است که با هیچ‌کدام از تاس‌های باقی‌مانده ورود ممکن نباشد.
      */
-    internal fun movesForDie(state: BgState, die: Int): List<BgMove> {
+    internal fun movesForDie(state: BgState, die: Int, honorHomeHitLock: Boolean = true): List<BgMove> {
         val p = state.turn ?: return emptyList()
         if (state.bar(p) > 0) return entryMoves(state, p, die)
         if (state.isEntering(p)) {
             val anyEntryPossible = state.remainingDice.distinct()
                 .any { entryMoves(state, p, it).isNotEmpty() }
-            return if (anyEntryPossible) entryMoves(state, p, die) else normalMoves(state, p, die)
+            return if (anyEntryPossible) {
+                entryMoves(state, p, die)
+            } else {
+                normalMoves(state, p, die, honorHomeHitLock)
+            }
         }
-        return normalMoves(state, p, die)
+        return normalMoves(state, p, die, honorHomeHitLock)
     }
 
     /**
@@ -82,12 +98,53 @@ object BgMoveGenerator {
      */
     fun maximalSequences(state: BgState): List<List<BgMove>> {
         if (state.phase != BgPhase.MOVING || state.turn == null) return emptyList()
+
+        var all = collectSequences(state, honorHomeHitLock = true)
+
+        // بند ۴ ایرانی مقدم بر بند ۵: اگر قفل «زننده تک می‌ماند» مانع مصرف
+        // تاس بیشتر شود، همان نوبت برداشته می‌شود — بازی کامل تاس‌ها می‌بَرد.
+        if (state.rules.hitInHomeStaysSingle) {
+            val lockedMax = all.maxOfOrNull { it.size } ?: 0
+            val free = collectSequences(state, honorHomeHitLock = false)
+            if ((free.maxOfOrNull { it.size } ?: 0) > lockedMax) all = free
+        }
+        if (all.isEmpty()) return emptyList()
+
+        val maxLen = all.maxOf { it.size }
+        var best = all.filter { it.size == maxLen }
+
+        val p = state.turn
+        val d = state.remainingDice
+
+        // قانون ایرانی آخرین مهره: وقتی تنها یک مهره مانده و در حال خروج است،
+        // اول باید تاس بزرگ‌تر بازی شود — حتی اگر خروج فوری تاس دوم را بسوزاند.
+        if (state.rules.lastCheckerHigherDie && d.distinct().size > 1 &&
+            state.borneOff(p) == state.rules.piecesPerPlayer - 1 && state.allActiveInHome(p)
+        ) {
+            val hiFirst = all.filter { it.first().die == d.max() }
+            if (hiFirst.isNotEmpty()) {
+                val hiMax = hiFirst.maxOf { it.size }
+                best = hiFirst.filter { it.size == hiMax }
+            }
+        }
+
+        // اگر از دو تاس نابرابر فقط یکی بازی می‌شود، تاس بزرگ‌تر اجباری است
+        if (maxLen == 1 && d.size == 2 && d[0] != d[1]) {
+            val hi = maxOf(d[0], d[1])
+            val hiSeqs = best.filter { it.first().die == hi }
+            if (hiSeqs.isNotEmpty()) best = hiSeqs
+        }
+        return best
+    }
+
+    /** همه‌ی توالی‌های ممکن با یا بدون قفلِ «زننده تک می‌ماند» */
+    private fun collectSequences(state: BgState, honorHomeHitLock: Boolean): List<List<BgMove>> {
         val all = mutableListOf<List<BgMove>>()
 
         fun dfs(s: BgState, prefix: List<BgMove>) {
             var extended = false
             for (die in s.remainingDice.distinct()) {
-                for (move in movesForDie(s, die)) {
+                for (move in movesForDie(s, die, honorHomeHitLock)) {
                     extended = true
                     dfs(BgEngine.applyMoveRaw(s, move), prefix + move)
                 }
@@ -95,19 +152,7 @@ object BgMoveGenerator {
             if (!extended && prefix.isNotEmpty()) all += prefix
         }
         dfs(state, emptyList())
-        if (all.isEmpty()) return emptyList()
-
-        val maxLen = all.maxOf { it.size }
-        var best = all.filter { it.size == maxLen }
-
-        // اگر از دو تاس نابرابر فقط یکی بازی می‌شود، تاس بزرگ‌تر اجباری است
-        val d = state.remainingDice
-        if (maxLen == 1 && d.size == 2 && d[0] != d[1]) {
-            val hi = maxOf(d[0], d[1])
-            val hiSeqs = best.filter { it.first().die == hi }
-            if (hiSeqs.isNotEmpty()) best = hiSeqs
-        }
-        return best
+        return all
     }
 
     /** حرکت‌های آغازینِ مجاز این لحظه — فقط سرِ توالی‌های بیشینه */

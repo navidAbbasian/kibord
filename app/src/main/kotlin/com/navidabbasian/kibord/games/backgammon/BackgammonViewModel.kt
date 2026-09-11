@@ -125,8 +125,18 @@ data class BgUiState(
     val chatBubbles: Map<BgPlayer, BgChatBubble> = emptyMap(),
     /** پنل چت سریع باز است؟ */
     val chatOpen: Boolean = false,
+    /** راهنمای یک‌باره‌ی «دست به مهره» ی روش ایرانی دیده شد؟ */
+    val touchMoveHintSeen: Boolean = false,
 ) {
     val isNetPlay: Boolean get() = netRole != BgNetRole.NONE
+
+    /** آیا این روش مکعب دوبل دارد؟ در ایرانی مکعب اصلاً وجود ندارد */
+    val cubeAllowed: Boolean
+        get() = variant?.let { BgRules.of(it).usesCube } != false
+
+    /** قانون «دست به مهره»ی روش ایرانی فعال است؟ */
+    val touchMoveActive: Boolean
+        get() = variant?.let { BgRules.of(it).touchMove } == true
 
     /** دست تمام شده ولی مسابقه ادامه دارد — پرده‌ی «دست بعدی» */
     val gameOverMatchContinues: Boolean
@@ -146,6 +156,7 @@ data class BgUiState(
     /** آیا بازیکنِ نوبت همین حالا (پیش از تاس) می‌تواند دوبل کند؟ */
     val canOfferDouble: Boolean
         get() {
+            if (!cubeAllowed) return false
             val g = game ?: return false
             val p = g.turn ?: return false
             return g.phase == BgPhase.ROLLING && isMyTurn && BgMatchRules.canDouble(match, p)
@@ -262,8 +273,12 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             myName = st.myName,
             resumable = st.resumable,
             matchLength = st.matchLength,
-            clockMinutes = st.clockMinutes,
-            match = BgMatchRules.newMatch(st.matchLength, st.clockMinutes * 60_000L),
+            // نرد ایرانی ساعت ندارد — وقت آزاد
+            clockMinutes = if (variant == BgVariant.IRANI) 0 else st.clockMinutes,
+            match = BgMatchRules.newMatch(
+                st.matchLength,
+                if (variant == BgVariant.IRANI) 0L else st.clockMinutes * 60_000L,
+            ),
             clockStampMs = SystemClock.elapsedRealtime(),
         )
         startClockTicker()
@@ -599,7 +614,11 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
         currentMoves = emptyList()
         rematchCount = 0
         val st = _uiState.value
-        val match = BgMatchRules.newMatch(st.matchLength, st.clockMinutes * 60_000L)
+        // نرد ایرانی ساعت ندارد — وقت آزاد
+        val match = BgMatchRules.newMatch(
+            st.matchLength,
+            if (variant == BgVariant.IRANI) 0L else st.clockMinutes * 60_000L,
+        )
         _uiState.value = st.copy(
             stage = BgStage.NetLobby,
             netRole = BgNetRole.HOST,
@@ -1068,6 +1087,8 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
                 submitMove(move)
                 return
             }
+            // دست به مهره (ایرانی): انتخاب قفل است — لمس جای دیگر عوضش نمی‌کند
+            if (st.touchMoveActive) return
         }
         if (currentMoves.any { it.from == rel }) {
             select(rel)
@@ -1078,7 +1099,10 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** لمس بار یا انبار مهره‌های واردنشده */
     fun tapEntry() {
-        if (!_uiState.value.isMyTurn) return
+        val st = _uiState.value
+        if (!st.isMyTurn) return
+        // دست به مهره: مهره‌ی انتخاب‌شده باید بازی شود — انتخاب عوض نمی‌شود
+        if (st.touchMoveActive && st.selectedSource != null && st.selectedSource != BgMove.ENTRY) return
         if (currentMoves.any { it.from == BgMove.ENTRY }) select(BgMove.ENTRY)
     }
 
@@ -1093,6 +1117,11 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
 
     /** حرکت انتخاب‌شده: مهمان به میزبان می‌فرستد، بقیه مستقیم اعمال می‌کنند */
     private fun submitMove(move: BgMove) {
+        // اولین حرکت در روش ایرانی: راهنمای «دست به مهره» دیگر لازم نیست
+        val st = _uiState.value
+        if (st.touchMoveActive && !st.touchMoveHintSeen) {
+            _uiState.value = st.copy(touchMoveHintSeen = true)
+        }
         if (_uiState.value.netRole == BgNetRole.CLIENT) {
             emitSound(BgSoundEvent.MOVE)
             client?.send(BgMessage.MoveRequest(move))
@@ -1194,7 +1223,7 @@ class BackgammonViewModel(application: Application) : AndroidViewModel(applicati
             }
 
             is BgMessage.DoubleOffer -> {
-                if (game.phase == BgPhase.ROLLING && game.turn == guest &&
+                if (st.cubeAllowed && game.phase == BgPhase.ROLLING && game.turn == guest &&
                     BgMatchRules.canDouble(st.match, guest)
                 ) {
                     doOfferDouble(guest)
@@ -1443,4 +1472,5 @@ private val BgVariant.analyticsName: String
         BgVariant.STANDARD -> "standard"
         BgVariant.DUTCH -> "dutch"
         BgVariant.HYPER -> "hypergammon"
+        BgVariant.IRANI -> "irani"
     }

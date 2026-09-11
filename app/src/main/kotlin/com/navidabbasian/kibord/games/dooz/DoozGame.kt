@@ -73,6 +73,14 @@ import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.ui.net.LobbySeat
+import com.navidabbasian.kibord.core.ui.net.LobbySeatKind
+import com.navidabbasian.kibord.core.ui.net.NetConnectionOverlays
+import com.navidabbasian.kibord.core.ui.net.NetEntryScreen
+import com.navidabbasian.kibord.core.ui.net.NetJoinScreen
+import com.navidabbasian.kibord.core.ui.net.NetLobbyScreen
+import com.navidabbasian.kibord.core.ui.net.NetModeCard
+import com.navidabbasian.kibord.core.net.lan.LanServer
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -120,8 +128,10 @@ fun DoozGame(
     viewModel: DoozViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val net by viewModel.net.collectAsState()
     val sound = LocalSoundManager.current
     var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val leaveAndExit = { viewModel.backToSetup(); onExitToHub() }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -165,11 +175,62 @@ fun DoozGame(
                         onTarget = viewModel::setTargetWins,
                         onName = viewModel::setName,
                         onStart = viewModel::startSeries,
+                        onNetwork = viewModel::chooseNetworkMode,
+                    )
+                }
+
+                DoozPhase.NetEntry -> {
+                    BackHandler { viewModel.backFromNetEntry() }
+                    NetEntryScreen(
+                        net = net,
+                        emoji = "⭕",
+                        title = "دوز چند گوشی",
+                        onNameChanged = viewModel::setMyName,
+                        onToggleOnline = viewModel::setOnline,
+                        onHost = viewModel::hostGame,
+                        onJoin = viewModel::openJoin,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
+                        subtitle = "هر کدوم با گوشی خودتون — یکی میزبان می‌شه (❌) و اون یکی بهش می‌پیونده (⭕)",
+                        hostOptions = {
+                            DoozTargetPills(selected = state.targetWins, onTarget = viewModel::setTargetWins)
+                        },
+                    )
+                }
+
+                DoozPhase.NetJoin -> {
+                    BackHandler { viewModel.backFromJoin() }
+                    NetJoinScreen(
+                        net = net,
+                        emoji = "⭕",
+                        onJoin = { g -> viewModel.joinLan(g.address, g.port) },
+                        onManualJoin = { address -> viewModel.joinLan(address, LanServer.BASE_PORT) },
+                        onJoinOnline = viewModel::joinOnline,
+                        hostLabel = { "دوزِ $it" },
+                    )
+                }
+
+                DoozPhase.NetLobby -> {
+                    BackHandler { if (net.isHost) viewModel.cancelHosting() else viewModel.backFromJoin() }
+                    NetLobbyScreen(
+                        net = net,
+                        emoji = "⭕",
+                        title = "دوز",
+                        seats = listOf(
+                            LobbySeat(name = state.names[0].ifBlank { net.myName }, kind = LobbySeatKind.HOST, tag = "❌"),
+                            if (state.names[1].isBlank()) LobbySeat(name = "", kind = LobbySeatKind.EMPTY, tag = "⭕")
+                            else LobbySeat(name = state.names[1], kind = LobbySeatKind.GUEST, connected = state.opponentConnected, tag = "⭕"),
+                        ),
+                        isHost = net.isHost,
+                        canStart = false,
+                        onStart = {},
+                        summary = "تا ${state.targetWins.toPersianDigits()} برد",
+                        autoStart = true,
                     )
                 }
 
                 DoozPhase.Play -> {
-                    BackHandler { pendingExit = { viewModel.backToSetup(); onExitToHub() } }
+                    BackHandler { pendingExit = leaveAndExit }
                     DoozPlayScreen(
                         state = state,
                         onTap = viewModel::tapCell,
@@ -183,13 +244,38 @@ fun DoozGame(
                         state = state,
                         onPlayAgain = { Analytics.gameReplay(); viewModel.playAgain() },
                         onSettings = viewModel::backToSetup,
-                        onExitToHub = { viewModel.backToSetup(); onExitToHub() },
+                        onExitToHub = leaveAndExit,
                     )
                 }
             }
         }
         if (state.phase != DoozPhase.SeriesOver) {
             GameHelpButton(gameId = GAME_ID, modifier = Modifier.align(Alignment.TopStart))
+        }
+        NetConnectionOverlays(
+            net = net,
+            showAwayBanner = state.phase == DoozPhase.Play,
+            onReconnect = viewModel::reconnectOnline,
+            onLeave = leaveAndExit,
+        )
+    }
+}
+
+/** قرص‌های «تا چند برد» — هم در تنظیمات محلی، هم به‌عنوان گزینه‌ی میزبان شبکه‌ای */
+@Composable
+private fun DoozTargetPills(selected: Int, onTarget: (Int) -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        SectionLabel("تا چند برد؟")
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DoozViewModel.TARGETS.forEach { t ->
+                DoozPill(
+                    text = "${t.toPersianDigits()} برد",
+                    emoji = if (t == 1) "⚡" else if (t == 3) "🏅" else "🏆",
+                    selected = selected == t,
+                    onClick = { onTarget(t) },
+                )
+            }
         }
     }
 }
@@ -204,6 +290,7 @@ private fun DoozSetupScreen(
     onTarget: (Int) -> Unit,
     onName: (Int, String) -> Unit,
     onStart: () -> Unit,
+    onNetwork: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
@@ -260,6 +347,8 @@ private fun DoozSetupScreen(
                 onClick = { onMode(DoozMode.BOT) },
             )
         }
+        Spacer(modifier = Modifier.height(18.dp))
+        NetModeCard(onClick = onNetwork)
         Spacer(modifier = Modifier.height(22.dp))
 
         // ---- سختی ربات ----
@@ -511,6 +600,15 @@ private fun DoozPlayScreen(
 
             // ---- نوبت ----
             TurnLine(state = state)
+            if (state.isNetGame && !state.opponentConnected) {
+                Text(
+                    text = "📴 ارتباط حریف قطع شد — با همون اسم برگرده، بازی ادامه پیدا می‌کنه",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = kiExtras.danger,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
             Spacer(modifier = Modifier.height(18.dp))
             Spacer(modifier = Modifier.navigationBarsPadding())
         }
@@ -617,6 +715,10 @@ private fun TurnLine(state: DoozUiState) {
         state.botThinking -> {
             text = "ربات داره فکر می‌کنه… 🤔"
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        state.myMark != null && state.turn == state.myMark -> {
+            text = "نوبت توئه ${state.turn.emoji()}"
+            color = markColor(state.turn)
         }
         else -> {
             text = "نوبت ${state.turn.emoji()} ${state.displayName(state.turn)}"

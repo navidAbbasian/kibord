@@ -56,7 +56,6 @@ import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.uno.UNO_HUMAN
 import com.navidabbasian.kibord.games.uno.UnoUiState
 import com.navidabbasian.kibord.games.uno.UnoViewModel
 import com.navidabbasian.kibord.games.uno.engine.UnoCard
@@ -75,7 +74,9 @@ fun UnoTableScreen(
 ) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
-    val humanTurn = game.phase == UnoPhase.PLAYING && game.turn == UNO_HUMAN && !state.dealing
+    /** صندلی خودم — در بازی محلی ۰، در چندگوشی صندلی‌ای که میزبان داده */
+    val me = state.mySeat
+    val humanTurn = game.phase == UnoPhase.PLAYING && game.turn == me && !state.dealing
 
     // وایلدی که انسان لمس کرده و منتظر انتخاب رنگ است
     var pendingWild by remember { mutableStateOf<UnoCard?>(null) }
@@ -97,7 +98,7 @@ fun UnoTableScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {
-                (1 until game.players).forEach { seat ->
+                state.opponentSeats(game.players).forEach { seat ->
                     OpponentChip(
                         name = state.seatName(seat),
                         count = game.hands[seat].size,
@@ -218,14 +219,14 @@ fun UnoTableScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = state.seatName(UNO_HUMAN),
+                    text = state.seatName(me),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Black,
                     color = if (humanTurn) accent else MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "${game.totals[UNO_HUMAN].toPersianDigits()} امتیاز",
+                    text = "${game.totals[me].toPersianDigits()} امتیاز",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -244,6 +245,7 @@ fun UnoTableScreen(
 
             HumanHand(
                 game = game,
+                me = me,
                 enabled = humanTurn && game.drawnCard == null,
                 onPlay = { card ->
                     if (card.isWild) pendingWild = card else viewModel.humanPlay(card)
@@ -280,7 +282,7 @@ fun UnoTableScreen(
         }
 
         // ---------------- دکمه‌ی «اونو!» ----------------
-        if (game.unoPending == UNO_HUMAN) {
+        if (game.unoPending == me) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -300,10 +302,10 @@ fun UnoTableScreen(
         }
 
         // ---------------- انیمیشن پرواز دست‌ها (هفت-صفر) ----------------
-        state.handAnim?.let { anim -> HandFlyOverlay(anim.id, anim.moves, game.players) }
+        state.handAnim?.let { anim -> HandFlyOverlay(anim.id, anim.moves, game.players, me = me) }
 
         // ---------------- انتخاب رنگ ----------------
-        val startColorNeeded = game.phase == UnoPhase.CHOOSE_COLOR && game.turn == UNO_HUMAN && !state.dealing
+        val startColorNeeded = game.phase == UnoPhase.CHOOSE_COLOR && game.turn == me && !state.dealing
         if (startColorNeeded || pendingWild != null || pickingDrawnColor) {
             ColorPickerDialog(
                 title = if (startColorNeeded) "برگ شروع وایلده — رنگ رو تو انتخاب کن!" else "چه رنگی بشه؟",
@@ -330,7 +332,7 @@ fun UnoTableScreen(
 
         // ---------------- برگ تازه‌کشیده: بازی کن یا نگه دار ----------------
         val drawn = game.drawnCard
-        if (drawn != null && game.turn == UNO_HUMAN && !pickingDrawnColor) {
+        if (drawn != null && game.turn == me && !pickingDrawnColor) {
             Dialog(onDismissRequest = {}) {
                 GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
                     Column(
@@ -368,7 +370,7 @@ fun UnoTableScreen(
         }
 
         // ---------------- انتخاب هم‌بازی برای تعویض (۷) ----------------
-        if (game.phase == UnoPhase.CHOOSE_SWAP && game.swapSeat == UNO_HUMAN) {
+        if (game.phase == UnoPhase.CHOOSE_SWAP && game.swapSeat == me) {
             Dialog(onDismissRequest = {}) {
                 GlassCard(modifier = Modifier.fillMaxWidth(), strong = true) {
                     Column(
@@ -388,7 +390,7 @@ fun UnoTableScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            (1 until game.players).forEach { seat ->
+                            state.opponentSeats(game.players).forEach { seat ->
                                 ChoiceBubble(
                                     main = state.seatName(seat).take(6),
                                     sub = "${game.hands[seat].size.toPersianDigits()} برگ",
@@ -504,11 +506,12 @@ private fun OpponentChip(
 @Composable
 private fun HumanHand(
     game: UnoState,
+    me: Int,
     enabled: Boolean,
     onPlay: (UnoCard) -> Unit,
 ) {
-    val legal = remember(game) { UnoEngine.legalPlays(game, UNO_HUMAN).map { it.id }.toSet() }
-    val hand = game.hands[UNO_HUMAN]
+    val legal = remember(game, me) { UnoEngine.legalPlays(game, me).map { it.id }.toSet() }
+    val hand = game.hands[me]
     if (hand.isEmpty()) return
     val twoRows = hand.size > 9
 
@@ -620,16 +623,17 @@ private fun ColorPickerDialog(
 
 /** پرواز کارت‌های بسته بین صندلی‌ها (تعویض و چرخش هفت-صفر) */
 @Composable
-private fun HandFlyOverlay(animId: Int, moves: List<Pair<Int, Int>>, players: Int) {
+private fun HandFlyOverlay(animId: Int, moves: List<Pair<Int, Int>>, players: Int, me: Int) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val w = maxWidth
         val h = maxHeight
         fun anchor(seat: Int): Pair<Float, Float> =
-            if (seat == UNO_HUMAN) {
+            if (seat == me) {
                 0.5f to 0.86f
             } else {
                 val k = players - 1
-                (seat.toFloat() / (k + 1)) to 0.10f
+                val slot = (seat - me + players) % players
+                (slot.toFloat() / (k + 1)) to 0.10f
             }
 
         val progress = remember(animId) { Animatable(0f) }
@@ -685,7 +689,7 @@ private fun RoundOverOverlay(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                BobbingEmoji(emoji = if (winner == UNO_HUMAN) "🎉" else "🃏", fontSize = 44.sp)
+                BobbingEmoji(emoji = if (winner == state.mySeat) "🎉" else "🃏", fontSize = 44.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 StickerTitle(
                     text = "${state.seatName(winner)} دستش رو خالی کرد!",

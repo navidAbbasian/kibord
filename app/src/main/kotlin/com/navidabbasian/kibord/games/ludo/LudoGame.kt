@@ -56,6 +56,14 @@ import com.navidabbasian.kibord.core.ui.components.BlobTextField
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.net.lan.LanServer
+import com.navidabbasian.kibord.core.ui.net.LobbySeat
+import com.navidabbasian.kibord.core.ui.net.LobbySeatKind
+import com.navidabbasian.kibord.core.ui.net.NetConnectionOverlays
+import com.navidabbasian.kibord.core.ui.net.NetEntryScreen
+import com.navidabbasian.kibord.core.ui.net.NetJoinScreen
+import com.navidabbasian.kibord.core.ui.net.NetLobbyScreen
+import com.navidabbasian.kibord.core.ui.net.NetModeCard
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -85,6 +93,7 @@ fun LudoGame(
     viewModel: LudoViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val net by viewModel.net.collectAsState()
     val sound = LocalSoundManager.current
     var pendingExit by remember { mutableStateOf(false) }
 
@@ -128,7 +137,87 @@ fun LudoGame(
         val game = state.game
         PhaseTransition(key = state.stage to (game?.phase == LudoPhase.FINISHED)) {
             when {
-                state.stage == LudoStage.Setup || game == null -> {
+                state.stage == LudoStage.Setup -> {
+                    BackHandler { onExitToHub() }
+                    LudoSetupScreen(state = state, viewModel = viewModel)
+                }
+
+                state.stage == LudoStage.NetEntry -> {
+                    BackHandler { viewModel.backFromNetEntry() }
+                    NetEntryScreen(
+                        net = net,
+                        emoji = "🎯",
+                        title = "منچ چند گوشی",
+                        onNameChanged = viewModel::setMyName,
+                        onToggleOnline = viewModel::setOnline,
+                        onHost = viewModel::hostGame,
+                        onJoin = viewModel::openJoin,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
+                        subtitle = "هر کدوم با گوشی خودتون — میزبان قرمزه، دوستات به ترتیب سبز و زرد و آبی می‌شن؛ صندلی‌های خالی ربات",
+                        hostOptions = {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                LudoToggleRow(
+                                    emoji = "🎲",
+                                    label = "سه تا شش پشت هم = سوختن نوبت",
+                                    checked = state.tripleSixRule,
+                                    index = 0,
+                                    onCheckedChange = { sound?.playButtonClick(); viewModel.setTripleSixRule(it) },
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                LudoToggleRow(
+                                    emoji = "⭐",
+                                    label = "زدن مهره روی خانه‌ی شروع ممنوع",
+                                    checked = state.safeStart,
+                                    index = 1,
+                                    onCheckedChange = { sound?.playButtonClick(); viewModel.setSafeStart(it) },
+                                )
+                            }
+                        },
+                    )
+                }
+
+                state.stage == LudoStage.NetJoin -> {
+                    BackHandler { viewModel.backFromJoin() }
+                    NetJoinScreen(
+                        net = net,
+                        emoji = "🎯",
+                        onJoin = { g -> viewModel.joinLan(g.address, g.port) },
+                        onManualJoin = { address -> viewModel.joinLan(address, LanServer.BASE_PORT) },
+                        onJoinOnline = viewModel::joinOnline,
+                        hostLabel = { "منچِ $it" },
+                    )
+                }
+
+                state.stage == LudoStage.NetLobby -> {
+                    BackHandler { if (net.isHost) viewModel.cancelHosting() else viewModel.backFromJoin() }
+                    NetLobbyScreen(
+                        net = net,
+                        emoji = "🎯",
+                        title = "منچ",
+                        seats = LudoColor.entries.map { c ->
+                            val seat = state.netSeats[c.ordinal]
+                            LobbySeat(
+                                name = seat.name,
+                                kind = when (seat.kind) {
+                                    LudoNetSeatKind.HOST -> LobbySeatKind.HOST
+                                    LudoNetSeatKind.GUEST -> LobbySeatKind.GUEST
+                                    LudoNetSeatKind.BOT -> LobbySeatKind.BOT
+                                    LudoNetSeatKind.EMPTY -> LobbySeatKind.EMPTY
+                                },
+                                connected = seat.connected,
+                                tag = "${ludoColorEmoji(c)} ${c.persianName}",
+                            )
+                        },
+                        isHost = net.isHost,
+                        canStart = state.netCanStart,
+                        onStart = viewModel::startNetGame,
+                        hint = if (net.isHost) "دست‌کم یکی از دوستات باید وصل باشه؛ صندلی خالی رو لمس کن تا ربات بشینه" else null,
+                        onSeatTap = viewModel::toggleLobbySeat,
+                    )
+                }
+
+                game == null -> {
                     BackHandler { onExitToHub() }
                     LudoSetupScreen(state = state, viewModel = viewModel)
                 }
@@ -150,7 +239,21 @@ fun LudoGame(
                 }
             }
         }
+        NetConnectionOverlays(
+            net = net,
+            showAwayBanner = state.stage == LudoStage.Playing,
+            onReconnect = viewModel::reconnectOnline,
+            onLeave = leaveAndExit,
+        )
     }
+}
+
+/** نقطه‌ی رنگی هر مهره برای لابی و برچسب‌ها */
+private fun ludoColorEmoji(color: LudoColor): String = when (color) {
+    LudoColor.RED -> "🔴"
+    LudoColor.GREEN -> "🟢"
+    LudoColor.YELLOW -> "🟡"
+    LudoColor.BLUE -> "🔵"
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +285,8 @@ private fun LudoSetupScreen(state: LudoUiState, viewModel: LudoViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            Spacer(modifier = Modifier.height(14.dp))
+            NetModeCard(onClick = viewModel::chooseNetworkMode)
             Spacer(modifier = Modifier.height(18.dp))
 
             LudoColor.entries.forEach { color ->
@@ -401,8 +506,11 @@ private fun LudoToggleRow(
 private fun LudoPlayScreen(state: LudoUiState, game: LudoState, viewModel: LudoViewModel) {
     val turnPaint = game.turn.paint()
     val turnName = state.displayName(game.turn)
-    val isHumanTurn = !game.currentSeat.isBot
+    val isBotTurn = game.currentSeat.isBot
+    /** نوبتِ آدمِ همین گوشی (در چندگوشی: فقط رنگ خودم) */
+    val isHumanTurn = state.isLocalHumanTurn(game)
     val canRoll = isHumanTurn && game.phase == LudoPhase.ROLLING && !state.busy
+    val turnDisconnected = state.isDisconnected(game.turn)
 
     Box(modifier = Modifier.fillMaxSize()) {
         GameHelpButton(gameId = "ludo", modifier = Modifier.align(Alignment.TopStart))
@@ -440,7 +548,7 @@ private fun LudoPlayScreen(state: LudoUiState, game: LudoState, viewModel: LudoV
             Spacer(modifier = Modifier.height(8.dp))
 
             // ---- بنر نوبت ----
-            LudoTurnBanner(paint = turnPaint, name = turnName, isBot = !isHumanTurn)
+            LudoTurnBanner(paint = turnPaint, name = if (isHumanTurn && state.netMode) "$turnName (تو)" else turnName, isBot = isBotTurn)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -478,9 +586,11 @@ private fun LudoPlayScreen(state: LudoUiState, game: LudoState, viewModel: LudoV
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     val hint = when {
+                        turnDisconnected -> "📴 $turnName قطع شده — با همون اسم برگرده، بازی ادامه پیدا می‌کنه"
                         state.message != null -> state.message
                         state.rolling -> "تاس داره می‌چرخه…"
-                        !isHumanTurn -> "$turnName داره فکر می‌کنه… 🤖"
+                        isBotTurn -> "$turnName داره فکر می‌کنه… 🤖"
+                        !isHumanTurn -> "نوبت $turnName — منتظر بمون…"
                         game.phase == LudoPhase.ROLLING -> "نوبت $turnName — تاس بریز!"
                         state.autoToken != null -> "فقط یه حرکت داری — خودش می‌ره!"
                         else -> "یه مهره‌ی روشن رو لمس کن"

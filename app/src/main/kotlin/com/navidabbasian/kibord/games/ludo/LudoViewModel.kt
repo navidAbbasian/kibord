@@ -5,6 +5,9 @@ import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.navidabbasian.kibord.core.analytics.Analytics
+import com.navidabbasian.kibord.core.net.NetSession
+import com.navidabbasian.kibord.core.net.NetUiState
+import com.navidabbasian.kibord.core.net.online.StoredOnlineRoom
 import com.navidabbasian.kibord.core.util.toPersianDigits
 import com.navidabbasian.kibord.core.settings.GamePrefs
 import com.navidabbasian.kibord.games.ludo.engine.LudoBot
@@ -31,7 +34,7 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 /** مرحله‌های صفحه‌ای منچ */
-enum class LudoStage { Setup, Playing }
+enum class LudoStage { Setup, NetEntry, NetJoin, NetLobby, Playing }
 
 /** رویدادهای صوتی که رابط به صدای مناسب ترجمه می‌کند */
 enum class LudoSoundEvent { DICE, HOP, ENTER, CAPTURE, GOAL, SKIP, TURN, BONUS, WIN }
@@ -80,17 +83,39 @@ data class LudoUiState(
     val message: String? = null,
     /** موتور مشغول است (انیمیشن، ربات، مکث) — دکمه‌ها قفل */
     val busy: Boolean = false,
+    /** بازی چندگوشی است؟ (لابی و بازی) */
+    val netMode: Boolean = false,
+    /** صندلی‌های میز چندگوشی به ترتیب رنگ */
+    val netSeats: List<LudoNetSeat> = List(4) { LudoNetSeat() },
+    /** رنگ خودم در بازی چندگوشی (میزبان قرمز) */
+    val myColor: LudoColor? = null,
 ) {
     val activeSeatCount: Int get() = seatConfigs.count { it.kind != LudoSeatKind.EMPTY }
     val botCount: Int get() = seatConfigs.count { it.kind == LudoSeatKind.BOT }
     val canStart: Boolean get() = activeSeatCount >= 2
 
+    /** لابی چندگوشی: دست‌کم یک دوستِ وصل و دو صندلی پر */
+    val netCanStart: Boolean
+        get() = netSeats.any { it.kind == LudoNetSeatKind.GUEST && it.connected } &&
+            netSeats.count { it.kind != LudoNetSeatKind.EMPTY } >= 2
+
     /** اسم نمایشی صندلی (پیش‌فرض اگر خالی بود) */
     fun displayName(color: LudoColor): String {
         val seat = game?.seat(color)
-        val name = seat?.name ?: seatConfigs[color.ordinal].name
-        return name.ifBlank { defaultName(color, seatConfigs[color.ordinal].kind) }
+        val name = seat?.name ?: if (netMode) netSeats[color.ordinal].name else seatConfigs[color.ordinal].name
+        val kind = seat?.kind ?: if (netMode) {
+            if (netSeats[color.ordinal].kind == LudoNetSeatKind.BOT) LudoSeatKind.BOT else LudoSeatKind.HUMAN
+        } else seatConfigs[color.ordinal].kind
+        return name.ifBlank { defaultName(color, kind) }
     }
+
+    /** آیا نوبت کسی است که روی همین گوشی بازی می‌کند؟ */
+    fun isLocalHumanTurn(g: LudoState): Boolean =
+        if (netMode) g.turn == myColor else !g.currentSeat.isBot
+
+    /** در چندگوشی: صاحب این رنگ قطع شده؟ */
+    fun isDisconnected(color: LudoColor): Boolean =
+        netMode && netSeats[color.ordinal].let { it.kind == LudoNetSeatKind.GUEST && !it.connected }
 }
 
 private fun defaultName(color: LudoColor, kind: LudoSeatKind): String =
@@ -106,6 +131,9 @@ private fun defaultSeatConfigs(): List<LudoSeatConfig> = listOf(
 /**
  * ویومدل منچ: تنظیم صندلی‌ها، جریان نوبت‌ها (تاس → حرکت → پرتاب اضافه/نوبت بعدی)،
  * ربات‌ها و زمان‌بندی انیمیشن‌ها — همه در یک Job دنباله‌دار تا با چرخش صفحه زنده بماند.
+ *
+ * چندگوشی: میزبان (قرمز) موتور و ربات‌ها را می‌گرداند و بعد از هر تغییر عکس میز را
+ * می‌فرستد؛ مهمان‌ها فقط «تاس بریز» و «این مهره» می‌فرستند.
  */
 class LudoViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -118,6 +146,22 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
     private val random = Random.Default
     private var flowJob: Job? = null
     private var animNonce = 0
+
+    private val session = NetSession(
+        app = application,
+        scope = viewModelScope,
+        gameId = GAME_ID,
+        encode = { m: LudoMessage -> m.encode() },
+        decode = ::decodeLudoMessage,
+        host = HostSide(),
+        guest = GuestSide(),
+    )
+
+    /** وضعیت اتصال برای صفحه‌های مشترک شبکه */
+    val net: StateFlow<NetUiState> = session.state
+
+    private val isHost: Boolean get() = session.current.isHost
+    private val isClient: Boolean get() = session.current.isClient
 
     init {
         val app = getApplication<Application>()
@@ -138,6 +182,12 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun sound(e: LudoSoundEvent) {
         _soundEvents.tryEmit(e)
+    }
+
+    /** تغییر وضعیت + (اگر میزبانیم) پخش عکس تازه برای مهمان‌ها */
+    private inline fun mutate(block: (LudoUiState) -> LudoUiState) {
+        _uiState.update(block)
+        pushState()
     }
 
     // ---- صفحه‌ی تنظیم ----
@@ -179,29 +229,51 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
             "triple_six_rule" to s.tripleSixRule,
             "safe_start" to s.safeStart,
         )
-        launchGame()
+        launchGame(localSeats())
     }
 
-    /** دوباره بازی با همان تنظیم‌ها */
-    fun playAgain() {
-        Analytics.gameReplay()
-        launchGame()
-    }
-
-    private fun launchGame() {
-        flowJob?.cancel()
+    private fun localSeats(): List<LudoSeat> {
         val s = _uiState.value
-        val seats = LudoColor.entries.map { c ->
+        return LudoColor.entries.map { c ->
             val cfg = s.seatConfigs[c.ordinal]
             LudoSeat(color = c, kind = cfg.kind, name = cfg.name.trim().ifBlank { defaultName(c, cfg.kind) })
         }
+    }
+
+    private fun netSeatsAsGame(): List<LudoSeat> {
+        val s = _uiState.value
+        return LudoColor.entries.map { c ->
+            val seat = s.netSeats[c.ordinal]
+            val kind = when (seat.kind) {
+                LudoNetSeatKind.HOST, LudoNetSeatKind.GUEST -> LudoSeatKind.HUMAN
+                LudoNetSeatKind.BOT -> LudoSeatKind.BOT
+                LudoNetSeatKind.EMPTY -> LudoSeatKind.EMPTY
+            }
+            LudoSeat(color = c, kind = kind, name = seat.name.ifBlank { defaultName(c, kind) })
+        }
+    }
+
+    /** دوباره بازی با همان تنظیم‌ها (در شبکه: مهمان از میزبان می‌خواهد) */
+    fun playAgain() {
+        if (isClient) {
+            session.send(LudoMessage.PlayAgain)
+            return
+        }
+        Analytics.gameReplay()
+        launchGame(if (_uiState.value.netMode) netSeatsAsGame() else localSeats())
+    }
+
+    private fun launchGame(seats: List<LudoSeat>) {
+        flowJob?.cancel()
+        val s = _uiState.value
         val active = seats.filter { it.active }.map { it.color }
+        if (active.size < 2) return
         val game = LudoEngine.newGame(
             seats = seats,
             rules = LudoRules(tripleSixLosesTurn = s.tripleSixRule, safeStartSquares = s.safeStart),
             firstTurn = active.random(random),
         )
-        _uiState.update {
+        mutate {
             it.copy(
                 stage = LudoStage.Playing,
                 game = game,
@@ -217,11 +289,292 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
         runFlow { onTurnStart(announce = false) }
     }
 
-    /** برگشت به صفحه‌ی تنظیم (از صفحه‌ی برنده یا خروج) */
+    /** برگشت به صفحه‌ی تنظیم (از صفحه‌ی برنده یا خروج) — در شبکه یعنی ترک میز */
     fun backToSetup() {
         flowJob?.cancel()
+        if (_uiState.value.netMode) session.leave()
         _uiState.update {
-            it.copy(stage = LudoStage.Setup, game = null, anim = null, legalTokens = emptySet(), autoToken = null, message = null, busy = false, rolling = false)
+            it.copy(
+                stage = LudoStage.Setup,
+                game = null,
+                anim = null,
+                legalTokens = emptySet(),
+                autoToken = null,
+                message = null,
+                busy = false,
+                rolling = false,
+                netMode = false,
+                netSeats = List(4) { LudoNetSeat() },
+                myColor = null,
+            )
+        }
+    }
+
+    // ---- چندگوشی: ورود، میزبانی، پیوستن ----
+
+    fun chooseNetworkMode() {
+        flowJob?.cancel()
+        session.clearError()
+        _uiState.update { it.copy(stage = LudoStage.NetEntry, game = null) }
+    }
+
+    fun backFromNetEntry() {
+        session.clearError()
+        _uiState.update { it.copy(stage = LudoStage.Setup) }
+    }
+
+    fun setMyName(name: String) = session.setMyName(name)
+
+    fun setOnline(on: Boolean) {
+        session.setOnline(on)
+    }
+
+    fun hostGame() {
+        if (session.current.online) session.hostOnline() else session.hostLan()
+    }
+
+    fun openJoin() {
+        if (session.current.myName.isBlank()) return
+        _uiState.update { it.copy(stage = LudoStage.NetJoin) }
+        session.startDiscovery()
+    }
+
+    fun joinLan(address: String, port: Int) = session.joinLan(address, port)
+
+    fun joinOnline(code: String) = session.joinOnline(code)
+
+    fun backFromJoin() {
+        session.backFromJoin()
+        _uiState.update { it.copy(stage = LudoStage.NetEntry, netMode = false, myColor = null) }
+    }
+
+    fun cancelHosting() {
+        flowJob?.cancel()
+        session.cancelHosting()
+        _uiState.update { it.copy(stage = LudoStage.NetEntry, netMode = false, netSeats = List(4) { LudoNetSeat() }, myColor = null, game = null) }
+    }
+
+    fun resumeOnline() = session.resumeOnline()
+
+    fun discardResume() = session.discardResume()
+
+    fun reconnectOnline() = session.reconnectOnline()
+
+    /** میزبان در لابی: صندلی خالی ↔ ربات */
+    fun toggleLobbySeat(index: Int) {
+        if (!isHost) return
+        val s = _uiState.value
+        if (s.stage != LudoStage.NetLobby) return
+        val seat = s.netSeats.getOrNull(index) ?: return
+        val next = when (seat.kind) {
+            LudoNetSeatKind.EMPTY -> seat.copy(kind = LudoNetSeatKind.BOT, name = "ربات")
+            LudoNetSeatKind.BOT -> LudoNetSeat()
+            else -> return
+        }
+        mutate { st -> st.copy(netSeats = st.netSeats.mapIndexed { i, x -> if (i == index) next else x }) }
+    }
+
+    /** میزبان: شروع بازی چندگوشی با صندلی‌های لابی */
+    fun startNetGame() {
+        val s = _uiState.value
+        if (!isHost || s.stage != LudoStage.NetLobby || !s.netCanStart) return
+        Analytics.gameSetup(
+            "players" to s.netSeats.count { it.isHuman },
+            "bots" to s.netSeats.count { it.kind == LudoNetSeatKind.BOT },
+            "net" to session.analyticsNet,
+            "triple_six_rule" to s.tripleSixRule,
+            "safe_start" to s.safeStart,
+        )
+        launchGame(netSeatsAsGame())
+    }
+
+    private fun snapshot(): LudoRoomSnapshot {
+        val s = _uiState.value
+        return LudoRoomSnapshot(
+            seats = s.netSeats,
+            tripleSix = s.tripleSixRule,
+            safeStart = s.safeStart,
+            started = s.stage == LudoStage.Playing && s.game != null,
+            game = s.game,
+            rollNonce = s.rollNonce,
+            rolling = s.rolling,
+            anim = s.anim?.let { LudoNetAnim(it.nonce, it.move, it.captured) },
+            legalTokens = s.legalTokens,
+            autoToken = s.autoToken,
+            message = s.message,
+            busy = s.busy,
+        )
+    }
+
+    private fun pushState() {
+        if (!isHost) return
+        val guests = _uiState.value.netSeats.filter { it.kind == LudoNetSeatKind.GUEST }.map { it.name }
+        session.pushToAll(guests)
+    }
+
+    /** عکس میز روی وضعیت خودمان (میزبان موقع ادامه، مهمان همیشه) */
+    private fun applyRoom(room: LudoRoomSnapshot, asHost: Boolean) {
+        val before = _uiState.value
+        val myColor = if (asHost) LudoColor.RED else {
+            val me = session.current.myName.trim()
+            LudoColor.entries.firstOrNull { room.seats[it.ordinal].name.trim() == me && room.seats[it.ordinal].kind == LudoNetSeatKind.GUEST }
+        }
+        val anim = room.anim?.let { a ->
+            if (before.anim?.nonce == a.nonce) before.anim
+            else LudoMoveAnim(nonce = a.nonce, move = a.move, captured = a.captured, startedAt = SystemClock.elapsedRealtime())
+        }
+        val stage = if (room.started && room.game != null) LudoStage.Playing else LudoStage.NetLobby
+        _uiState.update {
+            it.copy(
+                stage = stage,
+                netMode = true,
+                netSeats = room.seats,
+                tripleSixRule = room.tripleSix,
+                safeStart = room.safeStart,
+                game = room.game,
+                rollNonce = room.rollNonce,
+                rolling = room.rolling,
+                anim = anim,
+                legalTokens = room.legalTokens,
+                autoToken = room.autoToken,
+                message = room.message,
+                busy = room.busy,
+                myColor = myColor,
+            )
+        }
+        if (asHost) {
+            animNonce = maxOf(animNonce, room.anim?.nonce ?: 0)
+            return
+        }
+        // صداهای مهمان از روی تفاوت‌ها
+        val g = room.game ?: return
+        if (room.rollNonce > before.rollNonce) sound(LudoSoundEvent.DICE)
+        if (room.anim != null && room.anim.nonce != before.anim?.nonce) {
+            sound(if (room.anim.move.entersBoard) LudoSoundEvent.ENTER else LudoSoundEvent.HOP)
+            if (room.anim.captured != null) sound(LudoSoundEvent.CAPTURE)
+            else if (room.anim.move.reachesGoal) sound(LudoSoundEvent.GOAL)
+        }
+        val wasFinished = before.game?.phase == LudoPhase.FINISHED
+        if (g.phase == LudoPhase.FINISHED && !wasFinished) sound(LudoSoundEvent.WIN)
+        if (g.turn == myColor && before.game?.turn != myColor && g.phase == LudoPhase.ROLLING) sound(LudoSoundEvent.TURN)
+    }
+
+    private fun colorOfGuest(name: String): LudoColor? {
+        val seats = _uiState.value.netSeats
+        return LudoColor.entries.firstOrNull { seats[it.ordinal].kind == LudoNetSeatKind.GUEST && seats[it.ordinal].name.trim() == name.trim() }
+    }
+
+    /** آنچه میزبان باید جواب بدهد */
+    private inner class HostSide : NetSession.HostCallbacks<LudoMessage> {
+
+        override fun acceptJoin(name: String): String? {
+            val s = _uiState.value
+            if (!s.netMode) return "بازی‌ای در کار نیست"
+            if (name.isBlank()) return "اسم خالی است"
+            if (name.trim() == session.current.myName.trim()) return "این اسم مالِ میزبانه — یه اسم دیگه انتخاب کن"
+            val existing = colorOfGuest(name)
+            if (existing != null) {
+                // برگشتِ همان آدم
+                mutate { st -> st.copy(netSeats = st.netSeats.mapIndexed { i, x -> if (i == existing.ordinal) x.copy(connected = true) else x }) }
+                return null
+            }
+            if (s.stage == LudoStage.Playing) return "بازی شروع شده — دفعه‌ی بعد زودتر بیا!"
+            val free = s.netSeats.indexOfFirst { it.kind == LudoNetSeatKind.EMPTY }
+            if (free < 0) return "میز پره — چهار نفر بیشتر جا نداره!"
+            mutate { st ->
+                st.copy(netSeats = st.netSeats.mapIndexed { i, x -> if (i == free) LudoNetSeat(name = name.trim(), kind = LudoNetSeatKind.GUEST) else x })
+            }
+            return null
+        }
+
+        override fun onCommand(name: String, msg: LudoMessage) {
+            val color = colorOfGuest(name) ?: return
+            val s = _uiState.value
+            val game = s.game ?: return
+            when (msg) {
+                LudoMessage.Roll -> {
+                    if (s.stage == LudoStage.Playing && !s.busy && game.phase == LudoPhase.ROLLING && game.turn == color) {
+                        runFlow { doRoll() }
+                    }
+                }
+
+                is LudoMessage.Tap -> {
+                    if (s.stage == LudoStage.Playing && !s.busy && game.phase == LudoPhase.MOVING && game.turn == color) {
+                        val move = LudoEngine.legalMoves(game).firstOrNull { it.token == msg.token } ?: return
+                        runFlow { performMove(move) }
+                    }
+                }
+
+                LudoMessage.Continue -> continueForOthers()
+                LudoMessage.PlayAgain -> if (game.phase == LudoPhase.FINISHED) playAgain()
+                is LudoMessage.State -> Unit
+            }
+        }
+
+        override fun onDisconnected(name: String) {
+            val color = colorOfGuest(name) ?: return
+            mutate { st -> st.copy(netSeats = st.netSeats.mapIndexed { i, x -> if (i == color.ordinal) x.copy(connected = false) else x }) }
+        }
+
+        override fun stateFor(name: String): LudoMessage = LudoMessage.State(snapshot())
+
+        override fun onRoomReady() {
+            flowJob?.cancel()
+            _uiState.update {
+                it.copy(
+                    stage = LudoStage.NetLobby,
+                    netMode = true,
+                    netSeats = listOf(LudoNetSeat(name = session.current.myName.trim(), kind = LudoNetSeatKind.HOST)) + List(3) { LudoNetSeat() },
+                    myColor = LudoColor.RED,
+                    game = null,
+                    anim = null,
+                    legalTokens = emptySet(),
+                    autoToken = null,
+                    message = null,
+                    busy = false,
+                    rolling = false,
+                )
+            }
+        }
+
+        override fun onResumeHost(stored: StoredOnlineRoom, decoded: LudoMessage?) {
+            flowJob?.cancel()
+            val room = (decoded as? LudoMessage.State)?.room
+            if (room == null) {
+                _uiState.update {
+                    it.copy(
+                        stage = LudoStage.NetLobby,
+                        netMode = true,
+                        netSeats = listOf(LudoNetSeat(name = stored.name, kind = LudoNetSeatKind.HOST)) + List(3) { LudoNetSeat() },
+                        myColor = LudoColor.RED,
+                        game = null,
+                    )
+                }
+                return
+            }
+            val seats = room.seats.map { if (it.kind == LudoNetSeatKind.GUEST) it.copy(connected = false) else it }
+            applyRoom(room.copy(seats = seats, rolling = false, busy = false), asHost = true)
+            val g = _uiState.value.game ?: return
+            // جریان از همان‌جا که مانده بود ادامه می‌یابد
+            runFlow {
+                when (g.phase) {
+                    LudoPhase.ROLLING -> onTurnStart(announce = false)
+                    LudoPhase.MOVING, LudoPhase.PASSING -> resolveAfterRoll()
+                    LudoPhase.FINISHED -> Unit
+                }
+            }
+        }
+
+        override fun onRoomFailed() {
+            _uiState.update { it.copy(stage = LudoStage.NetEntry, netMode = false, game = null) }
+        }
+    }
+
+    /** مهمان: هرچه میزبان فرستاد، همان حقیقت است */
+    private inner class GuestSide : NetSession.GuestCallbacks<LudoMessage> {
+        override fun onMessage(msg: LudoMessage) {
+            val room = (msg as? LudoMessage.State)?.room ?: return
+            applyRoom(room, asHost = false)
         }
     }
 
@@ -235,21 +588,25 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
     /** آغاز نوبت بازیکن فعلی: آدم منتظر لمس «تاس بریز» می‌ماند، ربات خودش می‌ریزد */
     private suspend fun onTurnStart(announce: Boolean = true) {
         val game = _uiState.value.game ?: return
-        // لرزش کوتاه فقط وقتی نوبت به یک آدم می‌رسد — نشانه‌ی «گوشی دست توئه»
-        if (announce && !game.currentSeat.isBot) sound(LudoSoundEvent.TURN)
-        _uiState.update { it.copy(message = null, legalTokens = emptySet(), autoToken = null, busy = false) }
+        // لرزش کوتاه فقط وقتی نوبت به آدمِ همین گوشی می‌رسد — نشانه‌ی «گوشی دست توئه»
+        if (announce && _uiState.value.isLocalHumanTurn(game)) sound(LudoSoundEvent.TURN)
+        mutate { it.copy(message = null, legalTokens = emptySet(), autoToken = null, busy = false) }
         if (game.currentSeat.isBot) {
-            _uiState.update { it.copy(busy = true) }
+            mutate { it.copy(busy = true) }
             delay(if (announce) 850 else 600)
             doRoll()
         }
     }
 
-    /** لمس «تاس بریز» توسط آدم */
+    /** لمس «تاس بریز» توسط آدمِ همین گوشی */
     fun rollDice() {
         val s = _uiState.value
         val game = s.game ?: return
-        if (s.busy || game.phase != LudoPhase.ROLLING || game.currentSeat.isBot) return
+        if (s.busy || game.phase != LudoPhase.ROLLING || !s.isLocalHumanTurn(game)) return
+        if (isClient) {
+            session.send(LudoMessage.Roll)
+            return
+        }
         runFlow { doRoll() }
     }
 
@@ -259,11 +616,11 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
         val value = random.nextInt(1, 7)
         val rolled = LudoEngine.roll(game, value)
         sound(LudoSoundEvent.DICE)
-        _uiState.update {
+        mutate {
             it.copy(game = rolled, rollNonce = it.rollNonce + 1, rolling = true, busy = true, message = null, legalTokens = emptySet(), autoToken = null)
         }
         delay(LUDO_DICE_MS)
-        _uiState.update { it.copy(rolling = false) }
+        mutate { it.copy(rolling = false) }
         resolveAfterRoll()
     }
 
@@ -278,11 +635,11 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
                     else -> "$name حرکتی نداره — نوبت بعدی"
                 }
                 sound(LudoSoundEvent.SKIP)
-                _uiState.update { it.copy(message = msg, busy = true) }
+                mutate { it.copy(message = msg, busy = true) }
                 delay(1400)
                 val g = _uiState.value.game ?: return
                 if (g.phase != LudoPhase.PASSING) return
-                _uiState.update { it.copy(game = LudoEngine.endTurn(g)) }
+                mutate { it.copy(game = LudoEngine.endTurn(g)) }
                 onTurnStart()
             }
 
@@ -290,22 +647,22 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
                 val moves = LudoEngine.legalMoves(game)
                 if (moves.isEmpty()) {
                     // نباید پیش بیاید (roll خودش PASSING می‌کند) — ایمنی
-                    _uiState.update { it.copy(game = LudoEngine.endTurn(game)) }
+                    mutate { it.copy(game = LudoEngine.endTurn(game)) }
                     onTurnStart()
                     return
                 }
                 if (game.currentSeat.isBot) {
-                    _uiState.update { it.copy(busy = true, legalTokens = moves.map { m -> m.token }.toSet()) }
+                    mutate { it.copy(busy = true, legalTokens = moves.map { m -> m.token }.toSet()) }
                     delay(650)
                     val pick = LudoBot.choose(game, moves, random) ?: moves.first()
                     performMove(pick)
                 } else if (moves.size == 1) {
                     // تنها حرکت مجاز: کمی برجسته کن و خودش برو
-                    _uiState.update { it.copy(busy = true, legalTokens = setOf(moves[0].token), autoToken = moves[0].token) }
+                    mutate { it.copy(busy = true, legalTokens = setOf(moves[0].token), autoToken = moves[0].token) }
                     delay(520)
                     performMove(moves[0])
                 } else {
-                    _uiState.update {
+                    mutate {
                         it.copy(
                             busy = false,
                             legalTokens = moves.map { m -> m.token }.toSet(),
@@ -319,11 +676,15 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** لمس یک مهره‌ی بازیکن نوبت توسط آدم */
+    /** لمس یک مهره‌ی بازیکن نوبت توسط آدمِ همین گوشی */
     fun tapToken(token: Int) {
         val s = _uiState.value
         val game = s.game ?: return
-        if (s.busy || game.phase != LudoPhase.MOVING || game.currentSeat.isBot) return
+        if (s.busy || game.phase != LudoPhase.MOVING || !s.isLocalHumanTurn(game)) return
+        if (isClient) {
+            if (token in s.legalTokens) session.send(LudoMessage.Tap(token))
+            return
+        }
         val move = LudoEngine.legalMoves(game).firstOrNull { it.token == token } ?: return
         runFlow { performMove(move) }
     }
@@ -342,7 +703,7 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
             captured = after.lastMove?.captured,
             startedAt = SystemClock.elapsedRealtime(),
         )
-        _uiState.update {
+        mutate {
             it.copy(game = after, anim = anim, legalTokens = emptySet(), autoToken = null, busy = true, message = null)
         }
         sound(if (move.entersBoard) LudoSoundEvent.ENTER else LudoSoundEvent.HOP)
@@ -358,19 +719,19 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
         when (after.phase) {
             LudoPhase.FINISHED -> {
                 sound(LudoSoundEvent.WIN)
-                _uiState.update { it.copy(busy = false, message = null) }
+                mutate { it.copy(busy = false, message = null) }
             }
 
             LudoPhase.ROLLING -> {
                 // پرتاب اضافه: همان بازیکن
                 sound(LudoSoundEvent.BONUS)
                 val why = if (anim.captured != null) "زدی! 🎯" else "شش آوردی! 🎁"
-                _uiState.update { it.copy(message = "$why یه تاس دیگه برای $name") }
+                mutate { it.copy(message = "$why یه تاس دیگه برای $name") }
                 if (after.currentSeat.isBot) {
                     delay(900)
                     doRoll()
                 } else {
-                    _uiState.update { it.copy(busy = false) }
+                    mutate { it.copy(busy = false) }
                 }
             }
 
@@ -383,14 +744,24 @@ class LudoViewModel(application: Application) : AndroidViewModel(application) {
 
     /** از صفحه‌ی برنده: بقیه برای رتبه‌های بعدی ادامه می‌دهند */
     fun continueForOthers() {
+        if (isClient) {
+            session.send(LudoMessage.Continue)
+            return
+        }
         val game = _uiState.value.game ?: return
         if (game.phase != LudoPhase.FINISHED || game.gameOver) return
-        _uiState.update { it.copy(game = LudoEngine.continueAfterFinish(game), anim = null) }
+        mutate { it.copy(game = LudoEngine.continueAfterFinish(game), anim = null) }
         runFlow { onTurnStart() }
     }
 
+    /** بسته شدن صفحه یا کشته شدن اپ: شبکه جمع می‌شود ولی اتاقِ اینترنتی ذخیره می‌ماند */
     override fun onCleared() {
         flowJob?.cancel()
+        session.release()
         super.onCleared()
+    }
+
+    companion object {
+        const val GAME_ID = "ludo"
     }
 }

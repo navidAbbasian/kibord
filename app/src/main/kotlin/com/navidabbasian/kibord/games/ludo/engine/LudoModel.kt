@@ -1,6 +1,9 @@
 package com.navidabbasian.kibord.games.ludo.engine
 
+import kotlinx.serialization.Serializable
+
 /** رنگ‌های چهارگانه‌ی منچ به ترتیب ساعتگرد روی صفحه؛ هر کدام خانه‌ی شروع خودش روی مسیر ۵۲تایی */
+@Serializable
 enum class LudoColor(val startIndex: Int, val persianName: String) {
     RED(0, "قرمز"),
     GREEN(13, "سبز"),
@@ -18,8 +21,10 @@ enum class LudoColor(val startIndex: Int, val persianName: String) {
 }
 
 /** هر صندلی می‌تواند آدم، ربات یا خالی باشد */
+@Serializable
 enum class LudoSeatKind { HUMAN, BOT, EMPTY }
 
+@Serializable
 data class LudoSeat(
     val color: LudoColor,
     val kind: LudoSeatKind,
@@ -30,6 +35,7 @@ data class LudoSeat(
 }
 
 /** قوانین اختیاری دست */
+@Serializable
 data class LudoRules(
     /** سه تا شش پشت سر هم = نوبت می‌سوزد */
     val tripleSixLosesTurn: Boolean = true,
@@ -37,6 +43,7 @@ data class LudoRules(
     val safeStartSquares: Boolean = false,
 )
 
+@Serializable
 enum class LudoPhase {
     /** منتظر پرتاب تاس */
     ROLLING,
@@ -49,9 +56,11 @@ enum class LudoPhase {
 }
 
 /** آخرین اتفاقِ مهم برای پیام و صدا در رابط کاربری */
+@Serializable
 enum class LudoEvent { NONE, ENTERED, MOVED, CAPTURED, REACHED_GOAL, TRIPLE_SIX, NO_MOVE, PLAYER_FINISHED }
 
 /** یک حرکت: مهره‌ی شماره‌ی token از گام from به گام to */
+@Serializable
 data class LudoMove(
     val color: LudoColor,
     val token: Int,
@@ -65,9 +74,11 @@ data class LudoMove(
 }
 
 /** مهره‌ای که زده شده و به پایگاه برگشته */
+@Serializable
 data class LudoCapture(val color: LudoColor, val token: Int, val trackIndex: Int)
 
 /** آخرین حرکت انجام‌شده به همراه مهره‌ی زده‌شده — برای انیمیشن و صدا */
+@Serializable
 data class LudoLastMove(val move: LudoMove, val captured: LudoCapture?)
 
 /** مهره در پایگاه */
@@ -87,6 +98,7 @@ const val TOKENS_PER_PLAYER = 4
  * وضعیت کامل یک دست منچ — تغییرناپذیر؛ موتور نسخه‌ی تازه برمی‌گرداند.
  * tokens[color.ordinal][i] گامِ مهره‌ی i است: BASE، ۰ تا ۵۵ روی صفحه، GOAL رسیده.
  */
+@Serializable
 data class LudoState(
     val seats: List<LudoSeat>,
     val rules: LudoRules,

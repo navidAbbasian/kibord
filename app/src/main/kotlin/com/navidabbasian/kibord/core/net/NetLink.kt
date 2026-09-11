@@ -12,6 +12,15 @@ interface HostLink<T> {
     fun stop()
 }
 
+/**
+ * میزبانی که می‌تواند به یک مهمانِ مشخص هم پیام بدهد — برای بازی‌های
+ * کارتی که هر بازیکن فقط باید دستِ خودش را ببیند، عکسِ وضعیت برای هر
+ * مهمان جداگانه سانسور و فرستاده می‌شود.
+ */
+interface TargetedHostLink<T> : HostLink<T> {
+    fun sendTo(playerName: String, msg: T)
+}
+
 interface ClientLink<T> {
     fun send(msg: T)
     fun close()

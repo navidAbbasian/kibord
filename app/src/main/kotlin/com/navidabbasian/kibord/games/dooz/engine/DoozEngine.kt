@@ -25,6 +25,15 @@ class DoozBoard private constructor(val cells: List<DoozMark?>) {
 
     operator fun get(index: Int): DoozMark? = cells[index]
 
+    /** رشته‌ی ۹ حرفی مثل "XO..X.O.." — برای فرستادن روی شبکه (وارونه‌ی [of]) */
+    fun pattern(): String = cells.joinToString("") { c ->
+        when (c) {
+            DoozMark.X -> "X"
+            DoozMark.O -> "O"
+            null -> "."
+        }
+    }
+
     /** خانه‌های خالی */
     val emptyCells: List<Int> get() = cells.indices.filter { cells[it] == null }
 

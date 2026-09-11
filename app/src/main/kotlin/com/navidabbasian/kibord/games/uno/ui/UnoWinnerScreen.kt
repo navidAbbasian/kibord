@@ -30,7 +30,6 @@ import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.uno.UNO_HUMAN
 import com.navidabbasian.kibord.games.uno.UnoUiState
 import com.navidabbasian.kibord.games.uno.engine.UnoState
 
@@ -46,7 +45,7 @@ fun UnoWinnerScreen(
     val extras = kiExtras
     val winner = game.matchWinner ?: return
     val winnerName = state.seatName(winner)
-    val humanWon = winner == UNO_HUMAN
+    val humanWon = winner == state.mySeat
 
     ConfettiOverlay(modifier = Modifier.fillMaxSize())
 

@@ -4,7 +4,7 @@ import android.util.Log
 import com.navidabbasian.kibord.core.cloud.Cloud
 import com.navidabbasian.kibord.core.analytics.Analytics
 import com.navidabbasian.kibord.core.net.ClientLink
-import com.navidabbasian.kibord.core.net.HostLink
+import com.navidabbasian.kibord.core.net.TargetedHostLink
 import io.github.jan.supabase.realtime.PresenceAction
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.realtime.RealtimeChannel
@@ -95,7 +95,9 @@ class OnlineHost<T>(
     val roomCode: String = OnlineRooms.newCode(),
     /** بازگشتِ مهمانی که قطع شده بود (بعد از آنکه دوباره پذیرفته شد) */
     private val onClientRejoined: (playerName: String) -> Unit = {},
-) : HostLink<T> {
+    /** وضعیت از دیدِ یک مهمان مشخص (بازی‌های کارتی)؛ تهی یعنی همان [latestState] */
+    private val latestStateFor: ((playerName: String) -> T?)? = null,
+) : TargetedHostLink<T> {
 
     private var channel: RealtimeChannel? = null
     private val jobs = mutableListOf<Job>()
@@ -168,7 +170,7 @@ class OnlineHost<T>(
         if (error != null) return
         joined += name
         val wasAway = away.remove(name)
-        latestState()?.let { state ->
+        (latestStateFor?.invoke(name) ?: latestState())?.let { state ->
             ch.broadcast("st", buildJsonObject { put("to", name); put("body", encode(state)) })
         }
         if (returning && wasAway) onClientRejoined(name)
@@ -199,12 +201,17 @@ class OnlineHost<T>(
         }
     }
 
-    override fun broadcast(msg: T) {
+    override fun broadcast(msg: T) = send(to = "", msg = msg)
+
+    /** پیام فقط برای یک مهمان — بقیه با فیلد «to» نادیده‌اش می‌گیرند */
+    override fun sendTo(playerName: String, msg: T) = send(to = playerName, msg = msg)
+
+    private fun send(to: String, msg: T) {
         val ch = channel ?: return
         val body = encode(msg)
         scope.launch {
             try {
-                ch.broadcast("st", buildJsonObject { put("to", ""); put("body", body) })
+                ch.broadcast("st", buildJsonObject { put("to", to); put("body", body) })
             } catch (_: Exception) {
             }
         }

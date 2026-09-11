@@ -1,15 +1,21 @@
 package com.navidabbasian.kibord.games.uno.engine
 
+import kotlinx.serialization.Serializable
+
 /** چهار رنگ اونو */
+@Serializable
 enum class UnoColor { RED, YELLOW, GREEN, BLUE }
 
 /** نوع کارت */
+@Serializable
 enum class UnoKind { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_DRAW_FOUR }
 
 /** سه مدل محبوب بازی */
+@Serializable
 enum class UnoMode { CLASSIC, SEVEN_ZERO, MERCILESS }
 
 /** فاز جاری دست */
+@Serializable
 enum class UnoPhase {
     /** برگ شروع «عوض رنگ» بود؛ نفر اول باید رنگ را انتخاب کند */
     CHOOSE_COLOR,
@@ -31,6 +37,7 @@ enum class UnoPhase {
  * یک برگ اونو. `id` یکتاست چون از بیشتر برگ‌ها دو نسخه در دسته هست؛
  * برابری روی `id` هم حساب می‌شود تا حذف از دست دقیق باشد.
  */
+@Serializable
 data class UnoCard(
     val id: Int,
     val kind: UnoKind,
@@ -49,6 +56,7 @@ data class UnoCard(
 }
 
 /** تنظیمات مسابقه؛ سقف صفر یعنی تک‌دست */
+@Serializable
 data class UnoSettings(
     val mode: UnoMode = UnoMode.CLASSIC,
     val players: Int = 4,
@@ -74,6 +82,7 @@ object UnoRules {
  * وضعیت کامل یک مسابقه‌ی اونو — تغییرناپذیر؛ هر حرکت نسخه‌ی تازه می‌سازد.
  * آخرین عضو `discard` روی دسته‌ی رد است.
  */
+@Serializable
 data class UnoState(
     val settings: UnoSettings,
     val hands: List<List<UnoCard>>,

@@ -54,10 +54,12 @@ import com.navidabbasian.kibord.core.ui.theme.LudoAccent
 import com.navidabbasian.kibord.core.ui.theme.DoozAccent
 import com.navidabbasian.kibord.core.ui.theme.HokmAccent
 import com.navidabbasian.kibord.core.ui.theme.ShelemAccent
+import com.navidabbasian.kibord.core.ui.theme.UnoAccent
 import com.navidabbasian.kibord.games.ludo.LudoGame
 import com.navidabbasian.kibord.games.dooz.DoozGame
 import com.navidabbasian.kibord.games.hokm.HokmGame
 import com.navidabbasian.kibord.games.shelem.ShelemGame
+import com.navidabbasian.kibord.games.uno.UnoGame
 import com.navidabbasian.kibord.games.backgammon.BackgammonGame
 import com.navidabbasian.kibord.games.dor.DorGame
 import com.navidabbasian.kibord.games.esmfamil.EsmFamilGame
@@ -346,6 +348,11 @@ fun KiBordApp() {
         composable(Routes.SHELEM) {
             CompositionLocalProvider(LocalGameAccent provides ShelemAccent) {
                 ShelemGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
+            }
+        }
+        composable(Routes.UNO) {
+            CompositionLocalProvider(LocalGameAccent provides UnoAccent) {
+                UnoGame(onExitToHub = { navController.popBackStack(Routes.HUB, inclusive = false) })
             }
         }
     }

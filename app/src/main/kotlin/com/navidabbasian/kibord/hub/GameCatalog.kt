@@ -44,6 +44,8 @@ import com.navidabbasian.kibord.core.ui.theme.HokmAccent
 import com.navidabbasian.kibord.core.ui.theme.HokmAccentDark
 import com.navidabbasian.kibord.core.ui.theme.ShelemAccent
 import com.navidabbasian.kibord.core.ui.theme.ShelemAccentDark
+import com.navidabbasian.kibord.core.ui.theme.UnoAccent
+import com.navidabbasian.kibord.core.ui.theme.UnoAccentDark
 
 @Immutable
 data class GameInfo(
@@ -84,6 +86,7 @@ object Routes {
     const val DOOZ = "game/dooz"
     const val HOKM = "game/hokm"
     const val SHELEM = "game/shelem"
+    const val UNO = "game/uno"
     const val BACKGAMMON = "game/backgammon"
 }
 
@@ -246,7 +249,7 @@ val moreGamesCatalog = listOf(
     GameInfo(
         id = "backgammon",
         title = "تخته‌نرد",
-        tagline = "کلاسیک، هلندی و هایپرگامون — سه روش در یک تخته",
+        tagline = "کلاسیک، هلندی، هایپرگامون و ایرانی — چهار روش در یک تخته",
         emoji = "🎲",
         accent = BackgammonAccent,
         accentDark = BackgammonAccentDark,
@@ -276,7 +279,7 @@ val moreGamesCatalog = listOf(
     GameInfo(
         id = "hokm",
         title = "حکم",
-        tagline = "حاکم حکم می‌کنه، هفت دست می‌بره — دو، سه یا چهار نفره",
+        tagline = "حاکم حکم می‌کنه — دو نفره، چهار نفره و مردابادیِ ۳ نفره",
         emoji = "🃏",
         accent = HokmAccent,
         accentDark = HokmAccentDark,
@@ -292,6 +295,16 @@ val moreGamesCatalog = listOf(
         accentDark = ShelemAccentDark,
         players = "۴ نفر — با ربات",
         route = Routes.SHELEM,
+    ),
+    GameInfo(
+        id = "uno",
+        title = "اونو",
+        tagline = "رنگ به رنگ، +۲ و +۴! سه مدل محبوب دنیا",
+        emoji = "🌈",
+        accent = UnoAccent,
+        accentDark = UnoAccentDark,
+        players = "۲ تا ۴ نفر — با ربات",
+        route = Routes.UNO,
     ),
     GameInfo(
         id = "who_am_i",

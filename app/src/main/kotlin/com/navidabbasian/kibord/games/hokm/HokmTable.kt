@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,25 +48,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
+import com.navidabbasian.kibord.core.cards.Card
+import com.navidabbasian.kibord.core.cards.GlowChip
 import com.navidabbasian.kibord.core.cards.HandFan
+import com.navidabbasian.kibord.core.cards.OrnateCardBack
 import com.navidabbasian.kibord.core.cards.PlayingCard
+import com.navidabbasian.kibord.core.cards.SideBackFan
 import com.navidabbasian.kibord.core.cards.Suit
+import com.navidabbasian.kibord.core.cards.TableGlowCyan
+import com.navidabbasian.kibord.core.cards.TablePill
+import com.navidabbasian.kibord.core.cards.TablePillBrown
+import com.navidabbasian.kibord.core.cards.TablePillCream
+import com.navidabbasian.kibord.core.cards.TablePillGold
+import com.navidabbasian.kibord.core.cards.TableBadgeBlue
+import com.navidabbasian.kibord.core.cards.TopBackFan
+import com.navidabbasian.kibord.core.cards.WonTrickPile
+import com.navidabbasian.kibord.core.cards.WoodPill
+import com.navidabbasian.kibord.core.cards.WoodPlankBackground
 import com.navidabbasian.kibord.core.cards.color
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -83,21 +88,15 @@ import com.navidabbasian.kibord.games.hokm.engine.HokmState
 import com.navidabbasian.kibord.games.hokm.engine.HokmVariant
 import com.navidabbasian.kibord.games.hokm.engine.MordabadiRules
 import com.navidabbasian.kibord.games.hokm.engine.TrickCard
-import kotlin.math.abs
-import kotlin.math.min
-import kotlin.random.Random
+import kotlinx.coroutines.delay
 
-// ---------------------------------------------------------------- رنگ‌های میز چوبی
+// ---------------------------------------------------------------- رنگ‌های میز چوبی (مشترک در TableUi)
 
-private val WoodPlankColors = listOf(Color(0xFFB67B3E), Color(0xFFC68A4A), Color(0xFFA96F33))
-private val WoodSeam = Color(0xFF7A5122)
-private val PillBrown = Color(0xDB4A2F1B)
-private val PillGold = Color(0xFFC9A24B)
-private val PillCream = Color(0xFFF5E3B8)
-private val BadgeBlue = Color(0xFF2D7DF6)
-private val GlowCyan = Color(0xFF35D6E8)
-private val BackBlueTop = Color(0xFF1F3A6E)
-private val BackBlueBottom = Color(0xFF0F2547)
+private val PillBrown = TablePillBrown
+private val PillGold = TablePillGold
+private val PillCream = TablePillCream
+private val BadgeBlue = TableBadgeBlue
+private val GlowCyan = TableGlowCyan
 private val CreditGreen = Color(0xFF6FE3A5)
 private val DebtRed = Color(0xFFFF9B8E)
 
@@ -140,13 +139,14 @@ private fun slotRotation(pos: TablePos): Float = when (pos) {
 internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
     val game = state.game ?: return
     val humanPlays = state.humanSeatInGame == 0
-    val myTurn = game.phase == HokmPhase.PLAYING && game.turn == 0 && humanPlays && !game.trickComplete
-    val legal = remember(game) { if (myTurn) HokmRules.legalMoves(game, 0).toSet() else null }
+    val myTurn = game.phase == HokmPhase.PLAYING && game.turn == 0 && humanPlays &&
+        !game.trickComplete && state.exchangeFx == null && !state.collectionBanner
+    val legal = remember(game, myTurn) { if (myTurn) HokmRules.legalMoves(game, 0).toSet() else null }
     val debtorPicking = state.debtorPick != null
     val mordabadi = game.isMordabadi && game.quotas.isNotEmpty()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        WoodBackground(modifier = Modifier.fillMaxSize())
+        WoodPlankBackground(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
@@ -178,7 +178,8 @@ internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
                     debtorPicking -> game.hands[0].toSet()
                     else -> legal
                 },
-                maxCardWidth = if (mordabadi) 64.dp else 74.dp,
+                selected = state.receivedCard,
+                maxCardWidth = if (mordabadi) 72.dp else 74.dp,
                 onCardClick = when {
                     debtorPicking -> ({ card -> viewModel.giveDebtCard(card) })
                     myTurn -> ({ card -> viewModel.playCard(card) })
@@ -215,13 +216,32 @@ internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
             }
         }
 
+        // ---- بنر شروع فاز وصول (مردابادی) ----
+        AnimatedVisibility(
+            visible = state.collectionBanner,
+            enter = fadeIn() + scaleIn(initialScale = 0.8f),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            GlowChip(glowing = true) {
+                Text(
+                    text = "💰 وصول طلب‌ها",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = PillCream,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+
         // ---- انتخاب حکم توسط بازیکن ----
         if (game.phase == HokmPhase.CHOOSE_TRUMP && game.hakem == 0 && humanPlays) {
             TrumpChoiceSheet(game = game, onChoose = viewModel::chooseTrump)
         }
 
         // ---- وصول طلب (مردابادی): نوبت طلبکارِ انسانی ----
-        if (game.phase == HokmPhase.COLLECTION && MordabadiRules.collector(game) == 0 && !debtorPicking) {
+        if (game.phase == HokmPhase.COLLECTION && MordabadiRules.collector(game) == 0 &&
+            !debtorPicking && !state.collectionBanner && state.exchangeFx == null
+        ) {
             CollectionSheet(state = state, game = game, onExchange = viewModel::humanExchange)
         }
 
@@ -232,123 +252,6 @@ internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
             } else {
                 HandOverOverlay(state = state, game = game, onNext = viewModel::nextHand)
             }
-        }
-    }
-}
-
-// ---------------------------------------------------------------- زمینه‌ی چوبی
-
-/** میز چوبی: تخته‌های عمودی گرم با درز، رگه و تیرگی ملایم گوشه‌ها */
-@Composable
-private fun WoodBackground(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val plankW = 62.dp.toPx()
-        var x = 0f
-        var i = 0
-        while (x < size.width) {
-            drawRect(
-                color = WoodPlankColors[i % WoodPlankColors.size],
-                topLeft = Offset(x, 0f),
-                size = Size(plankW, size.height),
-            )
-            // درز باریک تیره بین تخته‌ها
-            drawLine(
-                color = WoodSeam.copy(alpha = 0.8f),
-                start = Offset(x + plankW, 0f),
-                end = Offset(x + plankW, size.height),
-                strokeWidth = 2.dp.toPx(),
-            )
-            // چند رگه‌ی کوتاه افقی
-            val rnd = Random(i * 131 + 7)
-            repeat(4) {
-                val gy = rnd.nextFloat() * size.height
-                val gx = x + 6.dp.toPx() + rnd.nextFloat() * (plankW - 24.dp.toPx())
-                drawLine(
-                    color = WoodSeam.copy(alpha = 0.20f),
-                    start = Offset(gx, gy),
-                    end = Offset(gx + 10.dp.toPx() + rnd.nextFloat() * 14.dp.toPx(), gy + rnd.nextFloat() * 3f),
-                    strokeWidth = 1.5f,
-                )
-            }
-            x += plankW
-            i++
-        }
-        // تیرگی ملایم به سمت گوشه‌ها
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color.Transparent, Color.Transparent, Color(0x59000000)),
-                center = center,
-                radius = size.maxDimension * 0.72f,
-            ),
-            size = size,
-        )
-    }
-}
-
-// ---------------------------------------------------------------- پشتِ کارت تزئینی
-
-/** پشتِ کارتِ سرمه‌ای با قاب دوخطِ طلایی و ترنجِ وسط — همه‌جای حکم استفاده می‌شود */
-@Composable
-internal fun OrnateCardBack(width: Dp, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(width, width * 1.4f)) {
-        val r = size.width * 0.13f
-        drawRoundRect(
-            brush = Brush.verticalGradient(listOf(BackBlueTop, BackBlueBottom)),
-            cornerRadius = CornerRadius(r, r),
-        )
-        val stroke = Stroke(width = (size.width * 0.022f).coerceAtLeast(1f))
-        val i1 = size.width * 0.055f
-        val i2 = size.width * 0.115f
-        drawRoundRect(
-            color = PillGold,
-            topLeft = Offset(i1, i1),
-            size = Size(size.width - 2 * i1, size.height - 2 * i1),
-            cornerRadius = CornerRadius(r * 0.75f, r * 0.75f),
-            style = stroke,
-        )
-        drawRoundRect(
-            color = PillGold.copy(alpha = 0.7f),
-            topLeft = Offset(i2, i2),
-            size = Size(size.width - 2 * i2, size.height - 2 * i2),
-            cornerRadius = CornerRadius(r * 0.5f, r * 0.5f),
-            style = Stroke(width = stroke.width * 0.7f),
-        )
-        // ترنج مرکزی: مربع‌های تودرتو (یکی چرخیده) + نقطه‌ی وسط
-        val s = size.width * 0.36f
-        val c = center
-        rotate(degrees = 45f, pivot = c) {
-            drawRect(
-                color = PillGold,
-                topLeft = Offset(c.x - s / 2, c.y - s / 2),
-                size = Size(s, s),
-                style = stroke,
-            )
-        }
-        val s2 = s * 0.68f
-        drawRect(
-            color = PillGold.copy(alpha = 0.85f),
-            topLeft = Offset(c.x - s2 / 2, c.y - s2 / 2),
-            size = Size(s2, s2),
-            style = Stroke(width = stroke.width * 0.7f),
-        )
-        rotate(degrees = 45f, pivot = c) {
-            val s3 = s * 0.3f
-            drawRect(
-                color = PillGold.copy(alpha = 0.45f),
-                topLeft = Offset(c.x - s3 / 2, c.y - s3 / 2),
-                size = Size(s3, s3),
-            )
-        }
-        drawCircle(color = PillGold, radius = size.width * 0.035f, center = c)
-        // گل‌های کوچک گوشه‌ها
-        val fi = size.width * 0.19f
-        listOf(
-            Offset(fi, fi),
-            Offset(size.width - fi, fi),
-            Offset(fi, size.height - fi),
-            Offset(size.width - fi, size.height - fi),
-        ).forEach { p ->
-            drawCircle(color = PillGold.copy(alpha = 0.65f), radius = size.width * 0.032f, center = p)
         }
     }
 }
@@ -378,25 +281,6 @@ private fun TopStrip(state: HokmUiState, game: HokmState, modifier: Modifier = M
     }
 }
 
-/** قرص کوچک قهوه‌ای با حاشیه‌ی طلایی */
-@Composable
-private fun WoodPill(text: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .background(PillBrown, RoundedCornerShape(14.dp))
-            .border(1.dp, PillGold.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = PillCream,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
-}
-
 // ---------------------------------------------------------------- میز
 
 @Composable
@@ -413,6 +297,14 @@ private fun HokmTableArea(state: HokmUiState, game: HokmState, humanPlays: Boole
                     .align(BiasAlignment(0f, -0.98f))
                     .padding(top = 2.dp),
             )
+
+            // نشانگر کوچکِ ماندگار فاز وصول
+            if (game.phase == HokmPhase.COLLECTION) {
+                WoodPill(
+                    text = "💰 وصول طلب‌ها…",
+                    modifier = Modifier.align(BiasAlignment(0f, -0.74f)),
+                )
+            }
 
             // حریف‌ها: بادبزنِ پشتِ کارت + قرص اسم + ستون دست‌های برده
             for (seat in 1 until variant.playerCount) {
@@ -437,6 +329,15 @@ private fun HokmTableArea(state: HokmUiState, game: HokmState, humanPlays: Boole
                 humanPlays = humanPlays,
                 modifier = Modifier.align(BiasAlignment(0f, 0.22f)),
             )
+
+            // تبادلِ وصول: دو کارت بین دو صندلی پرواز می‌کنند
+            state.exchangeFx?.let { fx ->
+                ExchangeFlight(
+                    fx = fx,
+                    variant = variant,
+                    modifier = Modifier.align(BiasAlignment(0f, 0.22f)),
+                )
+            }
         }
     }
 }
@@ -464,46 +365,35 @@ private fun OpponentSide(
     with(boxScope) {
         when (pos) {
             TablePos.TOP -> {
-                OpponentFanTop(
+                TopBackFan(
                     count = count,
                     modifier = Modifier.align(BiasAlignment(0f, -0.62f)),
                 )
-                Column(
+                TablePill(
+                    name = name,
+                    crowned = crowned,
+                    badge = badge,
+                    glowing = isTurn,
                     modifier = Modifier.align(BiasAlignment(0f, -0.30f)),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    NamePill(name = name, crowned = crowned, badge = badge, glowing = isTurn)
-                    if (mordabadi) {
-                        Spacer(modifier = Modifier.height(3.dp))
-                        MordabadiChips(game = game, seat = seat)
-                    }
-                }
+                )
             }
 
             TablePos.RIGHT, TablePos.LEFT -> {
                 val edge = if (pos == TablePos.RIGHT) 1f else -1f
-                OpponentFanSide(
+                SideBackFan(
                     count = count,
                     rightSide = pos == TablePos.RIGHT,
                     modifier = Modifier.align(BiasAlignment(edge, -0.35f)),
                 )
-                Column(
+                TablePill(
+                    name = name,
+                    crowned = crowned,
+                    badge = badge,
+                    glowing = isTurn,
+                    vertical = true,
+                    rotate = if (pos == TablePos.RIGHT) -90f else 90f,
                     modifier = Modifier.align(BiasAlignment(edge * 0.94f, 0.28f)),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    NamePill(
-                        name = name,
-                        crowned = crowned,
-                        badge = badge,
-                        glowing = isTurn,
-                        vertical = true,
-                        rotate = if (pos == TablePos.RIGHT) -90f else 90f,
-                    )
-                    if (mordabadi) {
-                        Spacer(modifier = Modifier.height(3.dp))
-                        MordabadiChips(game = game, seat = seat)
-                    }
-                }
+                )
             }
 
             TablePos.BOTTOM -> Unit
@@ -511,101 +401,7 @@ private fun OpponentSide(
     }
 }
 
-/** بادبزن بالای میز: کمان پشتِ کارت‌ها */
-@Composable
-private fun OpponentFanTop(count: Int, modifier: Modifier = Modifier) {
-    if (count <= 0) return
-    val n = min(count, 13)
-    val cardW = 42.dp
-    val step = min(20f, 150f / n)
-    Box(modifier = modifier.height(cardW * 1.4f + 14.dp), contentAlignment = Alignment.Center) {
-        for (i in 0 until n) {
-            val rel = i - (n - 1) / 2f
-            OrnateCardBack(
-                width = cardW,
-                modifier = Modifier
-                    .offset(x = (rel * step).dp, y = (abs(rel) * abs(rel) * 0.55f).dp)
-                    .graphicsLayer { rotationZ = rel * 4.5f },
-            )
-        }
-    }
-}
-
-/** بادبزن کناری: پشتِ کارت‌های چرخیده‌ی ۹۰ درجه چسبیده به لبه */
-@Composable
-private fun OpponentFanSide(count: Int, rightSide: Boolean, modifier: Modifier = Modifier) {
-    if (count <= 0) return
-    val n = min(count, 17)
-    val cardW = 36.dp
-    val stepY = min(15f, 220f / n)
-    val edgeX = if (rightSide) 10f else -10f
-    Box(modifier = modifier.width(cardW * 1.4f), contentAlignment = Alignment.Center) {
-        for (i in 0 until n) {
-            val rel = i - (n - 1) / 2f
-            OrnateCardBack(
-                width = cardW,
-                modifier = Modifier
-                    .offset(
-                        x = (edgeX + abs(rel) * abs(rel) * 0.12f * (if (rightSide) 1f else -1f)).dp,
-                        y = (rel * stepY).dp,
-                    )
-                    .graphicsLayer { rotationZ = (if (rightSide) 90f else -90f) + rel * 2f },
-            )
-        }
-    }
-}
-
-/** قرص اسم بازیکن: قهوه‌ای تیره با حاشیه‌ی طلایی و نشان آبیِ تعداد دست */
-@Composable
-private fun NamePill(
-    name: String,
-    crowned: Boolean,
-    badge: String,
-    glowing: Boolean,
-    vertical: Boolean = false,
-    rotate: Float = 0f,
-    modifier: Modifier = Modifier,
-) {
-    val borderColor = if (glowing) GlowCyan else PillGold
-    Row(
-        modifier = modifier
-            .then(if (vertical) Modifier.graphicsLayer { rotationZ = rotate } else Modifier)
-            .then(if (glowing) Modifier.breathing(intensity = 0.04f, periodMs = 1400) else Modifier),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .background(PillBrown, RoundedCornerShape(14.dp))
-                .border(if (glowing) 2.dp else 1.dp, borderColor, RoundedCornerShape(14.dp))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        ) {
-            Text(
-                text = (if (crowned) "👑 " else "") + name,
-                style = MaterialTheme.typography.labelLarge,
-                color = PillCream,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-            )
-        }
-        Spacer(modifier = Modifier.width(3.dp))
-        Box(
-            modifier = Modifier
-                .background(BadgeBlue, RoundedCornerShape(50))
-                .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(50))
-                .padding(horizontal = 7.dp, vertical = 3.dp),
-        ) {
-            Text(
-                text = badge,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-/** چیپ‌های مردابادی زیر قرص اسم: تراز (طلب سبز / بدهی قرمز) + جمعِ بدهی */
+/** چیپ‌های مردابادی زیر قرص اسم: تراز (طلب سبز / بدهی قرمز) + جمعِ بدهی — فقط برای خودِ بازیکن */
 @Composable
 private fun MordabadiChips(game: HokmState, seat: Int, modifier: Modifier = Modifier) {
     val balance = game.balances.getOrElse(seat) { 0 }
@@ -651,88 +447,39 @@ private fun MordabadiChips(game: HokmState, seat: Int, modifier: Modifier = Modi
 @Composable
 private fun TrumpChip(trump: Suit?, modifier: Modifier = Modifier) {
     val declared = trump != null
-    Box(
-        modifier = modifier
-            .border(6.dp, GlowCyan.copy(alpha = if (declared) 0.22f else 0.10f), RoundedCornerShape(22.dp))
-            .padding(3.dp)
-            .border(3.dp, GlowCyan.copy(alpha = if (declared) 0.45f else 0.20f), RoundedCornerShape(19.dp))
-            .padding(2.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .background(PillBrown, RoundedCornerShape(17.dp))
-                .border(1.5.dp, GlowCyan.copy(alpha = if (declared) 0.95f else 0.45f), RoundedCornerShape(17.dp))
-                .padding(horizontal = 12.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (declared && trump != null) {
+    GlowChip(glowing = declared, modifier = modifier) {
+        if (declared && trump != null) {
+            Text(
+                text = "حکــم :",
+                style = MaterialTheme.typography.titleSmall,
+                color = PillGold,
+                fontWeight = FontWeight.Black,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(Color.White, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = "حکــم :",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = PillGold,
+                    text = trump.symbol,
+                    fontSize = 17.sp,
+                    color = trump.color,
                     fontWeight = FontWeight.Black,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .background(Color.White, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = trump.symbol,
-                        fontSize = 17.sp,
-                        color = trump.color,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-            } else {
-                Text(
-                    text = "در انتظار حکم…",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = PillCream.copy(alpha = 0.7f),
-                )
             }
+        } else {
+            Text(
+                text = "در انتظار حکم…",
+                style = MaterialTheme.typography.titleSmall,
+                color = PillCream.copy(alpha = 0.7f),
+            )
         }
     }
 }
 
 // ---------------------------------------------------------------- دسته‌های دستِ برده
-
-/** دسته‌ی دست‌های برده: دو پشتِ کارت کوچک روی هم + نشانِ عددی با حاشیه‌ی فیروزه‌ای */
-@Composable
-private fun TrickPile(count: Int, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.size(52.dp, 54.dp), contentAlignment = Alignment.Center) {
-        OrnateCardBack(
-            width = 26.dp,
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .graphicsLayer { rotationZ = -8f },
-        )
-        OrnateCardBack(
-            width = 26.dp,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = 6.dp, y = 2.dp)
-                .graphicsLayer { rotationZ = 9f },
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .size(22.dp)
-                .background(PillBrown, CircleShape)
-                .border(1.5.dp, GlowCyan, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = count.toPersianDigits(),
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-            )
-        }
-    }
-}
 
 /** جای دسته‌ها: چهار نفره یکی برای هر تیم؛ دو/سه نفره برای هر بازیکن */
 @Composable
@@ -746,19 +493,19 @@ private fun TrickPiles(
     with(boxScope) {
         when (game.variant) {
             HokmVariant.FOUR -> {
-                TrickPile(count = game.teamTricks(0), modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                TrickPile(count = game.teamTricks(1), modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
+                WonTrickPile(count = game.teamTricks(0), modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
+                WonTrickPile(count = game.teamTricks(1), modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
             }
 
             HokmVariant.TWO -> {
-                TrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                TrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
+                WonTrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
+                WonTrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
             }
 
             HokmVariant.THREE -> {
-                TrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                TrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.70f, 0.62f)))
-                TrickPile(count = game.tricksWon[2], modifier = Modifier.align(BiasAlignment(-0.70f, 0.62f)))
+                WonTrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
+                WonTrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.70f, 0.62f)))
+                WonTrickPile(count = game.tricksWon[2], modifier = Modifier.align(BiasAlignment(-0.70f, 0.62f)))
             }
         }
     }
@@ -783,7 +530,7 @@ private fun HumanRow(state: HokmUiState, game: HokmState, myTurn: Boolean, morda
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            NamePill(
+            TablePill(
                 name = if (state.duelSeats != null) state.nameOf(0) else name,
                 crowned = game.hakem == 0,
                 badge = badge,
@@ -821,7 +568,9 @@ private fun TrickArea(state: HokmUiState, game: HokmState, humanPlays: Boolean, 
     val winnerSeat = if (state.sweeping) game.trickLeader else null
     Box(modifier = modifier.size(280.dp, 240.dp), contentAlignment = Alignment.Center) {
         // راهنمای وسط میز وقتی خالی است
-        if (game.trick.isEmpty() && game.phase == HokmPhase.PLAYING) {
+        if (game.trick.isEmpty() && game.phase == HokmPhase.PLAYING &&
+            state.exchangeFx == null && !state.collectionBanner
+        ) {
             CenterHint(state = state, game = game, humanPlays = humanPlays)
         }
         if (game.phase == HokmPhase.CHOOSE_TRUMP && !(game.hakem == 0 && humanPlays)) {
@@ -831,7 +580,7 @@ private fun TrickArea(state: HokmUiState, game: HokmState, humanPlays: Boolean, 
             val c = MordabadiRules.collector(game)
             if (state.debtorPick != null) {
                 WaitingBubble(text = "یه کارت بده جای بدهیت 👇")
-            } else if (c != null && c != 0) {
+            } else if (c != null && c != 0 && state.exchangeFx == null && !state.collectionBanner) {
                 WaitingBubble(text = "${state.nameOf(c)} داره طلبش رو وصول می‌کنه… 💰")
             }
         }
@@ -874,6 +623,59 @@ private fun FlyingTrickCard(tc: TrickCard, pos: TablePos, sweepTo: TablePos?) {
             .offset(x = x.dp, y = y.dp)
             .alpha((1f - sweep * 0.9f).coerceIn(0.1f, 1f)),
     )
+}
+
+// ---------------------------------------------------------------- پرواز تبادل وصول
+
+/**
+ * انیمیشن یک تبادلِ وصول: دو کارت بین صندلی طلبکار و بدهکار پرواز می‌کنند.
+ * کارت‌ها پشت‌به‌بالا هستند مگر خودِ بازیکن یک طرف تبادل باشد (کارتِ خودش رو دیده می‌شود).
+ */
+@Composable
+private fun ExchangeFlight(fx: ExchangeFx, variant: HokmVariant, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(280.dp, 240.dp), contentAlignment = Alignment.Center) {
+        FlyingSwapCard(
+            from = tablePos(variant, fx.collector),
+            to = tablePos(variant, fx.debtor),
+            face = fx.collectorFace,
+            fxId = fx.id,
+            startDelayMs = 0,
+        )
+        FlyingSwapCard(
+            from = tablePos(variant, fx.debtor),
+            to = tablePos(variant, fx.collector),
+            face = fx.debtorFace,
+            fxId = fx.id,
+            startDelayMs = 320,
+        )
+    }
+}
+
+@Composable
+private fun FlyingSwapCard(from: TablePos, to: TablePos, face: Card?, fxId: Long, startDelayMs: Int) {
+    val t = remember(fxId, startDelayMs) { Animatable(0f) }
+    LaunchedEffect(fxId, startDelayMs) {
+        t.snapTo(0f)
+        delay(startDelayMs.toLong())
+        t.animateTo(1f, tween(1150, easing = FastOutSlowInEasing))
+    }
+    val (ax, ay) = farOffset(from)
+    val (bx, by) = farOffset(to)
+    val p = t.value
+    val x = ax + (bx - ax) * p
+    val y = ay + (by - ay) * p
+    val a = when {
+        p < 0.1f -> p / 0.1f
+        p > 0.88f -> ((1f - p) / 0.12f)
+        else -> 1f
+    }
+    Box(modifier = Modifier.offset(x = x.dp, y = y.dp).alpha(a.coerceIn(0f, 1f))) {
+        if (face != null) {
+            PlayingCard(card = face, width = 58.dp)
+        } else {
+            OrnateCardBack(width = 44.dp)
+        }
+    }
 }
 
 @Composable
@@ -1060,7 +862,7 @@ private fun CollectionSheet(state: HokmUiState, game: HokmState, onExchange: (In
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // انتخاب بدهکار (وقتی دو بدهکار هست)
+                // انتخاب بدهکار (وقتی دو بدهکار هست) — بدون عدد؛ بدهی بقیه محرمانه است
                 if (debtors.size > 1) {
                     Text(
                         text = "از کی بگیری؟",
@@ -1085,7 +887,7 @@ private fun CollectionSheet(state: HokmUiState, game: HokmState, onExchange: (In
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                             ) {
                                 Text(
-                                    text = "${state.nameOf(d)} (بدهی ${(-game.balances[d]).toPersianDigits()})",
+                                    text = "${state.nameOf(d)} (بدهکار)",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Bold,
@@ -1270,7 +1072,7 @@ private fun HandOverOverlay(state: HokmUiState, game: HokmState, onNext: () -> U
     }
 }
 
-/** پایان دستِ مردابادی: تسویه‌ی سهمیه‌ها، تراز، جمع بدهی و چرخش/حذف */
+/** پایان دستِ مردابادی: تسویه‌ی سهمیه‌ها؛ تراز و جمع‌بدهی فقط برای خودِ بازیکن نمایش داده می‌شود */
 @Composable
 private fun MordabadiHandOverOverlay(state: HokmUiState, game: HokmState, onNext: () -> Unit) {
     val result = game.lastResult ?: return
@@ -1325,11 +1127,14 @@ private fun MordabadiHandOverOverlay(state: HokmUiState, game: HokmState, onNext
                         delta < 0 -> "${(-delta).toPersianDigits()}− بدهی"
                         else -> "سر به سر"
                     }
+                    // تراز و جمع بدهی فقط برای خودِ بازیکن — حساب بقیه محرمانه است
+                    val privateTail = if (seat == 0) {
+                        " • تراز ${game.balances.getOrElse(seat) { 0 }.toPersianDigits()}" +
+                            " • جمع بدهی ${game.totalDebts.getOrElse(seat) { 0 }.toPersianDigits()}"
+                    } else ""
                     ResultLine(
                         label = state.mordabadiNameOf(seat) + if (eliminated == seat) " 🚫" else "",
-                        value = "${result.teamTricks[seat].toPersianDigits()} دست → $deltaText" +
-                            " • تراز ${game.balances.getOrElse(seat) { 0 }.toPersianDigits()}" +
-                            " • جمع بدهی ${game.totalDebts.getOrElse(seat) { 0 }.toPersianDigits()}",
+                        value = "${result.teamTricks[seat].toPersianDigits()} دست → $deltaText" + privateTail,
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))

@@ -40,6 +40,10 @@ import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.cards.Card
 import com.navidabbasian.kibord.core.cards.PlayingCard
 import com.navidabbasian.kibord.core.cards.Suit
+import com.navidabbasian.kibord.core.cards.TableGlowCyan
+import com.navidabbasian.kibord.core.cards.TablePillBrown
+import com.navidabbasian.kibord.core.cards.TablePillCream
+import com.navidabbasian.kibord.core.cards.TablePillGold
 import com.navidabbasian.kibord.core.cards.color
 import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -99,8 +103,8 @@ private fun BidPanel(game: ShelemState, onBid: (Int) -> Unit, onPass: () -> Unit
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(extras.glassStrong, RoundedCornerShape(20.dp))
-            .border(1.dp, extras.glassBorderStrong, RoundedCornerShape(20.dp))
+            .background(TablePillBrown, RoundedCornerShape(20.dp))
+            .border(1.dp, TablePillGold, RoundedCornerShape(20.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -108,7 +112,7 @@ private fun BidPanel(game: ShelemState, onBid: (Int) -> Unit, onPass: () -> Unit
             Text(
                 text = if (canPass) "چند می‌بندی؟" else "بقیه پاس دادن — تو دیلری و باید حداقل ۱۰۰ برداری!",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = TablePillCream,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
@@ -125,18 +129,18 @@ private fun BidPanel(game: ShelemState, onBid: (Int) -> Unit, onPass: () -> Unit
                 BidChip(
                     text = amount.toPersianDigits(),
                     enabled = enabled,
-                    fill = if (enabled) accent.copy(alpha = 0.85f) else extras.glass,
-                    border = if (enabled) accent else extras.glassBorder,
-                    textColor = if (enabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    fill = if (enabled) accent.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.25f),
+                    border = if (enabled) accent else TablePillGold.copy(alpha = 0.35f),
+                    textColor = if (enabled) Color.White else TablePillCream.copy(alpha = 0.4f),
                     onClick = { sound?.playButtonClick(); onBid(amount) },
                 )
             }
             BidChip(
                 text = "پاس",
                 enabled = canPass,
-                fill = if (canPass) extras.danger.copy(alpha = 0.75f) else extras.glass,
-                border = if (canPass) extras.danger else extras.glassBorder,
-                textColor = if (canPass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                fill = if (canPass) extras.danger.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.25f),
+                border = if (canPass) extras.danger else TablePillGold.copy(alpha = 0.35f),
+                textColor = if (canPass) Color.White else TablePillCream.copy(alpha = 0.4f),
                 onClick = { sound?.playButtonClick(); onPass() },
             )
         }
@@ -175,11 +179,10 @@ private fun BidChip(
 
 @Composable
 private fun BidWaitPanel(state: ShelemUiState, game: ShelemState) {
-    val extras = kiExtras
     Row(
         modifier = Modifier
-            .background(extras.glass, RoundedCornerShape(16.dp))
-            .border(1.dp, extras.glassBorder, RoundedCornerShape(16.dp))
+            .background(TablePillBrown, RoundedCornerShape(16.dp))
+            .border(1.dp, TablePillGold.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -187,7 +190,7 @@ private fun BidWaitPanel(state: ShelemUiState, game: ShelemState) {
             text = if (SHELEM_HUMAN in game.passed) "پاس دادی — ببینیم کی حاکم می‌شه"
             else "شرط‌بندی دور میز می‌چرخه…",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TablePillCream,
         )
     }
 }
@@ -195,7 +198,6 @@ private fun BidWaitPanel(state: ShelemUiState, game: ShelemState) {
 /** پیش‌نمایش ویدو + شمارنده‌ی انتخاب + دکمه‌ی «بخوابون» */
 @Composable
 private fun DiscardPanel(state: ShelemUiState, game: ShelemState, onConfirm: () -> Unit) {
-    val extras = kiExtras
     val sound = LocalSoundManager.current
     val n = state.selectedDiscards.size
     val ready = n == ShelemRules.KITTY_SIZE
@@ -203,8 +205,8 @@ private fun DiscardPanel(state: ShelemUiState, game: ShelemState, onConfirm: () 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(extras.glassStrong, RoundedCornerShape(20.dp))
-            .border(1.dp, extras.glassBorderStrong, RoundedCornerShape(20.dp))
+            .background(TablePillBrown, RoundedCornerShape(20.dp))
+            .border(1.dp, TablePillGold, RoundedCornerShape(20.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -213,14 +215,14 @@ private fun DiscardPanel(state: ShelemUiState, game: ShelemState, onConfirm: () 
                 Text(
                     text = "ویدو مال توئه! ✦ چهار کارتِ تازه",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = TablePillCream,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "۴ کارت بخوابون — امتیازشون آخرِ دست مال تیمته" +
                         if (n > 0) " · انتخاب: ${n.toPersianDigits()}/۴ (${kittyPts.toPersianDigits()} امتیاز)" else "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TablePillCream.copy(alpha = 0.8f),
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -240,10 +242,9 @@ private fun DiscardPanel(state: ShelemUiState, game: ShelemState, onConfirm: () 
     }
 }
 
-/** ورقه‌ی انتخاب حکم: چهار خال درشت */
+/** ورقه‌ی انتخاب حکم: کارتِ قهوه‌ای با حاشیه‌ی طلایی و چهار خال درشت */
 @Composable
 fun ShelemTrumpSheet(hand: List<Card>, onPick: (Suit) -> Unit) {
-    val extras = kiExtras
     val sound = LocalSoundManager.current
     Box(
         modifier = Modifier
@@ -252,7 +253,13 @@ fun ShelemTrumpSheet(hand: List<Card>, onPick: (Suit) -> Unit) {
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
         contentAlignment = Alignment.Center,
     ) {
-        TicketCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp), tilt = 1.2f) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 26.dp)
+                .background(Color(0xF53A2413), RoundedCornerShape(24.dp))
+                .border(1.5.dp, TablePillGold, RoundedCornerShape(24.dp)),
+        ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -264,7 +271,7 @@ fun ShelemTrumpSheet(hand: List<Card>, onPick: (Suit) -> Unit) {
                 Text(
                     text = "تو حاکمی — رنگی رو انتخاب کن که بیشتر و قوی‌تر داری",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TablePillCream.copy(alpha = 0.85f),
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -275,7 +282,7 @@ fun ShelemTrumpSheet(hand: List<Card>, onPick: (Suit) -> Unit) {
                             modifier = Modifier
                                 .width(66.dp)
                                 .background(Color(0xFFFFFDF7), RoundedCornerShape(16.dp))
-                                .border(1.5.dp, suit.color.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
+                                .border(1.5.dp, TablePillGold.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
                                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                                     sound?.playButtonClick()
                                     onPick(suit)

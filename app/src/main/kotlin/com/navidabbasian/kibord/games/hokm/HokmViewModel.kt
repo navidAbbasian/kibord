@@ -35,6 +35,21 @@ enum class HokmSoundEvent { CARD, TRUMP, TRICK_WON, TRICK_LOST, HAND_WON, HAND_L
 /** مردابادی: بدهکارِ انسانی باید به جای خالی که ندارد یک کارت دلخواه بدهد */
 data class DebtorPick(val collector: Int, val suit: Suit, val trumpDemand: Boolean)
 
+/**
+ * مردابادی: انیمیشن یک تبادلِ وصول — دو کارت بین دو صندلی پرواز می‌کنند.
+ * روی کارت‌ها فقط وقتی دیده می‌شود که خودِ بازیکن آن طرفِ تبادل باشد؛
+ * تبادل ربات‌ها همیشه پشتِ کارت است تا چیزی لو نرود.
+ */
+data class ExchangeFx(
+    val collector: Int,
+    val debtor: Int,
+    /** کارتی که طلبکار می‌دهد — فقط وقتی طلبکار خودِ بازیکن است رو دیده می‌شود */
+    val collectorFace: Card?,
+    /** کارتی که بدهکار می‌دهد — فقط وقتی بدهکار خودِ بازیکن است رو دیده می‌شود */
+    val debtorFace: Card?,
+    val id: Long,
+)
+
 /** وضعیت رابط کاربری حکم */
 data class HokmUiState(
     val stage: HokmStage = HokmStage.Setup,
@@ -57,6 +72,12 @@ data class HokmUiState(
     val mordabadiGame: HokmState? = null,
     /** درخواست کارت از بدهکار انسانی که خال را ندارد */
     val debtorPick: DebtorPick? = null,
+    /** مردابادی: بنر «وصول طلب‌ها» ابتدای فاز وصول */
+    val collectionBanner: Boolean = false,
+    /** مردابادی: تبادلِ در حال پخش (کارت‌های در حال پرواز) */
+    val exchangeFx: ExchangeFx? = null,
+    /** مردابادی: کارتی که همین الان به دست بازیکن رسیده — چند لحظه برجسته می‌ماند */
+    val receivedCard: Card? = null,
 ) {
     /** اسم‌های صندلی‌ها: ۰ بازیکن، بقیه ربات */
     val names: List<String>
@@ -105,6 +126,13 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
     private val random = Random.Default
     private var driver: Job? = null
     private var noticeJob: Job? = null
+    private var fxJob: Job? = null
+
+    /** بنر «وصول طلب‌ها» فقط یک بار در ابتدای هر فاز وصول نشان داده می‌شود */
+    private var collectionIntroDone = false
+
+    /** لحظه‌ی آخرین تبادل وصول — برای فاصله‌ی نفس‌گیر بین قدم‌ها */
+    private var lastExchangeAt = 0L
 
     init {
         val app = getApplication<Application>()
@@ -162,6 +190,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
     /** مردابادی: بدون آس‌کِشی — سهمیه‌ها تصادفی، صاحبِ ۹ حاکم و یک دو بیرون */
     private fun beginMordabadi() {
         driver?.cancel()
+        fxJob?.cancel()
+        collectionIntroDone = false
+        lastExchangeAt = 0L
         val s = _uiState.value
         val match = MordabadiRules.newMatch(s.debtLimit, random)
         val hand = HokmRules.startHand(match, random)
@@ -176,6 +207,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
                 duelSeats = null,
                 mordabadiGame = null,
                 debtorPick = null,
+                collectionBanner = false,
+                exchangeFx = null,
+                receivedCard = null,
             )
         }
         val removed = match.removedCard
@@ -258,16 +292,30 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
 
                     g.phase == HokmPhase.COLLECTION -> {
                         if (st.debtorPick != null) return@launch // منتظر کارتِ بدهکار انسانی
+                        // بنر شروع فاز — فقط اگر واقعاً وصولی در کار است
+                        if (!collectionIntroDone) {
+                            collectionIntroDone = true
+                            if (MordabadiRules.collector(g) != null) {
+                                _uiState.update { it.copy(collectionBanner = true) }
+                                delay(1500)
+                                _uiState.update { it.copy(collectionBanner = false) }
+                            }
+                        }
                         val seat = MordabadiRules.collector(g)
                         when {
-                            seat == null -> _uiState.update { it.copy(game = MordabadiRules.advance(g)) }
+                            seat == null -> {
+                                awaitExchangeGap(SETTLE_GAP_MS) // مکث کوتاه قبل از شروع بازی
+                                _uiState.update { it.copy(game = MordabadiRules.advance(g)) }
+                            }
                             seat == human -> return@launch // شیت وصول انسان باز است
                             else -> {
                                 val pick = MordabadiRules.botCollect(g)
                                 if (pick == null) {
+                                    awaitExchangeGap(SETTLE_GAP_MS)
                                     _uiState.update { it.copy(game = MordabadiRules.advance(g)) }
                                 } else if (pick.debtor == human && MordabadiRules.debtorVoidIn(g, human, pick.suit)) {
                                     // بدهکارِ انسانی خال را ندارد → خودش کارت بدهد
+                                    awaitExchangeGap(EXCHANGE_GAP_MS)
                                     delay(700)
                                     _uiState.update {
                                         it.copy(debtorPick = DebtorPick(seat, pick.suit, pick.suit == g.trump))
@@ -278,7 +326,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
                                     )
                                     return@launch
                                 } else {
-                                    delay(1000)
+                                    // قدم‌های وصول یکی‌یکی و با فاصله پخش می‌شوند
+                                    awaitExchangeGap(EXCHANGE_GAP_MS)
+                                    delay(500)
                                     doExchange(pick.debtor, pick.suit, debtorGive = null)
                                 }
                             }
@@ -293,6 +343,8 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     g.phase == HokmPhase.PLAYING && g.turn != human -> {
+                        // اگر همین الان فاز وصول تمام شده، اول بگذار آخرین تبادل دیده شود
+                        awaitExchangeGap(SETTLE_GAP_MS)
                         delay(700)
                         val card = HokmBot.choosePlay(g, g.turn)
                         applyPlay(g.turn, card)
@@ -344,23 +396,72 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
         drive()
     }
 
+    /**
+     * یک تبادل وصول را اجرا و «پخش» می‌کند: وضعیت عوض می‌شود، دو کارت بین صندلی‌ها
+     * پرواز می‌کنند و پیام اعلامش می‌ماند. محرمانگی: در تبادل ربات‌ها فقط خال گفته
+     * می‌شود (نه رتبه‌ی کارت) و کارت‌های در پرواز پشت‌به‌بالا هستند؛ فقط وقتی خودِ
+     * بازیکن طرف تبادل است، سمتِ خودش را با کارتِ واقعی می‌بیند.
+     */
     private fun doExchange(debtor: Int, suit: Suit, debtorGive: Card?) {
         val st = _uiState.value
         val g = st.game ?: return
         val outcome = runCatching { MordabadiRules.exchange(g, debtor, suit, debtorGive) }.getOrNull() ?: return
-        _uiState.update { it.copy(game = outcome.state) }
+        val humanCollects = outcome.collector == 0
+        val humanIsDebtor = outcome.debtor == 0
+        val fx = ExchangeFx(
+            collector = outcome.collector,
+            debtor = outcome.debtor,
+            collectorFace = if (humanCollects) outcome.gaveCard else null,
+            debtorFace = if (humanIsDebtor) outcome.tookCard else null,
+            id = System.nanoTime(),
+        )
+        val received = when {
+            humanCollects -> outcome.tookCard
+            humanIsDebtor -> outcome.gaveCard
+            else -> null
+        }
+        lastExchangeAt = System.currentTimeMillis()
+        _uiState.update { it.copy(game = outcome.state, exchangeFx = fx, receivedCard = received) }
         emit(HokmSoundEvent.CARD)
+        fxJob?.cancel()
+        fxJob = viewModelScope.launch {
+            delay(2000)
+            _uiState.update {
+                if (it.exchangeFx?.id == fx.id) it.copy(exchangeFx = null, receivedCard = null) else it
+            }
+        }
         val cName = st.nameOf(outcome.collector)
         val dName = st.nameOf(outcome.debtor)
         val msg = when {
+            // انسان طلبکار است: هر دو کارتِ خودش را می‌بیند
+            humanCollects && outcome.trumpDemand ->
+                "حکم خواستی — از $dName گرفتی: ${outcome.tookCard.persianName} (۳ طلب)"
+            humanCollects && outcome.debtorWasVoid ->
+                "$dName ${suit.persian} نداشت — بهت داد: ${outcome.tookCard.persianName}"
+            humanCollects ->
+                "${outcome.gaveCard.persianName} رو دادی و از $dName گرفتی: ${outcome.tookCard.persianName}"
+            // انسان بدهکار است: می‌بیند چه ازش رفت و چه بهش رسید
+            humanIsDebtor && outcome.trumpDemand ->
+                "$cName حکم طلب کرد! (۳ طلب) — ازت گرفت: ${outcome.tookCard.persianName} • بهت داد: ${outcome.gaveCard.persianName}"
+            humanIsDebtor && outcome.debtorWasVoid ->
+                "دادی: ${outcome.tookCard.persianName} • بهت داد: ${outcome.gaveCard.persianName}"
+            humanIsDebtor ->
+                "$cName از تو بالاترین ${suit.persian}ت رو گرفت: ${outcome.tookCard.persianName} • بهت داد: ${outcome.gaveCard.persianName}"
+            // تبادل ربات‌ها: فقط خال اعلام می‌شود؛ رتبه‌ی کارت‌ها محرمانه می‌ماند
             outcome.trumpDemand ->
-                "$cName حکم خواست و ${outcome.tookCard.persianName} رو از $dName گرفت! (۳ طلب)"
+                "$cName از $dName حکم طلب کرد! (۳ طلب)"
             outcome.debtorWasVoid ->
-                "$dName ${suit.persian} نداشت — ${outcome.tookCard.persianName} رو به $cName داد"
+                "$dName ${suit.persian} نداشت — یه کارت به $cName داد"
             else ->
-                "$cName ${outcome.tookCard.persianName} رو از $dName گرفت!"
+                "$cName از $dName خالِ ${suit.persian} طلب گرفت"
         }
-        showNotice(msg, 1500)
+        showNotice(msg, 2400)
+    }
+
+    /** آن‌قدر صبر می‌کند تا از آخرین تبادل [gapMs] گذشته باشد — قدم‌ها روی هم نیفتند */
+    private suspend fun awaitExchangeGap(gapMs: Long) {
+        val elapsed = System.currentTimeMillis() - lastExchangeAt
+        if (elapsed in 0 until gapMs) delay(gapMs - elapsed)
     }
 
     // ---------- کارت‌ها ----------
@@ -428,8 +529,13 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
             beginDuel()
             return
         }
+        fxJob?.cancel()
+        collectionIntroDone = false
+        lastExchangeAt = 0L
         val hand = HokmRules.startHand(g, random)
-        _uiState.update { it.copy(game = hand, sweeping = false, notice = null) }
+        _uiState.update {
+            it.copy(game = hand, sweeping = false, notice = null, collectionBanner = false, exchangeFx = null, receivedCard = null)
+        }
         if (g.isMordabadi) {
             val hakemName = _uiState.value.mordabadiNameOf(hand.hakem)
             showNotice("سهمیه‌ها چرخید — $hakemName حاکمِ ۹دستی شد 👑", 2200)
@@ -441,6 +547,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
     private fun beginDuel() {
         val st = _uiState.value
         val g = st.game ?: return
+        fxJob?.cancel()
+        collectionIntroDone = false
+        lastExchangeAt = 0L
         val setup = MordabadiRules.startDuel(g, random)
         _uiState.update {
             it.copy(
@@ -450,6 +559,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
                 sweeping = false,
                 notice = null,
                 debtorPick = null,
+                collectionBanner = false,
+                exchangeFx = null,
+                receivedCard = null,
             )
         }
         val a = st.mordabadiNameOf(setup.seats[0])
@@ -479,6 +591,9 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
     fun backToSetup() {
         driver?.cancel()
         noticeJob?.cancel()
+        fxJob?.cancel()
+        collectionIntroDone = false
+        lastExchangeAt = 0L
         _uiState.update {
             it.copy(
                 stage = HokmStage.Setup,
@@ -490,11 +605,20 @@ class HokmViewModel(application: Application) : AndroidViewModel(application) {
                 duelSeats = null,
                 mordabadiGame = null,
                 debtorPick = null,
+                collectionBanner = false,
+                exchangeFx = null,
+                receivedCard = null,
             )
         }
     }
 
     companion object {
+        /** حداقل فاصله‌ی دو قدمِ وصول: هر تبادل دست‌کم این‌قدر روی صحنه می‌ماند */
+        private const val EXCHANGE_GAP_MS = 2300L
+
+        /** مکثِ نشستن بعد از آخرین تبادل، قبل از شروع اولین دست */
+        private const val SETTLE_GAP_MS = 2800L
+
         private const val KEY_NAME = "hokm_player_name"
         private const val KEY_VARIANT = "hokm_variant"
         private const val KEY_TARGET = "hokm_target"

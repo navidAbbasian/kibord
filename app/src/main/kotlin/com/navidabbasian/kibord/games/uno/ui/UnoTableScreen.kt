@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -494,7 +493,14 @@ private fun OpponentChip(
     }
 }
 
-/** بادبزن دست انسان: برگ‌های قانونی بالا و روشن، بقیه کدر */
+/**
+ * بادبزن دست انسان: برگ‌های قانونی بالا و روشن، بقیه کدر.
+ *
+ * تا ۹ برگ یک ردیف است؛ بیشتر که شد (بی‌رحم می‌تواند ۱۵+ برگ بریزد)
+ * دو ردیف می‌شود: ردیف عقب بالا و ردیف جلو رویش با همپوشانی ~۴۰٪ ارتفاع.
+ * گام دیدنیِ هر برگ دست‌کم ~۳۴dp نگه داشته می‌شود و کارت‌ها در حالت
+ * «فشرده» رندر می‌شوند تا فقط نشان گوشه‌شان در نوار دیدنی بیفتد.
+ */
 @Composable
 private fun HumanHand(
     game: UnoState,
@@ -503,25 +509,64 @@ private fun HumanHand(
 ) {
     val legal = remember(game) { UnoEngine.legalPlays(game, UNO_HUMAN).map { it.id }.toSet() }
     val hand = game.hands[UNO_HUMAN]
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy((-22).dp, Alignment.CenterHorizontally),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp, vertical = 4.dp),
+    if (hand.isEmpty()) return
+    val twoRows = hand.size > 9
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
     ) {
-        items(hand, key = { it.id }) { card ->
-            val playable = enabled && card.id in legal
-            UnoCardFace(
-                card = card,
-                width = 64.dp,
-                modifier = Modifier
-                    .offset(y = if (playable) (-10).dp else 0.dp)
-                    .graphicsLayer { alpha = if (!enabled || playable) 1f else 0.45f }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        enabled = playable,
-                    ) { onPlay(card) },
-            )
+        val avail = maxWidth
+        // کارت‌های دست کوچک‌تر می‌شوند تا گام هر برگ زیر ~۳۴dp نرود
+        val cardW = when {
+            !twoRows -> 64.dp
+            hand.size <= 18 -> 56.dp
+            else -> 48.dp
+        }
+        val cardH = cardW * 1.5f
+        val lift = 10.dp
+        // ردیف جلو ~۴۰٪ ارتفاع ردیف عقب را می‌پوشاند
+        val rowShift = cardH * 0.6f
+        val rows: List<List<UnoCard>> =
+            if (twoRows) listOf(hand.take(hand.size / 2), hand.drop(hand.size / 2))
+            else listOf(hand)
+        val blockH = lift + cardH + (if (twoRows) rowShift else 0.dp)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(blockH),
+        ) {
+            rows.forEachIndexed { rowIndex, row ->
+                val rowY = lift + (if (rowIndex == 1) rowShift else 0.dp)
+                val step =
+                    if (row.size <= 1) 0.dp
+                    else minOf((avail - cardW) / (row.size - 1), cardW + 6.dp)
+                val fanW = cardW + step * (row.size - 1)
+                val leading = (avail - fanW) / 2
+                row.forEachIndexed { i, card ->
+                    key(card.id) {
+                        val playable = enabled && card.id in legal
+                        UnoCardFace(
+                            card = card,
+                            width = cardW,
+                            compact = true,
+                            modifier = Modifier
+                                .offset(
+                                    x = leading + step * i,
+                                    y = rowY - (if (playable) lift else 0.dp),
+                                )
+                                .graphicsLayer { alpha = if (!enabled || playable) 1f else 0.45f }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = playable,
+                                ) { onPlay(card) },
+                        )
+                    }
+                }
+            }
         }
     }
 }

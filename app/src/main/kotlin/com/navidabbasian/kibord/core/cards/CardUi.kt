@@ -42,9 +42,17 @@ val Suit.color: Color get() = if (isRed) Color(0xFFD93B4B) else Color(0xFF26262E
 private val CardBackTop = Color(0xFF6A5AE0)
 private val CardBackBottom = Color(0xFF3E2F9E)
 
+/** از این پهنا به بالا، خالِ بزرگ وسط و شاخص کوچکِ پایین-راست هم کشیده می‌شوند */
+private val FullArtMinWidth = 56.dp
+
 /**
- * یک کارت بازی به سبک «کی برد؟»: گوشه‌های گرد، سایه‌ی نرم، عددِ بزرگ و خال
- * در گوشه و وسط. اندازه با [width] مشخص می‌شود (نسبت ۱:۱.۴).
+ * یک کارت بازی به سبک «کی برد؟»: گوشه‌های گرد، سایه‌ی نرم و شاخصِ گوشه.
+ * اندازه با [width] مشخص می‌شود (نسبت ۱:۱.۴).
+ *
+ * طراحی برای دست‌های شلوغ: در کارت‌های باریک (کمتر از ۵۶dp) فقط شاخصِ
+ * گوشه‌ی بالا-چپ (عدد و خالِ کوچک زیرش) روی زمینه‌ی کرمِ تمیز کشیده می‌شود؛
+ * خالِ بزرگ وسط و شاخصِ وارونه‌ی پایین-راست فقط در کارت‌های پهن‌تر می‌آیند
+ * تا نوارهای دیده‌شده‌ی بادبزن با کارت بغلی قاطی نشوند.
  *
  * - [faceUp] = false → پشت کارت
  * - [highlighted] → حاشیه‌ی روشن و کمی بالا آمده (کارتِ قابل بازی)
@@ -64,7 +72,7 @@ fun PlayingCard(
     val extras = kiExtras
     val height = width * 1.4f
     val lift by animateDpAsState(if (highlighted) (-10).dp else 0.dp, label = "lift")
-    val alpha by animateFloatAsState(if (dimmed) 0.45f else 1f, label = "alpha")
+    val scrim by animateFloatAsState(if (dimmed) 0.38f else 0f, label = "scrim")
     val shape = RoundedCornerShape(width * 0.14f)
     val borderColor = if (highlighted) Color(0xFFFFC83D) else extras.glassBorderStrong
 
@@ -73,7 +81,7 @@ fun PlayingCard(
         Box(
             modifier = modifier
                 .offset(y = lift)
-                .graphicsLayer { this.alpha = alpha; rotationZ = rotation }
+                .graphicsLayer { rotationZ = rotation }
                 .shadow(if (highlighted) 10.dp else 4.dp, shape, clip = false)
                 .size(width, height)
                 .background(
@@ -103,50 +111,53 @@ fun PlayingCard(
                 }
             } else {
                 val c = card.suit.color
-                // گوشه‌ی بالا-چپ
-                Column(
+                val fullArt = width >= FullArtMinWidth
+                // طرحِ خواسته‌ی مالک محصول: فقط عددِ درشت در گوشه‌ی بالا-چپ
+                // و خالِ بزرگ در مرکز — بدون خالِ کوچکِ گوشه
+                Text(
+                    text = card.rank.label,
+                    color = c,
+                    fontSize = (width.value * 0.30f).sp,
+                    fontWeight = FontWeight.Black,
+                    lineHeight = (width.value * 0.30f).sp,
+                    maxLines = 1,
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = width * 0.09f, top = width * 0.05f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = card.rank.label,
-                        color = c,
-                        fontSize = (width.value * 0.30f).sp,
-                        fontWeight = FontWeight.Black,
-                        lineHeight = (width.value * 0.32f).sp,
-                    )
-                    Text(
-                        text = card.suit.symbol,
-                        color = c,
-                        fontSize = (width.value * 0.26f).sp,
-                        lineHeight = (width.value * 0.28f).sp,
-                    )
-                }
-                // خال بزرگ وسط
+                        .padding(start = 5.dp, top = 3.dp),
+                )
+                // خال بزرگ وسط — همیشه؛ روی کارت‌های پوشیده هم رنگِ عدد راهنماست
                 Text(
                     text = card.suit.symbol,
-                    color = c.copy(alpha = 0.9f),
-                    fontSize = (width.value * 0.62f).sp,
-                    modifier = Modifier.align(Alignment.Center).offset(y = width * 0.12f),
+                    color = c.copy(alpha = 0.92f),
+                    fontSize = (width.value * 0.54f).sp,
+                    modifier = Modifier.align(Alignment.Center).offset(y = width * 0.08f),
                 )
-                // گوشه‌ی پایین-راست (وارونه)
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = width * 0.09f, bottom = width * 0.05f)
-                        .rotate(180f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = card.rank.label,
-                        color = c,
-                        fontSize = (width.value * 0.22f).sp,
-                        fontWeight = FontWeight.Black,
-                        lineHeight = (width.value * 0.24f).sp,
-                    )
+                if (fullArt) {
+                    // شاخص کوچک وارونه‌ی پایین-راست
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 4.dp, bottom = 3.dp)
+                            .rotate(180f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = card.rank.label,
+                            color = c,
+                            fontSize = (width.value * 0.22f).sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = (width.value * 0.24f).sp,
+                            maxLines = 1,
+                        )
+                    }
                 }
+            }
+            if (scrim > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = scrim), shape),
+                )
             }
         }
     }
@@ -156,6 +167,11 @@ fun PlayingCard(
  * بادبزنِ دستِ بازیکن: کارت‌ها روی هم می‌خوابند و با انتخاب بالا می‌آیند.
  * [playable] کارت‌های مجاز این لحظه‌اند (بقیه کم‌رنگ)؛ اگر null باشد همه مجازند.
  * پهنای هر کارت از فضای موجود حساب می‌شود تا ۱۳ کارت هم جا بگیرد.
+ *
+ * دست‌های خیلی شلوغ (بیش از [maxPerRow] کارت) خودکار دو ردیفه می‌شوند:
+ * نیمه‌ی اول (سقفِ n/2) ردیفِ بالا و بقیه ردیفِ پایین — ردیفِ پایین جلوتر
+ * کشیده می‌شود و حدود ۴۰٪ ارتفاع کارت روی ردیف بالا می‌افتد. با n ≤ maxPerRow
+ * رفتار تک‌ردیفه دقیقاً مثل قبل است.
  */
 @Composable
 fun HandFan(
@@ -165,23 +181,37 @@ fun HandFan(
     selected: Card? = null,
     faceUp: Boolean = true,
     maxCardWidth: Dp = 72.dp,
+    maxPerRow: Int = 9,
     onCardClick: ((Card) -> Unit)? = null,
 ) {
     if (cards.isEmpty()) {
         Box(modifier = modifier.height(maxCardWidth * 1.4f + 12.dp))
         return
     }
+    val twoRows = cards.size > maxPerRow
+    // کمی فضای نفس در پایین تا ایندکسِ ردیفِ جلو زیر لبه‌ی صفحه نرود
+    val fanHeight = (if (twoRows) maxCardWidth * 1.4f * 1.6f + 14.dp else maxCardWidth * 1.4f + 14.dp) + 8.dp
     // کل بادبزن چپ‌به‌راست چیده می‌شود (جهتِ خودِ Box هم) تا offset از چپ حساب شود
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-    BoxWithConstraints(modifier = modifier.fillMaxWidth().height(maxCardWidth * 1.4f + 14.dp)) {
-        val n = cards.size
-        // فاصله‌ی هر کارت از بعدی؛ آخرین کارت کامل دیده می‌شود
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().height(fanHeight)) {
         val cardW = minOf(maxCardWidth, maxWidth / 4)
-        val step = if (n == 1) 0.dp else minOf(cardW * 0.62f, (maxWidth - cardW) / (n - 1))
-        val totalW = cardW + step * (n - 1)
-        val startX = (maxWidth - totalW) / 2
-        run {
-            cards.forEachIndexed { i, card ->
+        // ردیف بالا اول کشیده می‌شود (پشت)، ردیف پایین بعدش (جلو)
+        val rows: List<Pair<List<Card>, Dp>> = if (!twoRows) {
+            listOf(cards to 0.dp)
+        } else {
+            val upper = cards.take((cards.size + 1) / 2)
+            listOf(
+                upper to -(cardW * 1.4f * 0.6f),
+                cards.drop(upper.size) to 0.dp,
+            )
+        }
+        rows.forEach { (rowCards, rowY) ->
+            val n = rowCards.size
+            // فاصله‌ی هر کارت از بعدی؛ آخرین کارت کامل دیده می‌شود
+            val step = if (n == 1) 0.dp else minOf(cardW * 0.62f, (maxWidth - cardW) / (n - 1))
+            val totalW = cardW + step * (n - 1)
+            val startX = (maxWidth - totalW) / 2
+            rowCards.forEachIndexed { i, card ->
                 val ok = playable == null || card in playable
                 val mid = (n - 1) / 2f
                 val tilt = if (n > 1) (i - mid) * (8f / maxOf(1f, mid)) else 0f
@@ -194,7 +224,7 @@ fun HandFan(
                     rotation = tilt * 0.6f,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .offset(x = startX + step * i, y = 0.dp),
+                        .offset(x = startX + step * i, y = rowY - 8.dp),
                     onClick = if (onCardClick != null && ok) ({ onCardClick(card) }) else null,
                 )
             }

@@ -1,5 +1,7 @@
 package com.navidabbasian.kibord.games.shelem.engine
 
+import kotlinx.serialization.Serializable
+
 import com.navidabbasian.kibord.core.cards.Card
 import com.navidabbasian.kibord.core.cards.Rank
 import com.navidabbasian.kibord.core.cards.Suit
@@ -38,11 +40,13 @@ object ShelemRules {
 }
 
 /** تنظیمات یک مسابقه */
+@Serializable
 data class ShelemSettings(
     val targetScore: Int = ShelemRules.DEFAULT_TARGET,
     val shelemBonus: Boolean = true,
 )
 
+@Serializable
 enum class ShelemPhase {
     /** شرط‌بندی دور میز */
     BIDDING,
@@ -59,6 +63,7 @@ enum class ShelemPhase {
 }
 
 /** نتیجه‌ی یک دستِ کامل — برای کارنامه و صفحه‌ی پایان دست */
+@Serializable
 data class HandResult(
     val handNumber: Int,
     val declarer: Int,
@@ -82,6 +87,7 @@ data class HandResult(
 )
 
 /** وضعیت کامل یک مسابقه‌ی شلم — داده‌ی خالص و تغییرناپذیر */
+@Serializable
 data class ShelemState(
     val settings: ShelemSettings = ShelemSettings(),
     val phase: ShelemPhase = ShelemPhase.BIDDING,

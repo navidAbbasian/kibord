@@ -263,17 +263,17 @@ val moreGamesCatalog = listOf(
         emoji = "🎯",
         accent = LudoAccent,
         accentDark = LudoAccentDark,
-        players = "۲ تا ۴ نفر — یا با ربات",
+        players = "۲ تا ۴ نفر — با ربات، هات‌اسپات یا آنلاین",
         route = Routes.LUDO,
     ),
     GameInfo(
         id = "dooz",
         title = "دوز",
-        tagline = "سه تا پشت هم! دو نفره یا با ربات",
+        tagline = "سه تا پشت هم! دو نفره، با ربات یا با دوستات روی دو گوشی",
         emoji = "⭕",
         accent = DoozAccent,
         accentDark = DoozAccentDark,
-        players = "۲ نفر — یا با ربات",
+        players = "۲ نفر — با ربات، هات‌اسپات یا آنلاین",
         route = Routes.DOOZ,
     ),
     GameInfo(
@@ -283,7 +283,7 @@ val moreGamesCatalog = listOf(
         emoji = "🃏",
         accent = HokmAccent,
         accentDark = HokmAccentDark,
-        players = "۲ تا ۴ نفر — با ربات",
+        players = "۲ تا ۴ نفر — با ربات، هات‌اسپات یا آنلاین",
         route = Routes.HOKM,
     ),
     GameInfo(
@@ -293,7 +293,7 @@ val moreGamesCatalog = listOf(
         emoji = "♠️",
         accent = ShelemAccent,
         accentDark = ShelemAccentDark,
-        players = "۴ نفر — با ربات",
+        players = "۴ نفر — با ربات، هات‌اسپات یا آنلاین",
         route = Routes.SHELEM,
     ),
     GameInfo(
@@ -303,7 +303,7 @@ val moreGamesCatalog = listOf(
         emoji = "🌈",
         accent = UnoAccent,
         accentDark = UnoAccentDark,
-        players = "۲ تا ۴ نفر — با ربات",
+        players = "۲ تا ۴ نفر — با ربات، هات‌اسپات یا آنلاین",
         route = Routes.UNO,
     ),
     GameInfo(

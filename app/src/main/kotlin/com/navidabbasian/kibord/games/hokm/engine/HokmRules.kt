@@ -1,5 +1,7 @@
 package com.navidabbasian.kibord.games.hokm.engine
 
+import kotlinx.serialization.Serializable
+
 import com.navidabbasian.kibord.core.cards.Card
 import com.navidabbasian.kibord.core.cards.Deck
 import com.navidabbasian.kibord.core.cards.Rank
@@ -9,6 +11,7 @@ import com.navidabbasian.kibord.core.cards.sortedForHand
 import kotlin.random.Random
 
 /** نتیجه‌ی «آس‌کِشی» برای تعیین حاکم اول: کارت‌های رو‌شده به ترتیب و صندلی برنده */
+@Serializable
 data class AceDeal(val cards: List<TrickCard>, val hakem: Int)
 
 /** تعداد دست‌هایی که یک تیم باید ببرد تا دست تمام شود */

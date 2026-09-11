@@ -56,6 +56,14 @@ import com.navidabbasian.kibord.core.ui.components.BobbingEmoji
 import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.ConfettiOverlay
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.net.lan.LanServer
+import com.navidabbasian.kibord.core.ui.net.LobbySeat
+import com.navidabbasian.kibord.core.ui.net.LobbySeatKind
+import com.navidabbasian.kibord.core.ui.net.NetConnectionOverlays
+import com.navidabbasian.kibord.core.ui.net.NetEntryScreen
+import com.navidabbasian.kibord.core.ui.net.NetJoinScreen
+import com.navidabbasian.kibord.core.ui.net.NetLobbyScreen
+import com.navidabbasian.kibord.core.ui.net.NetModeCard
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
@@ -79,6 +87,7 @@ fun HokmGame(
     viewModel: HokmViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val net by viewModel.net.collectAsState()
     val sound = LocalSoundManager.current
     var pendingExit by remember { mutableStateOf(false) }
 
@@ -125,6 +134,65 @@ fun HokmGame(
                     HokmSetupScreen(state = state, viewModel = viewModel)
                 }
 
+                HokmStage.NetEntry -> {
+                    BackHandler { viewModel.backFromNetEntry() }
+                    NetEntryScreen(
+                        net = net,
+                        emoji = "🃏",
+                        title = "حکم چند گوشی",
+                        onNameChanged = viewModel::setMyName,
+                        onToggleOnline = viewModel::setOnline,
+                        onHost = viewModel::hostGame,
+                        onJoin = viewModel::openJoin,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
+                        subtitle = "هر کدوم با گوشی خودتون — میزبان میز رو می‌چینه؛ در چهار نفره دوستِ دوم یارِ میزبانه و صندلی‌های خالی ربات می‌شن",
+                        hostOptions = { HokmMatchOptions(state = state, viewModel = viewModel) },
+                    )
+                }
+
+                HokmStage.NetJoin -> {
+                    BackHandler { viewModel.backFromJoin() }
+                    NetJoinScreen(
+                        net = net,
+                        emoji = "🃏",
+                        onJoin = { g -> viewModel.joinLan(g.address, g.port) },
+                        onManualJoin = { address -> viewModel.joinLan(address, LanServer.BASE_PORT) },
+                        onJoinOnline = viewModel::joinOnline,
+                        hostLabel = { "حکمِ $it" },
+                    )
+                }
+
+                HokmStage.NetLobby -> {
+                    BackHandler { if (net.isHost) viewModel.cancelHosting() else viewModel.backFromJoin() }
+                    NetLobbyScreen(
+                        net = net,
+                        emoji = "🃏",
+                        title = "حکم",
+                        seats = state.netSeats.mapIndexed { i, seat ->
+                            LobbySeat(
+                                name = seat.name,
+                                kind = when (seat.kind) {
+                                    HokmNetSeatKind.HOST -> LobbySeatKind.HOST
+                                    HokmNetSeatKind.GUEST -> LobbySeatKind.GUEST
+                                    HokmNetSeatKind.BOT -> LobbySeatKind.BOT
+                                    HokmNetSeatKind.EMPTY -> LobbySeatKind.EMPTY
+                                },
+                                connected = seat.connected,
+                                tag = if (state.variant == HokmVariant.FOUR) (if (i % 2 == 0) "تیم ۱" else "تیم ۲") else null,
+                            )
+                        },
+                        isHost = net.isHost,
+                        canStart = state.netCanStart,
+                        onStart = viewModel::startNetGame,
+                        summary = when (state.variant) {
+                            HokmVariant.FOUR -> "چهار نفره · تا ${state.target.toPersianDigits()} امتیاز"
+                            HokmVariant.THREE -> "مردابادی · سقف بدهی ${state.debtLimit.toPersianDigits()}"
+                            HokmVariant.TWO -> "دو نفره · تا ${state.target.toPersianDigits()} امتیاز"
+                        },
+                    )
+                }
+
                 HokmStage.AceDeal -> {
                     BackHandler { pendingExit = true }
                     HokmAceDealScreen(state = state, onSkip = viewModel::skipAceDeal)
@@ -145,6 +213,12 @@ fun HokmGame(
                 }
             }
         }
+        NetConnectionOverlays(
+            net = net,
+            showAwayBanner = state.stage == HokmStage.Playing || state.stage == HokmStage.AceDeal,
+            onReconnect = viewModel::reconnectOnline,
+            onLeave = leaveToHub,
+        )
     }
 }
 
@@ -187,102 +261,114 @@ private fun HokmSetupScreen(state: HokmUiState, viewModel: HokmViewModel) {
             )
 
             Spacer(modifier = Modifier.height(22.dp))
-            SectionLabel("چند نفره؟")
+            HokmMatchOptions(state = state, viewModel = viewModel)
+            Spacer(modifier = Modifier.height(18.dp))
+            NetModeCard(onClick = viewModel::chooseNetworkMode)
+            Spacer(modifier = Modifier.height(30.dp))
+            KButton(text = "بزن بریم! 🃏", onClick = viewModel::startMatch)
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+
+/** گزینه‌های مسابقه: روش (۴/۳/۲ نفره)، هدف یا سقف بدهی — هم در تنظیمات محلی، هم برای میزبان چندگوشی */
+@Composable
+internal fun HokmMatchOptions(state: HokmUiState, viewModel: HokmViewModel) {
+    val accent = LocalGameAccent.current
+    val teamColors = kiExtras.teamColors
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        SectionLabel("چند نفره؟")
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+        ) {
+            HokmVariant.entries.forEachIndexed { i, v ->
+                val selected = state.variant == v
+                ChoiceBubble(
+                    main = v.playerCount.toPersianDigits(),
+                    sub = "نفره",
+                    emoji = when (v) {
+                        HokmVariant.FOUR -> "👥"
+                        HokmVariant.THREE -> "🔺"
+                        HokmVariant.TWO -> "🤝"
+                    },
+                    size = 104.dp,
+                    mainFontSize = 30.sp,
+                    accent = if (selected) accent else teamColors.teamColorFor(i + 2).copy(alpha = 0.55f),
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.3f,
+                    modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
+                    onClick = { viewModel.setVariant(v) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = when (state.variant) {
+                HokmVariant.FOUR -> "تو و ${HokmUiState.BOT_NAMES[1]} یه تیم، ${HokmUiState.BOT_NAMES[0]} و ${HokmUiState.BOT_NAMES[2]} تیم مقابل"
+                HokmVariant.THREE -> "مردابادی! سهمیه‌های ۳/۵/۹ — یه دو از بازی بیرونه، طلب و بدهی رد و بدل می‌شه"
+                HokmVariant.TWO -> "تک به تک با ${HokmUiState.BOT_NAMES[0]} — نصف دسته کنار می‌مونه"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
+        if (state.variant == HokmVariant.THREE) {
+            // مردابادی پایانش حذفی است: به جای امتیاز، سقف بدهی انتخاب می‌شود
+            SectionLabel("سقف بدهی چند؟")
             Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
             ) {
-                HokmVariant.entries.forEachIndexed { i, v ->
-                    val selected = state.variant == v
+                MordabadiRules.DEBT_LIMITS.forEachIndexed { i, t ->
+                    val selected = state.debtLimit == t
                     ChoiceBubble(
-                        main = v.playerCount.toPersianDigits(),
-                        sub = "نفره",
-                        emoji = when (v) {
-                            HokmVariant.FOUR -> "👥"
-                            HokmVariant.THREE -> "🔺"
-                            HokmVariant.TWO -> "🤝"
-                        },
-                        size = 104.dp,
-                        mainFontSize = 30.sp,
-                        accent = if (selected) accent else teamColors.teamColorFor(i + 2).copy(alpha = 0.55f),
-                        tilt = if (i % 2 == 0) -3f else 3f,
-                        phase = i * 1.3f,
+                        main = t.toPersianDigits(),
+                        sub = "بدهی",
+                        size = 96.dp,
+                        mainFontSize = 28.sp,
+                        accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
+                        tilt = if (i % 2 == 0) 3f else -3f,
+                        phase = i * 1.1f + 0.5f,
                         modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
-                        onClick = { viewModel.setVariant(v) },
+                        onClick = { viewModel.setDebtLimit(t) },
                     )
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = when (state.variant) {
-                    HokmVariant.FOUR -> "تو و ${HokmUiState.BOT_NAMES[1]} یه تیم، ${HokmUiState.BOT_NAMES[0]} و ${HokmUiState.BOT_NAMES[2]} تیم مقابل"
-                    HokmVariant.THREE -> "مردابادی! سهمیه‌های ۳/۵/۹ — یه دو از بازی بیرونه، طلب و بدهی رد و بدل می‌شه"
-                    HokmVariant.TWO -> "تک به تک با ${HokmUiState.BOT_NAMES[0]} — نصف دسته کنار می‌مونه"
-                },
+                text = "جمع بدهیت به سقف برسه حذف می‌شی — دو بازمانده دوئل می‌کنن!",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-
-            Spacer(modifier = Modifier.height(22.dp))
-            if (state.variant == HokmVariant.THREE) {
-                // مردابادی پایانش حذفی است: به جای امتیاز، سقف بدهی انتخاب می‌شود
-                SectionLabel("سقف بدهی چند؟")
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                ) {
-                    MordabadiRules.DEBT_LIMITS.forEachIndexed { i, t ->
-                        val selected = state.debtLimit == t
-                        ChoiceBubble(
-                            main = t.toPersianDigits(),
-                            sub = "بدهی",
-                            size = 96.dp,
-                            mainFontSize = 28.sp,
-                            accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
-                            tilt = if (i % 2 == 0) 3f else -3f,
-                            phase = i * 1.1f + 0.5f,
-                            modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
-                            onClick = { viewModel.setDebtLimit(t) },
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "جمع بدهیت به سقف برسه حذف می‌شی — دو بازمانده دوئل می‌کنن!",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            } else {
-                SectionLabel("تا چند امتیاز؟")
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                ) {
-                    listOf(3, 5, 7).forEachIndexed { i, t ->
-                        val selected = state.target == t
-                        ChoiceBubble(
-                            main = t.toPersianDigits(),
-                            sub = "امتیاز",
-                            size = 96.dp,
-                            mainFontSize = 28.sp,
-                            accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
-                            tilt = if (i % 2 == 0) 3f else -3f,
-                            phase = i * 1.1f + 0.5f,
-                            modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
-                            onClick = { viewModel.setTarget(t) },
-                        )
-                    }
+        } else {
+            SectionLabel("تا چند امتیاز؟")
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+            ) {
+                listOf(3, 5, 7).forEachIndexed { i, t ->
+                    val selected = state.target == t
+                    ChoiceBubble(
+                        main = t.toPersianDigits(),
+                        sub = "امتیاز",
+                        size = 96.dp,
+                        mainFontSize = 28.sp,
+                        accent = if (selected) accent else teamColors.teamColorFor(i + 5).copy(alpha = 0.55f),
+                        tilt = if (i % 2 == 0) 3f else -3f,
+                        phase = i * 1.1f + 0.5f,
+                        modifier = Modifier.offset(y = if (i == 1) 12.dp else 0.dp),
+                        onClick = { viewModel.setTarget(t) },
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(30.dp))
-            KButton(text = "بزن بریم! 🃏", onClick = viewModel::startMatch)
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -467,11 +553,11 @@ private fun HokmWinnerScreen(
     val winnerText = when {
         variant == HokmVariant.FOUR && humanWon -> "تیم شما برد!"
         variant == HokmVariant.FOUR -> "تیم ${state.nameOf(1)} و ${state.nameOf(3)} برد!"
-        humanWon -> "${state.nameOf(0)} برد!"
+        humanWon -> "${state.nameOf(state.mySeatInGame)} برد!"
         else -> "${state.nameOf(winnerTeam)} برد!"
     }
     val winnerNames = when {
-        humanWon -> listOf(state.nameOf(0))
+        humanWon -> listOf(state.nameOf(state.mySeatInGame))
         variant == HokmVariant.FOUR -> listOf(state.nameOf(1), state.nameOf(3))
         else -> listOf(state.nameOf(winnerTeam))
     }
@@ -567,7 +653,7 @@ private fun MordabadiWinnerScreen(
     val duelWinnerTeam = duel.matchWinnerTeam ?: return
     val winnerSeat = duelSeats.getOrElse(duelWinnerTeam) { 0 }
     val loserSeat = duelSeats.getOrElse(1 - duelWinnerTeam) { 1 }
-    val humanWon = winnerSeat == 0
+    val humanWon = winnerSeat == state.mySeat
     val eliminated = final.lastResult?.eliminatedSeat
     val duelTricks = duel.lastResult?.teamTricks ?: duel.teamTricksAll
 
@@ -604,7 +690,7 @@ private fun MordabadiWinnerScreen(
             Text(
                 text = when {
                     humanWon -> "دمت گرم! هم حساب و کتابت جمع بود هم دوئل رو بردی 🎉"
-                    eliminated == 0 -> "بدهی امونت نداد و حذف شدی — دفعه‌ی بعد سهمیه‌تو بگیر!"
+                    eliminated == state.mySeat -> "بدهی امونت نداد و حذف شدی — دفعه‌ی بعد سهمیه‌تو بگیر!"
                     else -> "تا دوئل رفتی ولی آخرش نشد — تلافی کن!"
                 },
                 style = MaterialTheme.typography.bodyLarge,

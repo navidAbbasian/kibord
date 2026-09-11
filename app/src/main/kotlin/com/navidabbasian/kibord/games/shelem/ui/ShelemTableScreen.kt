@@ -69,7 +69,6 @@ import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.shelem.SHELEM_HUMAN
 import com.navidabbasian.kibord.games.shelem.ShelemUiState
 import com.navidabbasian.kibord.games.shelem.ShelemViewModel
 import com.navidabbasian.kibord.games.shelem.engine.ShelemEngine
@@ -92,13 +91,15 @@ fun ShelemTableScreen(
     game: ShelemState,
     viewModel: ShelemViewModel,
 ) {
+    /** صندلی خودم — در بازی محلی ۰، در چندگوشی صندلی‌ای که میزبان داده */
+    val me = state.mySeat
     val humanTurn = !state.dealing && when (game.phase) {
-        ShelemPhase.BIDDING -> game.bidTurn == SHELEM_HUMAN
-        ShelemPhase.DISCARDING, ShelemPhase.TRUMP -> game.declarer == SHELEM_HUMAN
-        ShelemPhase.PLAYING -> game.turn == SHELEM_HUMAN && game.trickWinner == null
+        ShelemPhase.BIDDING -> game.bidTurn == me
+        ShelemPhase.DISCARDING, ShelemPhase.TRUMP -> game.declarer == me
+        ShelemPhase.PLAYING -> game.turn == me && game.trickWinner == null
         else -> false
     }
-    val legal = remember(game) { ShelemEngine.legalPlaysFor(game, SHELEM_HUMAN).toSet() }
+    val legal = remember(game, me) { ShelemEngine.legalPlaysFor(game, me).toSet() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         WoodPlankBackground(modifier = Modifier.fillMaxSize())
@@ -151,8 +152,8 @@ fun ShelemTableScreen(
         GameHelpButton(gameId = "shelem", modifier = Modifier.align(Alignment.TopStart))
 
         // ---------------- ورقه‌ها ----------------
-        if (game.phase == ShelemPhase.TRUMP && game.declarer == SHELEM_HUMAN) {
-            ShelemTrumpSheet(hand = game.hands[SHELEM_HUMAN], onPick = viewModel::humanChooseTrump)
+        if (game.phase == ShelemPhase.TRUMP && game.declarer == me) {
+            ShelemTrumpSheet(hand = game.hands[me], onPick = viewModel::humanChooseTrump)
         }
         if ((game.phase == ShelemPhase.HAND_OVER || game.phase == ShelemPhase.MATCH_OVER) && game.handResult != null) {
             ShelemHandEndOverlay(
@@ -213,23 +214,28 @@ private fun ShelemTableArea(state: ShelemUiState, game: ShelemState, modifier: M
                     .padding(top = 2.dp),
             )
 
+            // صندلی‌ها نسبت به خودم: یار روبه‌رو (بالا)، حریف‌ها راست و چپ
+            val me = state.mySeat
+            val top = (me + 2) % 4
+            val right = (me + 1) % 4
+            val left = (me + 3) % 4
             // یار (بالا): بادبزن پشتِ کارت + قرص افقی
             TopBackFan(
-                count = game.hands[2].size,
+                count = game.hands[top].size,
                 modifier = Modifier.align(BiasAlignment(0f, -0.60f)),
             )
             Column(
                 modifier = Modifier.align(BiasAlignment(0f, -0.26f)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SeatPill(state = state, game = game, seat = 2)
+                SeatPill(state = state, game = game, seat = top)
                 Spacer(modifier = Modifier.height(3.dp))
-                SeatBubble(bubble = state.bidBubbles[2], thinking = state.thinkingSeat == 2)
+                SeatBubble(bubble = state.bidBubbles[top], thinking = state.thinkingSeat == top)
             }
 
             // حریف راست (صندلی ۱) و حریف چپ (صندلی ۳) — بادبزن عمودی لبه + قرص عمودی
             SideBackFan(
-                count = game.hands[1].size,
+                count = game.hands[right].size,
                 rightSide = true,
                 modifier = Modifier.align(BiasAlignment(1f, -0.35f)),
             )
@@ -237,12 +243,12 @@ private fun ShelemTableArea(state: ShelemUiState, game: ShelemState, modifier: M
                 modifier = Modifier.align(BiasAlignment(0.94f, 0.28f)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SeatPill(state = state, game = game, seat = 1, vertical = true, rotate = -90f)
+                SeatPill(state = state, game = game, seat = right, vertical = true, rotate = -90f)
                 Spacer(modifier = Modifier.height(3.dp))
-                SeatBubble(bubble = state.bidBubbles[1], thinking = state.thinkingSeat == 1)
+                SeatBubble(bubble = state.bidBubbles[right], thinking = state.thinkingSeat == right)
             }
             SideBackFan(
-                count = game.hands[3].size,
+                count = game.hands[left].size,
                 rightSide = false,
                 modifier = Modifier.align(BiasAlignment(-1f, -0.35f)),
             )
@@ -250,19 +256,19 @@ private fun ShelemTableArea(state: ShelemUiState, game: ShelemState, modifier: M
                 modifier = Modifier.align(BiasAlignment(-0.94f, 0.28f)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SeatPill(state = state, game = game, seat = 3, vertical = true, rotate = 90f)
+                SeatPill(state = state, game = game, seat = left, vertical = true, rotate = 90f)
                 Spacer(modifier = Modifier.height(3.dp))
-                SeatBubble(bubble = state.bidBubbles[3], thinking = state.thinkingSeat == 3)
+                SeatBubble(bubble = state.bidBubbles[left], thinking = state.thinkingSeat == left)
             }
 
             // دسته‌های دستِ برده — یکی برای هر تیم، کنار همان تیم
             if (game.phase >= ShelemPhase.PLAYING) {
                 WonTrickPile(
-                    count = game.tricksTaken[0],
+                    count = game.tricksTaken[state.myTeam],
                     modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)),
                 )
                 WonTrickPile(
-                    count = game.tricksTaken[1],
+                    count = game.tricksTaken[1 - state.myTeam],
                     modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)),
                 )
             }
@@ -270,6 +276,7 @@ private fun ShelemTableArea(state: ShelemUiState, game: ShelemState, modifier: M
             // دستِ جاری وسط میز
             TrickArea(
                 game = game,
+                me = me,
                 modifier = Modifier.align(BiasAlignment(0f, 0.22f)),
             )
 
@@ -353,9 +360,9 @@ private fun seatIsTurn(state: ShelemUiState, game: ShelemState, seat: Int): Bool
 
 /** متن قرص یک صندلی: اسم + (برای حاکم) شرطش */
 private fun seatPillName(state: ShelemUiState, game: ShelemState, seat: Int): String {
-    val base = if (seat == SHELEM_HUMAN) {
-        state.playerName.trim().ifBlank { "شما" }
-    } else if (seat == 2) {
+    val base = if (seat == state.mySeat) {
+        if (state.netMode) state.seatName(seat) else state.playerName.trim().ifBlank { "شما" }
+    } else if (seat == ShelemRules.partnerOf(state.mySeat)) {
         "یار: ${state.seatName(seat)}"
     } else {
         state.seatName(seat)
@@ -376,7 +383,7 @@ private fun SeatPill(
 ) {
     val team = ShelemRules.teamOf(seat)
     // ویدو فقط وقتی به حساب می‌آید که خودِ انسان حاکم باشد (خوابیده‌های ربات مخفی است)
-    val pts = game.livePoints(team, includeKitty = game.declarer == SHELEM_HUMAN)
+    val pts = game.livePoints(team, includeKitty = game.declarer == state.mySeat)
     TablePill(
         name = seatPillName(state, game, seat),
         crowned = game.declarer == seat && game.phase != ShelemPhase.BIDDING,
@@ -447,15 +454,17 @@ private fun shelemSlotRotation(seat: Int): Float = when (seat) {
 
 /** چهار جایگاه کارت دور مرکز — کارت‌ها از سمت صندلی پرواز می‌کنند */
 @Composable
-private fun TrickArea(game: ShelemState, modifier: Modifier = Modifier) {
+private fun TrickArea(game: ShelemState, me: Int, modifier: Modifier = Modifier) {
     Box(modifier = modifier.size(280.dp, 240.dp), contentAlignment = Alignment.Center) {
         for (seat in 0 until ShelemRules.PLAYERS) {
             val card = game.trickCardOf(seat)
             val winner = game.trickWinner == seat
-            val (dx, dy) = shelemSlotOffset(seat)
+            // جای کارت نسبت به خودم: پایین=۰، راست=۱، بالا=۲، چپ=۳
+            val slot = (seat - me + ShelemRules.PLAYERS) % ShelemRules.PLAYERS
+            val (dx, dy) = shelemSlotOffset(slot)
             FlyingTrickCard(
                 card = card,
-                seat = seat,
+                seat = slot,
                 width = 92.dp,
                 highlighted = winner,
                 modifier = Modifier.align(Alignment.Center).offset(x = dx.dp, y = dy.dp),
@@ -509,9 +518,9 @@ private fun HumanRow(state: ShelemUiState, game: ShelemState, humanTurn: Boolean
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SeatPill(state = state, game = game, seat = SHELEM_HUMAN)
+        SeatPill(state = state, game = game, seat = state.mySeat)
         Spacer(modifier = Modifier.width(6.dp))
-        SeatBubble(bubble = state.bidBubbles[SHELEM_HUMAN], thinking = false)
+        SeatBubble(bubble = state.bidBubbles[state.mySeat], thinking = false)
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = humanHint(state, game, humanTurn),
@@ -531,7 +540,7 @@ private fun humanHint(state: ShelemUiState, game: ShelemState, humanTurn: Boolea
     game.phase == ShelemPhase.DISCARDING -> if (humanTurn) "۴ کارت انتخاب کن بخوابونی" else "${state.seatName(game.declarer!!)} داره می‌خوابونه…"
     game.phase == ShelemPhase.TRUMP -> if (humanTurn) "حکم رو انتخاب کن" else "${state.seatName(game.declarer!!)} داره حکم می‌کنه…"
     game.phase == ShelemPhase.PLAYING -> when {
-        game.trickWinner != null -> "دست رو ${state.seatName(game.trickWinner)} برد" + if (ShelemRules.teamOf(game.trickWinner) == 0) " 🎉" else ""
+        game.trickWinner != null -> "دست رو ${state.seatName(game.trickWinner)} برد" + if (ShelemRules.teamOf(game.trickWinner) == state.myTeam) " 🎉" else ""
         humanTurn -> if (game.trick.isEmpty()) "نوبت توئه — شروع کن!" else "نوبت توئه!"
         else -> "نوبت ${state.seatName(game.turn)}"
     }
@@ -548,7 +557,7 @@ private fun HumanHand(
     onPlay: (Card) -> Unit,
     onToggleDiscard: (Card) -> Unit,
 ) {
-    val hand = game.hands[SHELEM_HUMAN]
+    val hand = game.hands[state.mySeat]
     // انیمیشن پخش: کارت‌ها یکی‌یکی ظاهر می‌شوند
     val dealProgress = remember { Animatable(1f) }
     LaunchedEffect(state.dealing, game.handNumber) {
@@ -562,7 +571,7 @@ private fun HumanHand(
     val visibleCount = if (state.dealing) (hand.size * dealProgress.value).toInt().coerceIn(0, hand.size) else hand.size
     val shown = hand.take(visibleCount)
 
-    val discarding = game.phase == ShelemPhase.DISCARDING && game.declarer == SHELEM_HUMAN
+    val discarding = game.phase == ShelemPhase.DISCARDING && game.declarer == state.mySeat
     if (discarding) {
         SelectableFan(
             cards = hand,

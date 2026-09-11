@@ -42,6 +42,7 @@ import com.navidabbasian.kibord.core.ui.components.ChoiceBubble
 import com.navidabbasian.kibord.core.ui.components.GameHelpButton
 import com.navidabbasian.kibord.core.ui.components.GlassCard
 import com.navidabbasian.kibord.core.ui.components.KButton
+import com.navidabbasian.kibord.core.ui.net.NetModeCard
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
@@ -58,6 +59,7 @@ fun ShelemSetupScreen(
     onTarget: (Int) -> Unit,
     onShelemBonus: (Boolean) -> Unit,
     onStart: () -> Unit,
+    onNetwork: () -> Unit,
 ) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
@@ -96,58 +98,9 @@ fun ShelemSetupScreen(
             )
 
             Spacer(modifier = Modifier.height(22.dp))
-            Text(
-                text = "بازی تا چند؟",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ShelemRules.TARGETS.forEachIndexed { i, t ->
-                    ChoiceBubble(
-                        main = t.toPersianDigits(),
-                        sub = "امتیاز",
-                        size = 100.dp,
-                        mainFontSize = 26.sp,
-                        accent = if (state.target == t) accent else extras.teamColors.teamColorFor(i + 2),
-                        tilt = if (i % 2 == 0) -3f else 3f,
-                        phase = i * 1.2f,
-                        modifier = Modifier.offset(y = if (i == 1) 14.dp else 0.dp),
-                        onClick = { onTarget(t) },
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(26.dp))
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                strong = true,
-                onClick = { sound?.playButtonClick(); onShelemBonus(!state.shelemBonus) },
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "شلم حساب بشه",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "اگه تیمی همه‌ی ۱۶۵ امتیاز دست رو ببره، امتیازش دوبرابر می‌شه (۳۳۰)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    ShelemToggle(on = state.shelemBonus, onToggle = { onShelemBonus(it) })
-                }
-            }
-
+            ShelemMatchOptions(state = state, onTarget = onTarget, onShelemBonus = onShelemBonus)
+            Spacer(modifier = Modifier.height(18.dp))
+            NetModeCard(onClick = onNetwork)
             Spacer(modifier = Modifier.height(28.dp))
             KButton(text = "بزن بریم! 🃏", onClick = { sound?.playButtonClick(); onStart() })
             Spacer(modifier = Modifier.navigationBarsPadding().height(24.dp))
@@ -156,6 +109,68 @@ fun ShelemSetupScreen(
 }
 
 /** کلید روشن/خاموشِ ساده‌ی هم‌خانواده با بقیه‌ی اپ */
+
+/** گزینه‌های مسابقه: سقف امتیاز و پاداش شلم — هم در تنظیمات محلی، هم برای میزبان چندگوشی */
+@Composable
+fun ShelemMatchOptions(state: ShelemUiState, onTarget: (Int) -> Unit, onShelemBonus: (Boolean) -> Unit) {
+    val accent = LocalGameAccent.current
+    val extras = kiExtras
+    val sound = LocalSoundManager.current
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "بازی تا چند؟",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            ShelemRules.TARGETS.forEachIndexed { i, t ->
+                ChoiceBubble(
+                    main = t.toPersianDigits(),
+                    sub = "امتیاز",
+                    size = 100.dp,
+                    mainFontSize = 26.sp,
+                    accent = if (state.target == t) accent else extras.teamColors.teamColorFor(i + 2),
+                    tilt = if (i % 2 == 0) -3f else 3f,
+                    phase = i * 1.2f,
+                    modifier = Modifier.offset(y = if (i == 1) 14.dp else 0.dp),
+                    onClick = { onTarget(t) },
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(26.dp))
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            strong = true,
+            onClick = { sound?.playButtonClick(); onShelemBonus(!state.shelemBonus) },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "شلم حساب بشه",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "اگه تیمی همه‌ی ۱۶۵ امتیاز دست رو ببره، امتیازش دوبرابر می‌شه (۳۳۰)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                ShelemToggle(on = state.shelemBonus, onToggle = { onShelemBonus(it) })
+            }
+        }
+    }
+}
+
 @Composable
 private fun ShelemToggle(on: Boolean, onToggle: (Boolean) -> Unit) {
     val accent = LocalGameAccent.current

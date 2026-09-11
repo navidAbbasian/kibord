@@ -12,6 +12,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.navidabbasian.kibord.core.audio.LocalSoundManager
 import com.navidabbasian.kibord.core.audio.MusicTrack
 import com.navidabbasian.kibord.core.ui.components.ExitConfirmDialog
+import com.navidabbasian.kibord.core.net.lan.LanServer
+import com.navidabbasian.kibord.core.ui.net.LobbySeat
+import com.navidabbasian.kibord.core.ui.net.LobbySeatKind
+import com.navidabbasian.kibord.core.ui.net.NetConnectionOverlays
+import com.navidabbasian.kibord.core.ui.net.NetEntryScreen
+import com.navidabbasian.kibord.core.ui.net.NetJoinScreen
+import com.navidabbasian.kibord.core.ui.net.NetLobbyScreen
+import com.navidabbasian.kibord.core.util.toPersianDigits
+import com.navidabbasian.kibord.games.shelem.ui.ShelemMatchOptions
 import com.navidabbasian.kibord.core.ui.components.KiBackground
 import com.navidabbasian.kibord.core.ui.components.PhaseTransition
 import com.navidabbasian.kibord.games.shelem.engine.ShelemPhase
@@ -26,8 +35,10 @@ fun ShelemGame(
     viewModel: ShelemViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val net by viewModel.net.collectAsState()
     val sound = LocalSoundManager.current
     var pendingExit by remember { mutableStateOf(false) }
+    val leaveAndExit = { viewModel.backToSetup(); onExitToHub() }
 
     LaunchedEffect(Unit) {
         viewModel.soundEvents.collect { event ->
@@ -46,7 +57,7 @@ fun ShelemGame(
     }
 
     LaunchedEffect(state.stage) {
-        if (state.stage == ShelemStage.Setup) sound?.switchMusic(MusicTrack.HUB) else sound?.stopBackgroundMusic()
+        if (state.stage != ShelemStage.Playing) sound?.switchMusic(MusicTrack.HUB) else sound?.stopBackgroundMusic()
     }
 
     KiBackground {
@@ -61,6 +72,9 @@ fun ShelemGame(
         )
         val game = state.game
         val screen = when {
+            state.stage == ShelemStage.NetEntry -> "entry"
+            state.stage == ShelemStage.NetJoin -> "join"
+            state.stage == ShelemStage.NetLobby -> "lobby"
             state.stage == ShelemStage.Setup || game == null -> "setup"
             game.phase == ShelemPhase.MATCH_OVER && state.showFinal -> "winner"
             else -> "table"
@@ -75,16 +89,74 @@ fun ShelemGame(
                         onTarget = viewModel::setTarget,
                         onShelemBonus = viewModel::setShelemBonus,
                         onStart = viewModel::startMatch,
+                        onNetwork = viewModel::chooseNetworkMode,
+                    )
+                }
+
+                "entry" -> {
+                    BackHandler { viewModel.backFromNetEntry() }
+                    NetEntryScreen(
+                        net = net,
+                        emoji = "🂡",
+                        title = "شلم چند گوشی",
+                        onNameChanged = viewModel::setMyName,
+                        onToggleOnline = viewModel::setOnline,
+                        onHost = viewModel::hostGame,
+                        onJoin = viewModel::openJoin,
+                        onResume = viewModel::resumeOnline,
+                        onDiscardResume = viewModel::discardResume,
+                        subtitle = "هر کدوم با گوشی خودتون — میزبان میز رو می‌چینه؛ دوستِ دوم یارِ میزبانه و صندلی‌های خالی ربات می‌شن",
+                        hostOptions = {
+                            ShelemMatchOptions(state = state, onTarget = viewModel::setTarget, onShelemBonus = viewModel::setShelemBonus)
+                        },
+                    )
+                }
+
+                "join" -> {
+                    BackHandler { viewModel.backFromJoin() }
+                    NetJoinScreen(
+                        net = net,
+                        emoji = "🂡",
+                        onJoin = { g -> viewModel.joinLan(g.address, g.port) },
+                        onManualJoin = { address -> viewModel.joinLan(address, LanServer.BASE_PORT) },
+                        onJoinOnline = viewModel::joinOnline,
+                        hostLabel = { "شلمِ $it" },
+                    )
+                }
+
+                "lobby" -> {
+                    BackHandler { if (net.isHost) viewModel.cancelHosting() else viewModel.backFromJoin() }
+                    NetLobbyScreen(
+                        net = net,
+                        emoji = "🂡",
+                        title = "شلم",
+                        seats = state.netSeats.mapIndexed { i, seat ->
+                            LobbySeat(
+                                name = seat.name,
+                                kind = when (seat.kind) {
+                                    ShelemNetSeatKind.HOST -> LobbySeatKind.HOST
+                                    ShelemNetSeatKind.GUEST -> LobbySeatKind.GUEST
+                                    ShelemNetSeatKind.BOT -> LobbySeatKind.BOT
+                                    ShelemNetSeatKind.EMPTY -> LobbySeatKind.EMPTY
+                                },
+                                connected = seat.connected,
+                                tag = if (i % 2 == 0) "تیم ۱" else "تیم ۲",
+                            )
+                        },
+                        isHost = net.isHost,
+                        canStart = state.netCanStart,
+                        onStart = viewModel::startNetGame,
+                        summary = "تا ${state.target.toPersianDigits()} امتیاز" + if (state.shelemBonus) " · با پاداش شلم" else "",
                     )
                 }
 
                 "winner" -> {
-                    BackHandler { viewModel.backToSetup(); onExitToHub() }
+                    BackHandler { leaveAndExit() }
                     ShelemWinnerScreen(
                         state = state,
                         game = game!!,
                         onPlayAgain = viewModel::playAgain,
-                        onExitToHub = { viewModel.backToSetup(); onExitToHub() },
+                        onExitToHub = leaveAndExit,
                     )
                 }
 
@@ -94,5 +166,11 @@ fun ShelemGame(
                 }
             }
         }
+        NetConnectionOverlays(
+            net = net,
+            showAwayBanner = state.stage == ShelemStage.Playing,
+            onReconnect = viewModel::reconnectOnline,
+            onLeave = leaveAndExit,
+        )
     }
 }

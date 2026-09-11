@@ -35,8 +35,8 @@ import com.navidabbasian.kibord.core.ui.components.ShareWinButton
 import com.navidabbasian.kibord.core.ui.components.StickerTitle
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.shelem.SHELEM_HUMAN
 import com.navidabbasian.kibord.games.shelem.ShelemUiState
+import com.navidabbasian.kibord.games.shelem.engine.ShelemRules
 import com.navidabbasian.kibord.games.shelem.engine.ShelemState
 
 /** صفحه‌ی پایان مسابقه: برنده، امتیازها، خلاصه‌ی دست‌ها، اشتراک و دوباره بازی */
@@ -49,14 +49,18 @@ fun ShelemWinnerScreen(
 ) {
     val winner = game.matchWinner ?: return
     val extras = kiExtras
-    val weWon = winner == 0
-    val humanName = state.seatName(SHELEM_HUMAN)
+    val me = state.mySeat
+    val partner = ShelemRules.partnerOf(me)
+    val opp1 = (me + 1) % ShelemRules.PLAYERS
+    val opp2 = (me + 3) % ShelemRules.PLAYERS
+    val weWon = winner == state.myTeam
+    val humanName = state.seatName(me)
     val teamNames = listOf(
-        "$humanName و ${state.seatName(2)}",
-        "${state.seatName(1)} و ${state.seatName(3)}",
+        "$humanName و ${state.seatName(partner)}",
+        "${state.seatName(opp1)} و ${state.seatName(opp2)}",
     )
     val winnerText = if (weWon) "تیم ما" else "تیم ${teamNames[1]}"
-    val winnerNames = if (weWon) listOf(humanName) else listOf(state.seatName(1), state.seatName(3))
+    val winnerNames = if (weWon) listOf(humanName, state.seatName(partner)) else listOf(state.seatName(opp1), state.seatName(opp2))
     val madeCount = game.history.count { it.made }
     val shelemCount = game.history.count { it.shelem }
 

@@ -103,10 +103,16 @@ private val DebtRed = Color(0xFFFF9B8E)
 /** جای هر صندلی دور میز */
 private enum class TablePos { BOTTOM, RIGHT, TOP, LEFT }
 
-private fun tablePos(variant: HokmVariant, seat: Int): TablePos = when (variant) {
-    HokmVariant.FOUR -> listOf(TablePos.BOTTOM, TablePos.RIGHT, TablePos.TOP, TablePos.LEFT)[seat]
-    HokmVariant.THREE -> listOf(TablePos.BOTTOM, TablePos.RIGHT, TablePos.LEFT)[seat]
-    HokmVariant.TWO -> listOf(TablePos.BOTTOM, TablePos.TOP)[seat]
+/** جای صندلی [seat] وقتی صندلی [me] پایینِ صفحه نشسته (منفی = تماشاگر، از دید صندلی ۰) */
+private fun tablePos(variant: HokmVariant, seat: Int, me: Int): TablePos {
+    val n = variant.playerCount
+    val anchor = if (me in 0 until n) me else 0
+    val idx = ((seat - anchor) % n + n) % n
+    return when (variant) {
+        HokmVariant.FOUR -> listOf(TablePos.BOTTOM, TablePos.RIGHT, TablePos.TOP, TablePos.LEFT)[idx]
+        HokmVariant.THREE -> listOf(TablePos.BOTTOM, TablePos.RIGHT, TablePos.LEFT)[idx]
+        HokmVariant.TWO -> listOf(TablePos.BOTTOM, TablePos.TOP)[idx]
+    }
 }
 
 /** جای کارت هر صندلی وسط میز (نسبت به مرکز، dp) */
@@ -138,10 +144,13 @@ private fun slotRotation(pos: TablePos): Float = when (pos) {
 @Composable
 internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
     val game = state.game ?: return
-    val humanPlays = state.humanSeatInGame == 0
-    val myTurn = game.phase == HokmPhase.PLAYING && game.turn == 0 && humanPlays &&
+    /** صندلی خودم در وضعیت جاری؛ منفی یعنی فقط تماشا می‌کنم (دوئلِ بقیه) */
+    val me = state.mySeatInGame
+    val humanPlays = me >= 0
+    val myHand = game.hands.getOrElse(me) { emptyList() }
+    val myTurn = game.phase == HokmPhase.PLAYING && game.turn == me && humanPlays &&
         !game.trickComplete && state.exchangeFx == null && !state.collectionBanner
-    val legal = remember(game, myTurn) { if (myTurn) HokmRules.legalMoves(game, 0).toSet() else null }
+    val legal = remember(game, myTurn) { if (myTurn) HokmRules.legalMoves(game, me).toSet() else null }
     val debtorPicking = state.debtorPick != null
     val mordabadi = game.isMordabadi && game.quotas.isNotEmpty()
 
@@ -173,15 +182,15 @@ internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
 
             HumanRow(state = state, game = game, myTurn = myTurn, mordabadi = mordabadi)
             HandFan(
-                cards = game.hands[0],
+                cards = myHand,
                 playable = when {
-                    debtorPicking -> game.hands[0].toSet()
+                    debtorPicking && state.debtorPick?.debtor == state.mySeat -> myHand.toSet()
                     else -> legal
                 },
                 selected = state.receivedCard,
                 maxCardWidth = if (mordabadi) 72.dp else 74.dp,
                 onCardClick = when {
-                    debtorPicking -> ({ card -> viewModel.giveDebtCard(card) })
+                    debtorPicking && state.debtorPick?.debtor == state.mySeat -> ({ card -> viewModel.giveDebtCard(card) })
                     myTurn -> ({ card -> viewModel.playCard(card) })
                     else -> null
                 },
@@ -234,15 +243,15 @@ internal fun HokmPlayScreen(state: HokmUiState, viewModel: HokmViewModel) {
         }
 
         // ---- انتخاب حکم توسط بازیکن ----
-        if (game.phase == HokmPhase.CHOOSE_TRUMP && game.hakem == 0 && humanPlays) {
-            TrumpChoiceSheet(game = game, onChoose = viewModel::chooseTrump)
+        if (game.phase == HokmPhase.CHOOSE_TRUMP && game.hakem == me && humanPlays) {
+            TrumpChoiceSheet(game = game, cards = myHand, onChoose = viewModel::chooseTrump)
         }
 
         // ---- وصول طلب (مردابادی): نوبت طلبکارِ انسانی ----
-        if (game.phase == HokmPhase.COLLECTION && MordabadiRules.collector(game) == 0 &&
+        if (game.phase == HokmPhase.COLLECTION && MordabadiRules.collector(game) == state.mySeat &&
             !debtorPicking && !state.collectionBanner && state.exchangeFx == null
         ) {
-            CollectionSheet(state = state, game = game, onExchange = viewModel::humanExchange)
+            CollectionSheet(state = state, game = game, me = state.mySeat, onExchange = viewModel::humanExchange)
         }
 
         // ---- پایان دست ----
@@ -307,8 +316,10 @@ private fun HokmTableArea(state: HokmUiState, game: HokmState, humanPlays: Boole
             }
 
             // حریف‌ها: بادبزنِ پشتِ کارت + قرص اسم + ستون دست‌های برده
-            for (seat in 1 until variant.playerCount) {
-                val pos = tablePos(variant, seat)
+            val me = state.mySeatInGame
+            for (seat in 0 until variant.playerCount) {
+                if (seat == me) continue
+                val pos = tablePos(variant, seat, me)
                 OpponentSide(
                     state = state,
                     game = game,
@@ -335,6 +346,7 @@ private fun HokmTableArea(state: HokmUiState, game: HokmState, humanPlays: Boole
                 ExchangeFlight(
                     fx = fx,
                     variant = variant,
+                    me = state.mySeat,
                     modifier = Modifier.align(BiasAlignment(0f, 0.22f)),
                 )
             }
@@ -353,7 +365,8 @@ private fun OpponentSide(
     boxScope: androidx.compose.foundation.layout.BoxScope,
 ) {
     val isTurn = game.phase == HokmPhase.PLAYING && game.turn == seat && !game.trickComplete
-    val isPartner = game.variant.partnerOf(0) == seat
+    val me = state.mySeatInGame
+    val isPartner = me >= 0 && game.variant.partnerOf(me) == seat
     val name = if (isPartner) "شریک شما" else state.nameOf(seat)
     val crowned = game.hakem == seat
     val count = game.hands[seat].size
@@ -493,19 +506,27 @@ private fun TrickPiles(
     with(boxScope) {
         when (game.variant) {
             HokmVariant.FOUR -> {
-                WonTrickPile(count = game.teamTricks(0), modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                WonTrickPile(count = game.teamTricks(1), modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
+                val myTeam = state.myTeam
+                WonTrickPile(count = game.teamTricks(myTeam), modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
+                WonTrickPile(count = game.teamTricks(1 - myTeam), modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
             }
 
             HokmVariant.TWO -> {
-                WonTrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                WonTrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
+                val me = state.mySeatInGame.coerceIn(0, 1)
+                WonTrickPile(count = game.tricksWon[me], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
+                WonTrickPile(count = game.tricksWon[1 - me], modifier = Modifier.align(BiasAlignment(0.92f, -0.86f)))
             }
 
             HokmVariant.THREE -> {
-                WonTrickPile(count = game.tricksWon[0], modifier = Modifier.align(BiasAlignment(-0.92f, 0.94f)))
-                WonTrickPile(count = game.tricksWon[1], modifier = Modifier.align(BiasAlignment(0.70f, 0.62f)))
-                WonTrickPile(count = game.tricksWon[2], modifier = Modifier.align(BiasAlignment(-0.70f, 0.62f)))
+                val me = state.mySeatInGame
+                for (seat in 0..2) {
+                    val bias = when (tablePos(HokmVariant.THREE, seat, me)) {
+                        TablePos.BOTTOM -> BiasAlignment(-0.92f, 0.94f)
+                        TablePos.RIGHT -> BiasAlignment(0.70f, 0.62f)
+                        else -> BiasAlignment(-0.70f, 0.62f)
+                    }
+                    WonTrickPile(count = game.tricksWon[seat], modifier = Modifier.align(bias))
+                }
             }
         }
     }
@@ -516,11 +537,24 @@ private fun TrickPiles(
 /** ردیف اطلاعات بازیکن: قرص «شما» با تاج و نشانِ دست‌ها + چیپ نوبت */
 @Composable
 private fun HumanRow(state: HokmUiState, game: HokmState, myTurn: Boolean, mordabadi: Boolean) {
-    val name = state.playerName.trim().ifBlank { "شما" }
+    val me = state.mySeatInGame
+    if (me < 0) {
+        Text(
+            text = "حذف شدی — دوئل بقیه رو تماشا می‌کنی 👀",
+            style = MaterialTheme.typography.labelLarge,
+            color = PillCream,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        )
+        return
+    }
+    val name = if (state.netMode || state.duelSeats != null) state.nameOf(me) else state.playerName.trim().ifBlank { "شما" }
     val badge = if (mordabadi) {
-        "${game.tricksWon[0].toPersianDigits()} از ${game.quotaOf(0).toPersianDigits()}"
+        "${game.tricksWon[me].toPersianDigits()} از ${game.quotaOf(me).toPersianDigits()}"
     } else {
-        game.tricksWon[0].toPersianDigits()
+        game.tricksWon[me].toPersianDigits()
     }
     Row(
         modifier = Modifier
@@ -531,14 +565,14 @@ private fun HumanRow(state: HokmUiState, game: HokmState, myTurn: Boolean, morda
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TablePill(
-                name = if (state.duelSeats != null) state.nameOf(0) else name,
-                crowned = game.hakem == 0,
+                name = name,
+                crowned = game.hakem == me,
                 badge = badge,
                 glowing = myTurn,
             )
             if (mordabadi) {
                 Spacer(modifier = Modifier.width(6.dp))
-                MordabadiChips(game = game, seat = 0)
+                MordabadiChips(game = game, seat = me)
             }
         }
         AnimatedVisibility(visible = myTurn, enter = fadeIn() + scaleIn(initialScale = 0.8f), exit = fadeOut()) {
@@ -573,14 +607,15 @@ private fun TrickArea(state: HokmUiState, game: HokmState, humanPlays: Boolean, 
         ) {
             CenterHint(state = state, game = game, humanPlays = humanPlays)
         }
-        if (game.phase == HokmPhase.CHOOSE_TRUMP && !(game.hakem == 0 && humanPlays)) {
+        val me = state.mySeatInGame
+        if (game.phase == HokmPhase.CHOOSE_TRUMP && game.hakem != me) {
             WaitingBubble(text = "${state.nameOf(game.hakem)} داره حکم می‌کنه… 🤔")
         }
         if (game.phase == HokmPhase.COLLECTION) {
             val c = MordabadiRules.collector(game)
             if (state.debtorPick != null) {
                 WaitingBubble(text = "یه کارت بده جای بدهیت 👇")
-            } else if (c != null && c != 0 && state.exchangeFx == null && !state.collectionBanner) {
+            } else if (c != null && c != state.mySeat && state.exchangeFx == null && !state.collectionBanner) {
                 WaitingBubble(text = "${state.nameOf(c)} داره طلبش رو وصول می‌کنه… 💰")
             }
         }
@@ -588,8 +623,8 @@ private fun TrickArea(state: HokmUiState, game: HokmState, humanPlays: Boolean, 
             key(tc.card.id, game.handNumber) {
                 FlyingTrickCard(
                     tc = tc,
-                    pos = tablePos(variant, tc.seat),
-                    sweepTo = winnerSeat?.let { tablePos(variant, it) },
+                    pos = tablePos(variant, tc.seat, me),
+                    sweepTo = winnerSeat?.let { tablePos(variant, it, me) },
                 )
             }
         }
@@ -632,19 +667,22 @@ private fun FlyingTrickCard(tc: TrickCard, pos: TablePos, sweepTo: TablePos?) {
  * کارت‌ها پشت‌به‌بالا هستند مگر خودِ بازیکن یک طرف تبادل باشد (کارتِ خودش رو دیده می‌شود).
  */
 @Composable
-private fun ExchangeFlight(fx: ExchangeFx, variant: HokmVariant, modifier: Modifier = Modifier) {
+private fun ExchangeFlight(
+    fx: ExchangeFx,
+    variant: HokmVariant,
+    me: Int, modifier: Modifier = Modifier) {
     Box(modifier = modifier.size(280.dp, 240.dp), contentAlignment = Alignment.Center) {
         FlyingSwapCard(
-            from = tablePos(variant, fx.collector),
-            to = tablePos(variant, fx.debtor),
-            face = fx.collectorFace,
+            from = tablePos(variant, fx.collector, me),
+            to = tablePos(variant, fx.debtor, me),
+            face = fx.collectorFace?.takeIf { fx.collector == me },
             fxId = fx.id,
             startDelayMs = 0,
         )
         FlyingSwapCard(
-            from = tablePos(variant, fx.debtor),
-            to = tablePos(variant, fx.collector),
-            face = fx.debtorFace,
+            from = tablePos(variant, fx.debtor, me),
+            to = tablePos(variant, fx.collector, me),
+            face = fx.debtorFace?.takeIf { fx.debtor == me },
             fxId = fx.id,
             startDelayMs = 320,
         )
@@ -680,15 +718,16 @@ private fun FlyingSwapCard(from: TablePos, to: TablePos, face: Card?, fxId: Long
 
 @Composable
 private fun CenterHint(state: HokmUiState, game: HokmState, humanPlays: Boolean) {
+    val me = state.mySeatInGame
     val text = when {
-        game.turn == 0 && humanPlays ->
-            if (game.hakem == 0 && game.played.isEmpty()) "تو حاکمی — شروع کن! 👑" else "نوبت توئه — یه کارت بنداز"
+        game.turn == me && humanPlays ->
+            if (game.hakem == me && game.played.isEmpty()) "تو حاکمی — شروع کن! 👑" else "نوبت توئه — یه کارت بنداز"
         else -> "${state.nameOf(game.turn)} داره فکر می‌کنه…"
     }
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
-        color = if (game.turn == 0 && humanPlays) Color.White else PillCream.copy(alpha = 0.9f),
+        color = if (game.turn == me && humanPlays) Color.White else PillCream.copy(alpha = 0.9f),
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
         modifier = Modifier
@@ -726,11 +765,10 @@ private fun WaitingBubble(text: String) {
 // ---------------------------------------------------------------- انتخاب حکم
 
 @Composable
-private fun TrumpChoiceSheet(game: HokmState, onChoose: (Suit) -> Unit) {
+private fun TrumpChoiceSheet(game: HokmState, cards: List<Card>, onChoose: (Suit) -> Unit) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
     val sound = LocalSoundManager.current
-    val cards = game.hands[0]
     val cardWidth = if (cards.size > 6) 34.dp else 54.dp
     Box(
         modifier = Modifier
@@ -820,16 +858,16 @@ private fun TrumpChoiceSheet(game: HokmState, onChoose: (Suit) -> Unit) {
 
 /** شیت وصول برای طلبکار انسانی: انتخاب بدهکار + خال (یا حکم‌خواهی با ۳ طلب) */
 @Composable
-private fun CollectionSheet(state: HokmUiState, game: HokmState, onExchange: (Int, Suit) -> Unit) {
+private fun CollectionSheet(state: HokmUiState, game: HokmState, me: Int, onExchange: (Int, Suit) -> Unit) {
     val accent = LocalGameAccent.current
     val extras = kiExtras
     val sound = LocalSoundManager.current
     val debtors = MordabadiRules.debtors(game)
-    val suits = MordabadiRules.availableSuits(game, 0)
+    val suits = MordabadiRules.availableSuits(game, me)
     var debtor by remember(game) { mutableStateOf(debtors.minByOrNull { game.balances[it] } ?: -1) }
     if (debtor !in debtors && debtors.isNotEmpty()) debtor = debtors.first()
     val trump = game.trump
-    val canTrump = debtor >= 0 && MordabadiRules.canDemandTrump(game, 0, debtor)
+    val canTrump = debtor >= 0 && MordabadiRules.canDemandTrump(game, me, debtor)
 
     Box(
         modifier = Modifier
@@ -854,7 +892,7 @@ private fun CollectionSheet(state: HokmUiState, game: HokmState, onExchange: (In
                 StickerTitle(text = "طلبت رو وصول کن! 💰", fontSize = 22.sp, rotation = -1.5f)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "طلب تو: ${game.balances[0].toPersianDigits()} — " +
+                    text = "طلب تو: ${game.balances[me].toPersianDigits()} — " +
                         "یه خال انتخاب کن: پایین‌ترینش رو می‌دی و بالاترینش رو می‌گیری",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1079,10 +1117,11 @@ private fun MordabadiHandOverOverlay(state: HokmUiState, game: HokmState, onNext
     val accent = LocalGameAccent.current
     val extras = kiExtras
     val eliminated = result.eliminatedSeat
-    val myDelta = result.deltas.getOrElse(0) { 0 }
+    val me = state.mySeat
+    val myDelta = result.deltas.getOrElse(me) { 0 }
 
     val title = when {
-        eliminated == 0 -> "حذف شدی! 🚫"
+        eliminated == me -> "حذف شدی! 🚫"
         eliminated != null -> "${state.mordabadiNameOf(eliminated)} حذف شد!"
         myDelta > 0 -> "طلبکار شدی!"
         myDelta < 0 -> "بدهکار شدی…"
@@ -1107,7 +1146,7 @@ private fun MordabadiHandOverOverlay(state: HokmUiState, game: HokmState, onNext
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
             accent = accent,
-            golden = eliminated != null && eliminated != 0,
+            golden = eliminated != null && eliminated != me,
             tilt = 1.2f,
         ) {
             Column(
@@ -1128,7 +1167,7 @@ private fun MordabadiHandOverOverlay(state: HokmUiState, game: HokmState, onNext
                         else -> "سر به سر"
                     }
                     // تراز و جمع بدهی فقط برای خودِ بازیکن — حساب بقیه محرمانه است
-                    val privateTail = if (seat == 0) {
+                    val privateTail = if (seat == me) {
                         " • تراز ${game.balances.getOrElse(seat) { 0 }.toPersianDigits()}" +
                             " • جمع بدهی ${game.totalDebts.getOrElse(seat) { 0 }.toPersianDigits()}"
                     } else ""

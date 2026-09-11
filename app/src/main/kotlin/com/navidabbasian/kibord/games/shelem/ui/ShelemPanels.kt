@@ -54,7 +54,6 @@ import com.navidabbasian.kibord.core.ui.components.breathing
 import com.navidabbasian.kibord.core.ui.theme.LocalGameAccent
 import com.navidabbasian.kibord.core.ui.theme.kiExtras
 import com.navidabbasian.kibord.core.util.toPersianDigits
-import com.navidabbasian.kibord.games.shelem.SHELEM_HUMAN
 import com.navidabbasian.kibord.games.shelem.ShelemUiState
 import com.navidabbasian.kibord.games.shelem.ShelemViewModel
 import com.navidabbasian.kibord.games.shelem.engine.ShelemEngine
@@ -73,7 +72,7 @@ fun ShelemActionPanel(
     val key = when {
         state.dealing -> "deal"
         game.phase == ShelemPhase.BIDDING && humanTurn -> "bid"
-        game.phase == ShelemPhase.DISCARDING && game.declarer == SHELEM_HUMAN -> "discard"
+        game.phase == ShelemPhase.DISCARDING && game.declarer == state.mySeat -> "discard"
         game.phase == ShelemPhase.BIDDING -> "bidwait"
         else -> "status"
     }
@@ -83,7 +82,7 @@ fun ShelemActionPanel(
         label = "panel",
     ) { k ->
         when (k) {
-            "bid" -> BidPanel(game = game, onBid = viewModel::humanBid, onPass = viewModel::humanPass)
+            "bid" -> BidPanel(game = game, me = state.mySeat, onBid = viewModel::humanBid, onPass = viewModel::humanPass)
             "discard" -> DiscardPanel(state = state, game = game, onConfirm = viewModel::confirmDiscard)
             "bidwait" -> BidWaitPanel(state = state, game = game)
             else -> Spacer(modifier = Modifier.height(4.dp))
@@ -94,12 +93,12 @@ fun ShelemActionPanel(
 /** تراشه‌های ۱۰۰ تا ۱۶۵ + پاس؛ مبالغ پایین‌تر از بالاترین شرط خاموش‌اند */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BidPanel(game: ShelemState, onBid: (Int) -> Unit, onPass: () -> Unit) {
+private fun BidPanel(game: ShelemState, me: Int, onBid: (Int) -> Unit, onPass: () -> Unit) {
     val extras = kiExtras
     val accent = LocalGameAccent.current
     val sound = LocalSoundManager.current
-    val available = remember(game) { ShelemEngine.availableBids(game, SHELEM_HUMAN).toSet() }
-    val canPass = ShelemEngine.canPass(game, SHELEM_HUMAN)
+    val available = remember(game, me) { ShelemEngine.availableBids(game, me).toSet() }
+    val canPass = ShelemEngine.canPass(game, me)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,7 +186,7 @@ private fun BidWaitPanel(state: ShelemUiState, game: ShelemState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = if (SHELEM_HUMAN in game.passed) "پاس دادی — ببینیم کی حاکم می‌شه"
+            text = if (state.mySeat in game.passed) "پاس دادی — ببینیم کی حاکم می‌شه"
             else "شرط‌بندی دور میز می‌چرخه…",
             style = MaterialTheme.typography.bodyMedium,
             color = TablePillCream,
@@ -313,10 +312,10 @@ fun ShelemHandEndOverlay(state: ShelemUiState, game: ShelemState, onNext: () -> 
     val r = game.handResult ?: return
     val extras = kiExtras
     val sound = LocalSoundManager.current
-    val declName = if (r.declarer == SHELEM_HUMAN) "تو" else state.seatName(r.declarer)
+    val declName = if (r.declarer == state.mySeat) "تو" else state.seatName(r.declarer)
     val declTeamName = state.teamName(r.declarerTeam)
     val oppTeam = 1 - r.declarerTeam
-    val weMade = (r.declarerTeam == 0) == r.made
+    val weMade = (r.declarerTeam == state.myTeam) == r.made
     val title = when {
         r.shelem -> "شلم! 🔥"
         r.made -> "شرط گرفته شد ✅"
